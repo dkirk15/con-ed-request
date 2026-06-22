@@ -90,6 +90,7 @@ export const repaymentGuarantees = pgTable("repayment_guarantees", {
   requestId: integer("request_id").notNull().references(() => conEdRequests.id),
   employeeId: integer("employee_id").notNull().references(() => users.id),
   signedName: text("signed_name").notNull(),
+  signedDate: text("signed_date"),
   signedAt: timestamp("signed_at").defaultNow().notNull(),
 });
 

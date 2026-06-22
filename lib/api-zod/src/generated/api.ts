@@ -751,7 +751,8 @@ export const SignRepaymentGuaranteeParams = zod.object({
 })
 
 export const SignRepaymentGuaranteeBody = zod.object({
-  "signedName": zod.string()
+  "signedName": zod.string(),
+  "signedDate": zod.string().optional()
 })
 
 

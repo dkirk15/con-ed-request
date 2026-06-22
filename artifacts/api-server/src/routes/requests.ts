@@ -401,7 +401,7 @@ router.post("/requests/:requestId/cancel", requireAuth, async (req: Request, res
     }
 
     // Only cancellable before BO review
-    const cancellableStatuses = ["pending_manager", "manager_approved"];
+    const cancellableStatuses = ["pending_manager", "pending_bo"];
     if (!cancellableStatuses.includes(existing.status)) {
       res.status(400).json({ error: "Request cannot be cancelled at this stage" });
       return;
@@ -478,7 +478,7 @@ router.post(
       const [updated] = await db
         .update(conEdRequests)
         .set({
-          status: "manager_approved",
+          status: "pending_bo",
           managerId: user.id,
           managerApprovedAt: new Date(),
           updatedAt: new Date(),
@@ -554,7 +554,7 @@ router.post(
         .where(eq(conEdRequests.id, requestId))
         .limit(1);
 
-      if (!existing || existing.status !== "manager_approved") {
+      if (!existing || existing.status !== "pending_bo") {
         res.status(400).json({ error: "Request is not awaiting Business Office review" });
         return;
       }
@@ -572,7 +572,7 @@ router.post(
       const [updated] = await db
         .update(conEdRequests)
         .set({
-          status: "bo_approved",
+          status: "awaiting_receipt",
           boApproverId: req.dbUser!.id,
           boApprovedAt: new Date(),
           approvedTuition: approvedTuition != null ? String(approvedTuition) : null,
@@ -617,7 +617,7 @@ router.post(
           boDenialReason: parsed.data.reason,
           updatedAt: new Date(),
         })
-        .where(and(eq(conEdRequests.id, requestId), eq(conEdRequests.status, "manager_approved")))
+        .where(and(eq(conEdRequests.id, requestId), eq(conEdRequests.status, "pending_bo")))
         .returning();
 
       if (!updated) {
@@ -663,6 +663,7 @@ router.post(
           requestId,
           employeeId: req.dbUser!.id,
           signedName: parsed.data.signedName,
+          signedDate: parsed.data.signedDate ?? null,
         })
         .returning();
 
@@ -671,6 +672,7 @@ router.post(
         requestId: guarantee.requestId,
         employeeId: guarantee.employeeId,
         signedName: guarantee.signedName,
+        signedDate: guarantee.signedDate ?? null,
         signedAt: guarantee.signedAt.toISOString(),
       });
     } catch (err) {
@@ -766,7 +768,7 @@ router.post(
       }
 
       // Only allowed once BO has approved
-      if (existing.status !== "bo_approved") {
+      if (existing.status !== "awaiting_receipt") {
         res.status(400).json({ error: "Receipt can only be submitted once the Business Office has approved this request" });
         return;
       }
