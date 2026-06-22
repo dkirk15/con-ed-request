@@ -17,6 +17,17 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _impersonatedRole: string | null = null;
+
+/**
+ * Set a role to impersonate on every outgoing request.
+ * When set, an `X-Impersonate-Role` header is attached to every fetch call.
+ * The API server honours this header only for admin users.
+ * Pass `null` to clear impersonation.
+ */
+export function setImpersonatedRole(role: string | null): void {
+  _impersonatedRole = role;
+}
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -356,6 +367,11 @@ export async function customFetch<T = unknown>(
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
     }
+  }
+
+  // Attach impersonation header when an admin is testing as another role.
+  if (_impersonatedRole) {
+    headers.set("x-impersonate-role", _impersonatedRole);
   }
 
   const requestInfo = { method, url: resolveUrl(input) };

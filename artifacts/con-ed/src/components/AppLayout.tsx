@@ -17,6 +17,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Home, FileText, Users, UserCircle, LogOut } from "lucide-react";
 import logo from "@assets/oss-logo-white.png";
+import ImpersonationBanner from "@/components/ImpersonationBanner";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { data: user } = useGetMe();
@@ -113,6 +114,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <SidebarTrigger />
             <span className="ml-4 font-serif font-bold text-primary">OSS Con-Ed</span>
           </header>
+          <ImpersonationBanner />
           <div className="flex-1 overflow-auto p-4 md:p-8">
             <div className="max-w-6xl mx-auto">
               {children}

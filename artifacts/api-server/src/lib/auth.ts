@@ -65,6 +65,17 @@ export async function requireAuth(
     return;
   }
 
+  // Admin impersonation: honour X-Impersonate-Role for admins only
+  if (user.role === "admin") {
+    const requested = req.headers["x-impersonate-role"] as string | undefined;
+    const validRoles = ["employee", "manager", "business_office", "accounting", "admin"];
+    if (requested && validRoles.includes(requested)) {
+      req.dbUser = { ...user, role: requested as typeof user.role };
+      next();
+      return;
+    }
+  }
+
   req.dbUser = user;
   next();
 }

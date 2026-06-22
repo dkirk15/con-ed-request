@@ -20,6 +20,7 @@ import NotFound from "@/pages/not-found";
 
 import AppLayout from "@/components/AppLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ImpersonationProvider } from "@/context/ImpersonationContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -138,10 +139,12 @@ function App() {
     <WouterRouter base={basePath}>
       <ClerkWithRouter publishableKey={clerkPubKey}>
         <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <AppRoutes />
-            <Toaster />
-          </TooltipProvider>
+          <ImpersonationProvider>
+            <TooltipProvider>
+              <AppRoutes />
+              <Toaster />
+            </TooltipProvider>
+          </ImpersonationProvider>
         </QueryClientProvider>
       </ClerkWithRouter>
     </WouterRouter>
