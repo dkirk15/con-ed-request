@@ -289,7 +289,7 @@ function BODashboard() {
           <CardContent className="p-6">
             <div className="flex flex-col">
               <span className="text-amber-800 text-sm font-medium mb-1 flex items-center gap-1">
-                <Clock className="h-4 w-4" /> Pending BO Approval
+                <Clock className="h-4 w-4" /> Pending CE Approvals
               </span>
               <span className="text-3xl font-bold text-amber-900">{formatCurrency(totalPendingAmount || 0)}</span>
               <span className="text-amber-700/80 text-xs mt-1">Across {pendingApproval.length} requests</span>

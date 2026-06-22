@@ -145,7 +145,15 @@ router.get(
         .where(eq(conEdRequests.status, "awaiting_receipt"))
         .orderBy(conEdRequests.updatedAt);
 
-      const totalFundingApproved = awaitingRows.reduce(
+      // YTD = all requests that have passed BO approval (awaiting_receipt + receipt_submitted + reimbursed)
+      const approvedYtdRows = await db
+        .select({ totalApproved: conEdRequests.totalApproved })
+        .from(conEdRequests)
+        .where(
+          inArray(conEdRequests.status, ["awaiting_receipt", "receipt_submitted", "reimbursed"])
+        );
+
+      const totalFundingApproved = approvedYtdRows.reduce(
         (sum, r) => sum + parseFloat(r.totalApproved ?? "0"),
         0,
       );
