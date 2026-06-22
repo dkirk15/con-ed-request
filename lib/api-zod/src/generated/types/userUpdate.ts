@@ -15,4 +15,9 @@ export interface UserUpdate {
   managerId?: number | null;
   /** @nullable */
   hireDate?: Date | null;
+  /**
+     * Manual annual con-ed allocation override in dollars. Null clears the override.
+     * @nullable
+     */
+  conEdAllocation?: number | null;
 }

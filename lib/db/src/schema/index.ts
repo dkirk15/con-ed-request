@@ -47,6 +47,7 @@ export const users = pgTable("users", {
   clinicId: integer("clinic_id").references(() => clinics.id),
   managerId: integer("manager_id"),
   hireDate: date("hire_date"),
+  conEdAllocation: numeric("con_ed_allocation", { precision: 10, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

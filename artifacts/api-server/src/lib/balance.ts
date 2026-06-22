@@ -50,10 +50,13 @@ export function calcAnnualAllocation(hireDateStr: string | null) {
   return calcAnnualAllocationForYear(hireDateStr, new Date().getFullYear());
 }
 
-export async function getUserBalance(userId: number, hireDateStr: string | null) {
+export async function getUserBalance(userId: number, hireDateStr: string | null, conEdAllocation?: number | null) {
   const year = new Date().getFullYear();
   const yearStart = new Date(`${year}-01-01`);
-  const { allocation, isProrated, hireMonth } = calcAnnualAllocation(hireDateStr);
+  const calculated = calcAnnualAllocation(hireDateStr);
+  const allocation = conEdAllocation != null ? conEdAllocation : calculated.allocation;
+  const isProrated = conEdAllocation != null ? false : calculated.isProrated;
+  const hireMonth = conEdAllocation != null ? null : calculated.hireMonth;
 
   const approvedRows = await db
     .select({

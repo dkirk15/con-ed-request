@@ -47,6 +47,7 @@ async function formatUser(user: typeof users.$inferSelect) {
     managerId: user.managerId ?? null,
     managerName,
     hireDate: user.hireDate ?? null,
+    conEdAllocation: user.conEdAllocation != null ? parseFloat(user.conEdAllocation) : null,
     createdAt: user.createdAt.toISOString(),
   };
 }
@@ -88,7 +89,8 @@ router.get("/users/:userId/balance", requireAuth, async (req: Request, res: Resp
       return;
     }
 
-    const balance = await getUserBalance(targetUser.id, targetUser.hireDate);
+    const alloc = targetUser.conEdAllocation != null ? parseFloat(targetUser.conEdAllocation) : null;
+    const balance = await getUserBalance(targetUser.id, targetUser.hireDate, alloc);
     res.json(balance);
   } catch (err) {
     req.log.error({ err }, "getUserBalance error");
@@ -235,6 +237,9 @@ router.patch("/users/:userId", requireRole("admin"), async (req: Request, res: R
     }
     if (bodyParsed.data.hireDate !== undefined) {
       updates.hireDate = bodyParsed.data.hireDate ? (bodyParsed.data.hireDate as unknown as string) : null;
+    }
+    if (bodyParsed.data.conEdAllocation !== undefined) {
+      updates.conEdAllocation = bodyParsed.data.conEdAllocation != null ? String(bodyParsed.data.conEdAllocation) : null;
     }
 
     const [user] = await db

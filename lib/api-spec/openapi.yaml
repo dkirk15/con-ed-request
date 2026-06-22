@@ -716,6 +716,10 @@ components:
         hireDate:
           type: ["string", "null"]
           format: date
+        conEdAllocation:
+          type: ["number", "null"]
+          format: float
+          description: Manual annual con-ed allocation override in dollars. When set, replaces the hire-date-prorated calculation.
         createdAt:
           type: string
           format: date-time
@@ -754,6 +758,10 @@ components:
         hireDate:
           type: ["string", "null"]
           format: date
+        conEdAllocation:
+          type: ["number", "null"]
+          format: float
+          description: Manual annual con-ed allocation override in dollars. Null clears the override.
 
     # ─── Balance ───────────────────────────────────────────────────────────────
 

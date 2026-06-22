@@ -30,6 +30,7 @@ export const GetMeResponse = zod.object({
   "managerId": zod.number().nullish(),
   "managerName": zod.string().nullish(),
   "hireDate": zod.coerce.date().nullish(),
+  "conEdAllocation": zod.number().nullish().describe('Manual annual con-ed allocation override in dollars. When set, replaces the hire-date-prorated calculation.'),
   "createdAt": zod.coerce.date()
 })
 
@@ -53,6 +54,7 @@ export const ListUsersResponseItem = zod.object({
   "managerId": zod.number().nullish(),
   "managerName": zod.string().nullish(),
   "hireDate": zod.coerce.date().nullish(),
+  "conEdAllocation": zod.number().nullish().describe('Manual annual con-ed allocation override in dollars. When set, replaces the hire-date-prorated calculation.'),
   "createdAt": zod.coerce.date()
 })
 export const ListUsersResponse = zod.array(ListUsersResponseItem)
@@ -90,6 +92,7 @@ export const GetUserResponse = zod.object({
   "managerId": zod.number().nullish(),
   "managerName": zod.string().nullish(),
   "hireDate": zod.coerce.date().nullish(),
+  "conEdAllocation": zod.number().nullish().describe('Manual annual con-ed allocation override in dollars. When set, replaces the hire-date-prorated calculation.'),
   "createdAt": zod.coerce.date()
 })
 
@@ -105,7 +108,8 @@ export const UpdateUserBody = zod.object({
   "role": zod.enum(['employee', 'manager', 'business_office', 'accounting', 'admin']).optional(),
   "clinicId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
-  "hireDate": zod.coerce.date().nullish()
+  "hireDate": zod.coerce.date().nullish(),
+  "conEdAllocation": zod.number().nullish().describe('Manual annual con-ed allocation override in dollars. Null clears the override.')
 })
 
 export const UpdateUserResponse = zod.object({
@@ -119,6 +123,7 @@ export const UpdateUserResponse = zod.object({
   "managerId": zod.number().nullish(),
   "managerName": zod.string().nullish(),
   "hireDate": zod.coerce.date().nullish(),
+  "conEdAllocation": zod.number().nullish().describe('Manual annual con-ed allocation override in dollars. When set, replaces the hire-date-prorated calculation.'),
   "createdAt": zod.coerce.date()
 })
 
@@ -1361,6 +1366,7 @@ export const GetAdminDashboardResponse = zod.object({
   "managerId": zod.number().nullish(),
   "managerName": zod.string().nullish(),
   "hireDate": zod.coerce.date().nullish(),
+  "conEdAllocation": zod.number().nullish().describe('Manual annual con-ed allocation override in dollars. When set, replaces the hire-date-prorated calculation.'),
   "createdAt": zod.coerce.date()
 })),
   "pendingRoleAssignment": zod.array(zod.object({
@@ -1374,6 +1380,7 @@ export const GetAdminDashboardResponse = zod.object({
   "managerId": zod.number().nullish(),
   "managerName": zod.string().nullish(),
   "hireDate": zod.coerce.date().nullish(),
+  "conEdAllocation": zod.number().nullish().describe('Manual annual con-ed allocation override in dollars. When set, replaces the hire-date-prorated calculation.'),
   "createdAt": zod.coerce.date()
 })).optional()
 })

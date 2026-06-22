@@ -35,6 +35,7 @@ const formSchema = z.object({
   clinicId: z.coerce.number().optional().nullable(),
   managerId: z.coerce.number().optional().nullable(),
   hireDate: z.string().optional().nullable(),
+  conEdAllocation: z.coerce.number().positive().optional().nullable(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -62,6 +63,7 @@ export default function UserDetailPage() {
       clinicId: null,
       managerId: null,
       hireDate: null,
+      conEdAllocation: null,
     },
   });
 
@@ -75,6 +77,7 @@ export default function UserDetailPage() {
         clinicId: user.clinicId,
         managerId: user.managerId,
         hireDate: user.hireDate ? user.hireDate.substring(0, 10) : null,
+        conEdAllocation: user.conEdAllocation ?? null,
       });
     }
   }, [user, id, form]);
@@ -88,6 +91,7 @@ export default function UserDetailPage() {
           clinicId: data.clinicId || null,
           managerId: data.managerId || null,
           hireDate: data.hireDate || null,
+          conEdAllocation: data.conEdAllocation ?? null,
         },
       },
       {
@@ -226,6 +230,32 @@ export default function UserDetailPage() {
                       <Input type="date" {...field} value={field.value || ""} />
                     </FormControl>
                     <FormDescription>Used to calculate prorated annual CEU allocations</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="conEdAllocation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Annual Con-Ed Allocation</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">$</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="pl-7"
+                          placeholder="Leave blank to use default"
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value === "" ? null : parseFloat(e.target.value))}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormDescription>Override the calculated allocation. Leave blank to use the default (hire-date prorated $2,000/yr).</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

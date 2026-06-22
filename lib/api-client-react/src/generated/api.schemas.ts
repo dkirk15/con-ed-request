@@ -45,6 +45,11 @@ export interface User {
   managerName?: string | null;
   /** @nullable */
   hireDate?: string | null;
+  /**
+     * Manual annual con-ed allocation override in dollars. When set, replaces the hire-date-prorated calculation.
+     * @nullable
+     */
+  conEdAllocation?: number | null;
   createdAt: string;
 }
 
@@ -91,6 +96,11 @@ export interface UserUpdate {
   managerId?: number | null;
   /** @nullable */
   hireDate?: string | null;
+  /**
+     * Manual annual con-ed allocation override in dollars. Null clears the override.
+     * @nullable
+     */
+  conEdAllocation?: number | null;
 }
 
 export interface BalanceInfo {
