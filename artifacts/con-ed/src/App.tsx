@@ -1,10 +1,11 @@
 import { Switch, Route, Redirect, useLocation, Router as WouterRouter } from "wouter";
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ClerkProvider } from "@clerk/clerk-react";
+import { ClerkProvider, useAuth } from "@clerk/clerk-react";
 import { publishableKeyFromHost } from "@clerk/react/internal";
+import { setAuthTokenGetter } from "@workspace/api-client-react";
 
 import SignInPage from "@/pages/SignInPage";
 import SignUpPage from "@/pages/SignUpPage";
@@ -86,6 +87,19 @@ function AppRoutes() {
   );
 }
 
+/**
+ * Registers Clerk's getToken() as the Bearer token provider for every API
+ * fetch call. Must live inside <ClerkProvider>.
+ */
+function ClerkTokenSync() {
+  const { getToken } = useAuth();
+  useEffect(() => {
+    setAuthTokenGetter(() => getToken());
+    return () => setAuthTokenGetter(null);
+  }, [getToken]);
+  return null;
+}
+
 function ClerkWithRouter({
   publishableKey,
   children,
@@ -104,6 +118,7 @@ function ClerkWithRouter({
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >
+      <ClerkTokenSync />
       {children}
     </ClerkProvider>
   );

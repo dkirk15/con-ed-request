@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -25,6 +26,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 function AuthenticatedUserWrapper({ children }: { children: ReactNode }) {
   const { data: user, isLoading, error } = useGetMe();
   const { signOut } = useClerk();
+  const queryClient = useQueryClient();
 
   const is401 = (error as any)?.status === 401;
 
@@ -46,7 +48,10 @@ function AuthenticatedUserWrapper({ children }: { children: ReactNode }) {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => signOut({ redirectUrl: window.location.href })}
+              onClick={() => {
+                queryClient.clear();
+                signOut();
+              }}
             >
               Sign in again
             </Button>
