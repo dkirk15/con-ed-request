@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "OSS Con-Ed Portal"
+version = "1.0.0"
+id = "artifacts/con-ed"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24374
+
+[services.development]
+run = "pnpm --filter @workspace/con-ed run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/con-ed", "run", "build" ]
+publicDir = "artifacts/con-ed/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24374"
+BASE_PATH = "/"

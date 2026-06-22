@@ -1,22 +1,35 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: OSS Continuing Education Portal API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: users
+    description: User management
+  - name: clinics
+    description: Clinic management
+  - name: requests
+    description: Con-ed request workflow
+  - name: receipts
+    description: Receipt uploads
+  - name: reimbursements
+    description: Reimbursement tracking
+  - name: dashboard
+    description: Aggregated dashboard data
+  - name: Storage
+    description: Object storage upload and serving endpoints.
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +37,598 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── Users ───────────────────────────────────────────────────────────────────
+
+  /users/me:
+    get:
+      operationId: getMe
+      tags: [users]
+      summary: Get current authenticated user profile
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users (admin only)
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [employee, manager, business_office, accounting, admin]
+        - name: clinicId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create or provision a user (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{userId}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get a specific user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update a user (admin only - role, clinic, manager assignment)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  # ─── Clinics ─────────────────────────────────────────────────────────────────
+
+  /clinics:
+    get:
+      operationId: listClinics
+      tags: [clinics]
+      summary: List all clinics
+      responses:
+        "200":
+          description: List of clinics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Clinic"
+
+  # ─── Con-Ed Requests ─────────────────────────────────────────────────────────
+
+  /requests:
+    get:
+      operationId: listRequests
+      tags: [requests]
+      summary: List con-ed requests (scoped by role)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: employeeId
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: List of requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConEdRequest"
+    post:
+      operationId: createRequest
+      tags: [requests]
+      summary: Submit a new con-ed request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConEdRequestInput"
+      responses:
+        "201":
+          description: Created request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConEdRequest"
+
+  /requests/{requestId}:
+    get:
+      operationId: getRequest
+      tags: [requests]
+      summary: Get a single con-ed request
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Request detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConEdRequest"
+    patch:
+      operationId: updateRequest
+      tags: [requests]
+      summary: Update a draft request before submission
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConEdRequestUpdate"
+      responses:
+        "200":
+          description: Updated request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConEdRequest"
+
+  /requests/{requestId}/cancel:
+    post:
+      operationId: cancelRequest
+      tags: [requests]
+      summary: Cancel a pending request (employee only)
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Cancelled request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConEdRequest"
+
+  /requests/{requestId}/manager-approve:
+    post:
+      operationId: managerApproveRequest
+      tags: [requests]
+      summary: Manager approves a request
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Approved request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConEdRequest"
+
+  /requests/{requestId}/manager-deny:
+    post:
+      operationId: managerDenyRequest
+      tags: [requests]
+      summary: Manager denies a request
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DenialInput"
+      responses:
+        "200":
+          description: Denied request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConEdRequest"
+
+  /requests/{requestId}/bo-approve:
+    post:
+      operationId: boApproveRequest
+      tags: [requests]
+      summary: Business office approves and sets funding amounts
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BOApprovalInput"
+      responses:
+        "200":
+          description: BO approved request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConEdRequest"
+
+  /requests/{requestId}/bo-deny:
+    post:
+      operationId: boDenyRequest
+      tags: [requests]
+      summary: Business office denies a request
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DenialInput"
+      responses:
+        "200":
+          description: BO denied request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConEdRequest"
+
+  /requests/{requestId}/repayment-guarantee:
+    post:
+      operationId: signRepaymentGuarantee
+      tags: [requests]
+      summary: Employee digitally signs repayment guarantee (when over budget)
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RepaymentGuaranteeInput"
+      responses:
+        "201":
+          description: Signed repayment guarantee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RepaymentGuarantee"
+
+  # ─── Receipts ────────────────────────────────────────────────────────────────
+
+  /requests/{requestId}/receipts:
+    get:
+      operationId: listReceipts
+      tags: [receipts]
+      summary: Get receipts for a request
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of receipts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Receipt"
+    post:
+      operationId: submitReceipt
+      tags: [receipts]
+      summary: Submit a receipt for an approved request
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReceiptInput"
+      responses:
+        "201":
+          description: Receipt submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+
+  # ─── Reimbursements ──────────────────────────────────────────────────────────
+
+  /requests/{requestId}/reimburse:
+    post:
+      operationId: markReimbursed
+      tags: [reimbursements]
+      summary: Accounting marks a request as reimbursed with paycheck date
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReimbursementInput"
+      responses:
+        "201":
+          description: Reimbursement recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reimbursement"
+
+  # ─── Dashboard / Aggregations ────────────────────────────────────────────────
+
+  /dashboard/employee:
+    get:
+      operationId: getEmployeeDashboard
+      tags: [dashboard]
+      summary: Employee dashboard summary (balance + request counts)
+      responses:
+        "200":
+          description: Employee dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeDashboard"
+
+  /dashboard/manager:
+    get:
+      operationId: getManagerDashboard
+      tags: [dashboard]
+      summary: Manager dashboard summary (clinic overview + pending requests)
+      responses:
+        "200":
+          description: Manager dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManagerDashboard"
+
+  /dashboard/business-office:
+    get:
+      operationId: getBoDashboard
+      tags: [dashboard]
+      summary: Business office dashboard (pending approval queue + awaiting receipt)
+      responses:
+        "200":
+          description: Business office dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BODashboard"
+
+  /dashboard/accounting:
+    get:
+      operationId: getAccountingDashboard
+      tags: [dashboard]
+      summary: Accounting dashboard (submitted receipts pending reimbursement)
+      responses:
+        "200":
+          description: Accounting dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountingDashboard"
+
+  /dashboard/admin:
+    get:
+      operationId: getAdminDashboard
+      tags: [dashboard]
+      summary: Admin dashboard (user counts by role, recent signups)
+      responses:
+        "200":
+          description: Admin dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+
+  # ─── Employee Balance ─────────────────────────────────────────────────────────
+
+  /users/{userId}/balance:
+    get:
+      operationId: getUserBalance
+      tags: [users]
+      summary: Get a user's current con-ed balance for this year
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Balance info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BalanceInfo"
+
+  # ─── Object Storage ──────────────────────────────────────────────────────────
+
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400":
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Failed to generate upload URL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /storage/public-objects/{filePath}:
+    get:
+      tags: [Storage]
+      operationId: getPublicObject
+      summary: Serve a public asset
+      parameters:
+        - name: filePath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object content
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serve an uploaded object (receipt file)
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object content
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +639,555 @@ components:
       required:
         - status
 
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    # ─── Clinic ────────────────────────────────────────────────────────────────
+
+    Clinic:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    # ─── User ──────────────────────────────────────────────────────────────────
+
+    User:
+      type: object
+      required: [id, clerkId, name, email, role, createdAt]
+      properties:
+        id:
+          type: integer
+        clerkId:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [employee, manager, business_office, accounting, admin]
+        clinicId:
+          type: ["integer", "null"]
+        clinicName:
+          type: ["string", "null"]
+        managerId:
+          type: ["integer", "null"]
+        managerName:
+          type: ["string", "null"]
+        hireDate:
+          type: ["string", "null"]
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+
+    UserInput:
+      type: object
+      required: [clerkId, name, email, role]
+      properties:
+        clerkId:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [employee, manager, business_office, accounting, admin]
+        clinicId:
+          type: ["integer", "null"]
+        managerId:
+          type: ["integer", "null"]
+        hireDate:
+          type: ["string", "null"]
+          format: date
+
+    UserUpdate:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [employee, manager, business_office, accounting, admin]
+        clinicId:
+          type: ["integer", "null"]
+        managerId:
+          type: ["integer", "null"]
+        hireDate:
+          type: ["string", "null"]
+          format: date
+
+    # ─── Balance ───────────────────────────────────────────────────────────────
+
+    BalanceInfo:
+      type: object
+      required: [userId, annualAllocation, usedAmount, remainingAmount, year, isProrated]
+      properties:
+        userId:
+          type: integer
+        annualAllocation:
+          type: number
+          format: float
+        usedAmount:
+          type: number
+          format: float
+        remainingAmount:
+          type: number
+          format: float
+        pendingAmount:
+          type: number
+          format: float
+        year:
+          type: integer
+        isProrated:
+          type: boolean
+        hireMonth:
+          type: ["integer", "null"]
+
+    # ─── Con-Ed Request ────────────────────────────────────────────────────────
+
+    ConEdRequest:
+      type: object
+      required: [id, employeeId, status, courseNames, totalRequested, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        employeeName:
+          type: ["string", "null"]
+        employeeEmail:
+          type: ["string", "null"]
+        clinicName:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum:
+            - pending_manager
+            - manager_approved
+            - manager_denied
+            - pending_bo
+            - bo_approved
+            - bo_denied
+            - awaiting_receipt
+            - receipt_submitted
+            - reimbursed
+            - cancelled
+        courseNames:
+          type: string
+        courseDates:
+          type: ["string", "null"]
+        ceuCount:
+          type: ["number", "null"]
+          format: float
+        location:
+          type: ["string", "null"]
+        tuition:
+          type: ["number", "null"]
+          format: float
+        lodging:
+          type: ["number", "null"]
+          format: float
+        airfare:
+          type: ["number", "null"]
+          format: float
+        rentalCar:
+          type: ["number", "null"]
+          format: float
+        parking:
+          type: ["number", "null"]
+          format: float
+        totalRequested:
+          type: number
+          format: float
+        approvedTuition:
+          type: ["number", "null"]
+          format: float
+        approvedLodging:
+          type: ["number", "null"]
+          format: float
+        approvedAirfare:
+          type: ["number", "null"]
+          format: float
+        approvedRentalCar:
+          type: ["number", "null"]
+          format: float
+        approvedParking:
+          type: ["number", "null"]
+          format: float
+        approvedOther:
+          type: ["number", "null"]
+          format: float
+        totalApproved:
+          type: ["number", "null"]
+          format: float
+        managerId:
+          type: ["integer", "null"]
+        managerName:
+          type: ["string", "null"]
+        managerApprovedAt:
+          type: ["string", "null"]
+          format: date-time
+        managerDeniedAt:
+          type: ["string", "null"]
+          format: date-time
+        managerDenialReason:
+          type: ["string", "null"]
+        boApproverId:
+          type: ["integer", "null"]
+        boApproverName:
+          type: ["string", "null"]
+        boApprovedAt:
+          type: ["string", "null"]
+          format: date-time
+        boDeniedAt:
+          type: ["string", "null"]
+          format: date-time
+        boDenialReason:
+          type: ["string", "null"]
+        remainingBalanceAfter:
+          type: ["number", "null"]
+          format: float
+        requiresRepaymentGuarantee:
+          type: boolean
+        repaymentGuarantee:
+          $ref: "#/components/schemas/RepaymentGuarantee"
+          nullable: true
+        receipts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Receipt"
+        reimbursement:
+          $ref: "#/components/schemas/Reimbursement"
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ConEdRequestInput:
+      type: object
+      required: [courseNames, totalRequested]
+      properties:
+        courseNames:
+          type: string
+        courseDates:
+          type: ["string", "null"]
+        ceuCount:
+          type: ["number", "null"]
+          format: float
+        location:
+          type: ["string", "null"]
+        tuition:
+          type: ["number", "null"]
+          format: float
+        lodging:
+          type: ["number", "null"]
+          format: float
+        airfare:
+          type: ["number", "null"]
+          format: float
+        rentalCar:
+          type: ["number", "null"]
+          format: float
+        parking:
+          type: ["number", "null"]
+          format: float
+        totalRequested:
+          type: number
+          format: float
+
+    ConEdRequestUpdate:
+      type: object
+      properties:
+        courseNames:
+          type: string
+        courseDates:
+          type: ["string", "null"]
+        ceuCount:
+          type: ["number", "null"]
+          format: float
+        location:
+          type: ["string", "null"]
+        tuition:
+          type: ["number", "null"]
+          format: float
+        lodging:
+          type: ["number", "null"]
+          format: float
+        airfare:
+          type: ["number", "null"]
+          format: float
+        rentalCar:
+          type: ["number", "null"]
+          format: float
+        parking:
+          type: ["number", "null"]
+          format: float
+        totalRequested:
+          type: number
+          format: float
+
+    DenialInput:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+
+    BOApprovalInput:
+      type: object
+      required: [totalApproved]
+      properties:
+        approvedTuition:
+          type: ["number", "null"]
+          format: float
+        approvedLodging:
+          type: ["number", "null"]
+          format: float
+        approvedAirfare:
+          type: ["number", "null"]
+          format: float
+        approvedRentalCar:
+          type: ["number", "null"]
+          format: float
+        approvedParking:
+          type: ["number", "null"]
+          format: float
+        approvedOther:
+          type: ["number", "null"]
+          format: float
+        totalApproved:
+          type: number
+          format: float
+
+    # ─── Repayment Guarantee ───────────────────────────────────────────────────
+
+    RepaymentGuarantee:
+      type: object
+      required: [id, requestId, employeeId, signedName, signedAt]
+      properties:
+        id:
+          type: integer
+        requestId:
+          type: integer
+        employeeId:
+          type: integer
+        signedName:
+          type: string
+        signedAt:
+          type: string
+          format: date-time
+
+    RepaymentGuaranteeInput:
+      type: object
+      required: [signedName]
+      properties:
+        signedName:
+          type: string
+
+    # ─── Receipt ───────────────────────────────────────────────────────────────
+
+    Receipt:
+      type: object
+      required: [id, requestId, fileUrl, uploadedAt]
+      properties:
+        id:
+          type: integer
+        requestId:
+          type: integer
+        fileUrl:
+          type: string
+        fileName:
+          type: ["string", "null"]
+        uploadedAt:
+          type: string
+          format: date-time
+
+    ReceiptInput:
+      type: object
+      required: [fileUrl]
+      properties:
+        fileUrl:
+          type: string
+        fileName:
+          type: ["string", "null"]
+
+    # ─── Reimbursement ────────────────────────────────────────────────────────
+
+    Reimbursement:
+      type: object
+      required: [id, requestId, paycheckDate, markedAt]
+      properties:
+        id:
+          type: integer
+        requestId:
+          type: integer
+        paycheckDate:
+          type: string
+          format: date
+        markedById:
+          type: ["integer", "null"]
+        markedByName:
+          type: ["string", "null"]
+        markedAt:
+          type: string
+          format: date-time
+
+    ReimbursementInput:
+      type: object
+      required: [paycheckDate]
+      properties:
+        paycheckDate:
+          type: string
+          format: date
+
+    # ─── Dashboards ───────────────────────────────────────────────────────────
+
+    EmployeeDashboard:
+      type: object
+      required: [balance, requestCounts, recentRequests]
+      properties:
+        balance:
+          $ref: "#/components/schemas/BalanceInfo"
+        requestCounts:
+          type: object
+          properties:
+            pending:
+              type: integer
+            approved:
+              type: integer
+            reimbursed:
+              type: integer
+            cancelled:
+              type: integer
+          required: [pending, approved, reimbursed, cancelled]
+        recentRequests:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConEdRequest"
+
+    ManagerDashboard:
+      type: object
+      required: [myBalance, pendingClinicRequests, clinicEmployeeCount, requestCounts]
+      properties:
+        myBalance:
+          $ref: "#/components/schemas/BalanceInfo"
+        pendingClinicRequests:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConEdRequest"
+        clinicEmployeeCount:
+          type: integer
+        requestCounts:
+          type: object
+          properties:
+            pendingMyApproval:
+              type: integer
+            approvedThisYear:
+              type: integer
+            totalClinicSpend:
+              type: number
+              format: float
+          required: [pendingMyApproval, approvedThisYear, totalClinicSpend]
+
+    BODashboard:
+      type: object
+      required: [pendingApproval, approvedAwaitingReceipt, totalFundingApproved]
+      properties:
+        pendingApproval:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConEdRequest"
+        approvedAwaitingReceipt:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConEdRequest"
+        totalFundingApproved:
+          type: number
+          format: float
+        totalPendingAmount:
+          type: number
+          format: float
+
+    AccountingDashboard:
+      type: object
+      required: [pendingReimbursement, recentlyReimbursed, totalPendingAmount]
+      properties:
+        pendingReimbursement:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConEdRequest"
+        recentlyReimbursed:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConEdRequest"
+        totalPendingAmount:
+          type: number
+          format: float
+
+    AdminDashboard:
+      type: object
+      required: [usersByRole, recentUsers, totalUsers]
+      properties:
+        totalUsers:
+          type: integer
+        usersByRole:
+          type: object
+          properties:
+            employee:
+              type: integer
+            manager:
+              type: integer
+            business_office:
+              type: integer
+            accounting:
+              type: integer
+            admin:
+              type: integer
+          required: [employee, manager, business_office, accounting, admin]
+        recentUsers:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        pendingRoleAssignment:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+
+    # ─── Object Storage ────────────────────────────────────────────────────────
+
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+          format: uri
+        objectPath:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/UploadUrlRequest"

@@ -1,0 +1,2 @@
+- [OSS Con-Ed clerk package](clerk-package.md) — design subagent uses @clerk/clerk-react (not @clerk/react); install both in artifact
+- [OSS Con-Ed balance logic](balance-logic.md) — $2K/yr prorated first year: allocation = 2000×(13-hireMonth)/12

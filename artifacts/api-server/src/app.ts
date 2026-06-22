@@ -1,6 +1,13 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
+import { clerkMiddleware } from "@clerk/express";
+import {
+  CLERK_PROXY_PATH,
+  clerkProxyMiddleware,
+  getClerkProxyHost,
+} from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -25,9 +32,29 @@ app.use(
     },
   }),
 );
-app.use(cors());
+
+// Clerk proxy MUST come before express.json()
+app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+
+app.use(cors({ credentials: true, origin: true }));
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Clerk middleware — attaches auth state to all requests
+app.use(
+  clerkMiddleware({
+    ...(process.env.NODE_ENV === "production"
+      ? {
+          proxyUrl: (req: express.Request) => {
+            const protocol = req.headers["x-forwarded-proto"] || "https";
+            const host = getClerkProxyHost(req) || "";
+            return `${protocol}://${host}${CLERK_PROXY_PATH}`;
+          },
+        }
+      : {}),
+  }),
+);
 
 app.use("/api", router);
 
