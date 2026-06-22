@@ -31,9 +31,12 @@ function ProtectedRouter() {
     <AppLayout>
       <Switch>
         <Route path="/dashboard" component={DashboardPage} />
+        <Route path="/requests/new" component={NewRequestPage} />
+        <Route path="/requests/:id" component={RequestDetailPage} />
         <Route path="/requests" component={RequestsPage} />
+        <Route path="/users/:id" component={UserDetailPage} />
+        <Route path="/users" component={UsersPage} />
         <Route path="/account" component={AccountPage} />
-        {/* TODO: Add NewRequestPage, RequestDetailPage, UsersPage, UserDetailPage */}
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

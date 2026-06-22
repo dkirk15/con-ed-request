@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { conEdRequests } from "@workspace/db/schema";
-import { eq, and, or, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 
 const ANNUAL_BUDGET = 2000;
 
@@ -34,8 +34,8 @@ export async function getUserBalance(userId: number, hireDateStr: string | null)
   const yearStart = new Date(`${year}-01-01`);
   const { allocation, isProrated, hireMonth } = calcAnnualAllocation(hireDateStr);
 
-  // Get all non-cancelled, non-denied requests for this year
-  const rows = await db
+  // "Used" = any BO-approved or further advanced status (totalApproved counts against budget)
+  const usedRows = await db
     .select({
       status: conEdRequests.status,
       totalRequested: conEdRequests.totalRequested,
@@ -46,49 +46,34 @@ export async function getUserBalance(userId: number, hireDateStr: string | null)
       and(
         eq(conEdRequests.employeeId, userId),
         sql`${conEdRequests.createdAt} >= ${yearStart}`,
-        or(
-          inArray(conEdRequests.status, [
-            "bo_approved",
-            "awaiting_receipt",
-            "receipt_submitted",
-            "reimbursed",
-          ]),
-        ),
+        inArray(conEdRequests.status, [
+          "bo_approved",
+          "awaiting_receipt",
+          "receipt_submitted",
+          "reimbursed",
+        ]),
       ),
     );
 
-  let usedAmount = 0;
-  let pendingAmount = 0;
-
-  for (const row of rows) {
-    const approved = parseFloat(row.totalApproved ?? "0");
-    const requested = parseFloat(row.totalRequested ?? "0");
-
-    if (
-      row.status === "reimbursed" ||
-      row.status === "receipt_submitted" ||
-      row.status === "awaiting_receipt"
-    ) {
-      usedAmount += approved || requested;
-    } else if (row.status === "bo_approved") {
-      pendingAmount += approved || requested;
-    }
-  }
-
-  // Also count pending_manager and manager_approved as pending
+  // "Pending" = still in manager/BO approval pipeline
   const pendingRows = await db
-    .select({
-      totalRequested: conEdRequests.totalRequested,
-    })
+    .select({ totalRequested: conEdRequests.totalRequested })
     .from(conEdRequests)
     .where(
       and(
         eq(conEdRequests.employeeId, userId),
         sql`${conEdRequests.createdAt} >= ${yearStart}`,
-        inArray(conEdRequests.status, ["pending_manager", "manager_approved", "pending_bo"]),
+        inArray(conEdRequests.status, ["pending_manager", "pending_bo"]),
       ),
     );
 
+  let usedAmount = 0;
+  for (const row of usedRows) {
+    // Once BO approves, totalApproved is set; fall back to requested if not yet set
+    usedAmount += parseFloat(row.totalApproved ?? row.totalRequested ?? "0");
+  }
+
+  let pendingAmount = 0;
   for (const row of pendingRows) {
     pendingAmount += parseFloat(row.totalRequested ?? "0");
   }

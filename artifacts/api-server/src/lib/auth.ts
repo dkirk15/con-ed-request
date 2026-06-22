@@ -3,6 +3,8 @@ import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { users } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
+import { createClerkClient } from "@clerk/clerk-sdk-node";
+const clerkSdk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 export type Role =
   | "employee"
@@ -19,6 +21,33 @@ declare global {
   }
 }
 
+async function resolveOrProvisionUser(clerkId: string): Promise<typeof users.$inferSelect | null> {
+  const [existing] = await db
+    .select()
+    .from(users)
+    .where(eq(users.clerkId, clerkId))
+    .limit(1);
+
+  if (existing) return existing;
+
+  // Auto-provision: fetch name/email from Clerk and create a record with role=employee
+  try {
+    const clerkUser = await clerkSdk.users.getUser(clerkId);
+    const email =
+      clerkUser.emailAddresses?.[0]?.emailAddress ?? `${clerkId}@unknown.invalid`;
+    const name =
+      [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || email;
+
+    const [created] = await db
+      .insert(users)
+      .values({ clerkId, name, email, role: "employee" })
+      .returning();
+    return created;
+  } catch {
+    return null;
+  }
+}
+
 export async function requireAuth(
   req: Request,
   res: Response,
@@ -30,16 +59,9 @@ export async function requireAuth(
     return;
   }
 
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.clerkId, clerkId))
-    .limit(1);
-
+  const user = await resolveOrProvisionUser(clerkId);
   if (!user) {
-    // Auto-provision a basic user record if not yet in DB
-    // The admin can later assign a role/clinic
-    res.status(403).json({ error: "User not provisioned. Contact your administrator." });
+    res.status(403).json({ error: "Unable to provision user. Contact your administrator." });
     return;
   }
 

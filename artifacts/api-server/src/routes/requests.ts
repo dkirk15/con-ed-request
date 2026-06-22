@@ -286,6 +286,8 @@ router.post("/requests", requireAuth, async (req: Request, res: Response) => {
 router.get("/requests/:requestId", requireAuth, async (req: Request, res: Response) => {
   try {
     const requestId = parseInt(req.params.requestId);
+    const user = req.dbUser!;
+
     const [row] = await db
       .select()
       .from(conEdRequests)
@@ -296,6 +298,26 @@ router.get("/requests/:requestId", requireAuth, async (req: Request, res: Respon
       res.status(404).json({ error: "Request not found" });
       return;
     }
+
+    // Scope: employee can only view own requests
+    if (user.role === "employee" && row.employeeId !== user.id) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    // Manager can only view requests from their clinic
+    if (user.role === "manager") {
+      const [emp] = await db
+        .select({ clinicId: users.clinicId })
+        .from(users)
+        .where(eq(users.id, row.employeeId))
+        .limit(1);
+      if (!emp || emp.clinicId !== user.clinicId) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+    }
+    // business_office, accounting, admin can view all
 
     res.json(await formatRequest(row));
   } catch (err) {
@@ -379,6 +401,30 @@ router.post("/requests/:requestId/cancel", requireAuth, async (req: Request, res
   }
 });
 
+async function verifyManagerClinicAccess(
+  managerId: number,
+  managerClinicId: number | null,
+  requestId: number,
+): Promise<{ ok: boolean; row?: typeof conEdRequests.$inferSelect }> {
+  const [row] = await db
+    .select()
+    .from(conEdRequests)
+    .where(and(eq(conEdRequests.id, requestId), eq(conEdRequests.status, "pending_manager")))
+    .limit(1);
+  if (!row) return { ok: false };
+
+  // Admins bypass clinic check; managers must match clinic
+  if (managerClinicId !== null) {
+    const [emp] = await db
+      .select({ clinicId: users.clinicId })
+      .from(users)
+      .where(eq(users.id, row.employeeId))
+      .limit(1);
+    if (!emp || emp.clinicId !== managerClinicId) return { ok: false };
+  }
+  return { ok: true, row };
+}
+
 // POST /api/requests/:requestId/manager-approve
 router.post(
   "/requests/:requestId/manager-approve",
@@ -386,22 +432,25 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const requestId = parseInt(req.params.requestId);
+      const user = req.dbUser!;
+      const clinicId = user.role === "manager" ? user.clinicId : null;
+
+      const { ok } = await verifyManagerClinicAccess(user.id, clinicId, requestId);
+      if (!ok) {
+        res.status(400).json({ error: "Request not found or not eligible for manager approval" });
+        return;
+      }
 
       const [updated] = await db
         .update(conEdRequests)
         .set({
           status: "pending_bo",
-          managerId: req.dbUser!.id,
+          managerId: user.id,
           managerApprovedAt: new Date(),
           updatedAt: new Date(),
         })
-        .where(and(eq(conEdRequests.id, requestId), eq(conEdRequests.status, "pending_manager")))
+        .where(eq(conEdRequests.id, requestId))
         .returning();
-
-      if (!updated) {
-        res.status(400).json({ error: "Request not in pending_manager status" });
-        return;
-      }
 
       res.json(await formatRequest(updated));
     } catch (err) {
@@ -418,9 +467,17 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const requestId = parseInt(req.params.requestId);
+      const user = req.dbUser!;
       const parsed = ManagerDenyRequestBody.safeParse(req.body);
       if (!parsed.success) {
         res.status(400).json({ error: "Denial reason required" });
+        return;
+      }
+
+      const clinicId = user.role === "manager" ? user.clinicId : null;
+      const { ok } = await verifyManagerClinicAccess(user.id, clinicId, requestId);
+      if (!ok) {
+        res.status(400).json({ error: "Request not found or not eligible for denial" });
         return;
       }
 
@@ -428,18 +485,13 @@ router.post(
         .update(conEdRequests)
         .set({
           status: "manager_denied",
-          managerId: req.dbUser!.id,
+          managerId: user.id,
           managerDeniedAt: new Date(),
           managerDenialReason: parsed.data.reason,
           updatedAt: new Date(),
         })
-        .where(and(eq(conEdRequests.id, requestId), eq(conEdRequests.status, "pending_manager")))
+        .where(eq(conEdRequests.id, requestId))
         .returning();
-
-      if (!updated) {
-        res.status(400).json({ error: "Request not in pending_manager status" });
-        return;
-      }
 
       res.json(await formatRequest(updated));
     } catch (err) {

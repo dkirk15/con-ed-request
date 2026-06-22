@@ -14,7 +14,7 @@ import { Link } from "wouter";
 import { formatCurrency, formatDate } from "@/lib/constants";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/hooks/use-toast";
-import { customFetch } from "@workspace/api-client-react/src/custom-fetch";
+import { customFetch } from "@workspace/api-client-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
