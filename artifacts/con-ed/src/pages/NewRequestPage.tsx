@@ -39,7 +39,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface BalanceData {
-  annualBudget: number;
+  annualAllocation: number;
   usedAmount: number;
   pendingAmount: number;
   remainingAmount: number;
@@ -179,7 +179,7 @@ export default function NewRequestPage() {
         <div className="flex items-center gap-6 bg-slate-50 rounded-lg border border-slate-200 px-5 py-3 text-sm">
           <span className="text-slate-500">Annual budget:</span>
           <span className="font-semibold">
-            {formatCurrency(balanceData.annualBudget)}
+            {formatCurrency(balanceData.annualAllocation)}
           </span>
           <span className="text-slate-500">Used / Pending:</span>
           <span className="font-semibold">

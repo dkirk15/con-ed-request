@@ -3,8 +3,6 @@
  * Run with: pnpm --filter @workspace/db run seed
  *
  * The script is idempotent — it will not insert duplicate clinics.
- * The admin user record requires a Clerk ID; set ADMIN_CLERK_ID env var before running
- * or manually update the record after the first admin signs in.
  */
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
@@ -12,31 +10,31 @@ import { clinics, users } from "./schema/index.js";
 import { eq } from "drizzle-orm";
 
 const CLINIC_NAMES = [
-  "Bellevue – Main Clinic",
-  "Bellevue – Eastgate",
-  "Bothell",
-  "Edmonds",
-  "Everett",
+  "Auburn",
+  "Bonney Lake",
+  "Business Office",
+  "Covington",
+  "Enumclaw",
   "Federal Way",
+  "Gig Harbor – Kimball Drive",
+  "Gig Harbor – YMCA",
+  "Graham",
   "Issaquah",
-  "Kenmore",
   "Kent",
-  "Kirkland",
-  "Lynnwood",
-  "Maple Valley",
-  "Mill Creek",
+  "Lacey",
+  "Lakewood",
   "Monroe",
   "Mountlake Terrace",
   "Mukilteo",
-  "Newcastle",
-  "Olympia",
+  "Olympia – Eastside",
+  "Olympia – McPhee",
+  "Olympia – Westside",
+  "Port Orchard",
   "Puyallup",
-  "Redmond",
   "Renton",
-  "Sammamish",
-  "Seattle – Capitol Hill",
-  "Seattle – Northgate",
-  "Tacoma",
+  "Tacoma – Allenmore",
+  "Tacoma – Mall Blvd",
+  "Tacoma – Pearl St",
 ];
 
 async function main() {
@@ -45,22 +43,32 @@ async function main() {
 
   console.log("Seeding clinics…");
   let inserted = 0;
+  let skipped = 0;
   for (const name of CLINIC_NAMES) {
-    const existing = await db.select().from(clinics).where(eq(clinics.name, name)).limit(1);
+    const existing = await db
+      .select()
+      .from(clinics)
+      .where(eq(clinics.name, name))
+      .limit(1);
     if (existing.length === 0) {
       await db.insert(clinics).values({ name });
       inserted++;
+    } else {
+      skipped++;
     }
   }
-  console.log(`Clinics: ${inserted} inserted, ${CLINIC_NAMES.length - inserted} already existed.`);
+  console.log(`Clinics: ${inserted} inserted, ${skipped} already existed.`);
 
-  // Seed initial admin user if ADMIN_CLERK_ID is set
   const adminClerkId = process.env.ADMIN_CLERK_ID;
   const adminEmail = process.env.ADMIN_EMAIL ?? "admin@osstherapy.com";
   const adminName = process.env.ADMIN_NAME ?? "OSS Administrator";
 
   if (adminClerkId) {
-    const existing = await db.select().from(users).where(eq(users.clerkId, adminClerkId)).limit(1);
+    const existing = await db
+      .select()
+      .from(users)
+      .where(eq(users.clerkId, adminClerkId))
+      .limit(1);
     if (existing.length === 0) {
       await db.insert(users).values({
         clerkId: adminClerkId,
@@ -70,15 +78,17 @@ async function main() {
       });
       console.log(`Admin user created: ${adminName} <${adminEmail}>`);
     } else {
-      // Ensure existing user has admin role
-      await db.update(users).set({ role: "admin" }).where(eq(users.clerkId, adminClerkId));
-      console.log(`Admin user already exists, role confirmed: ${adminClerkId}`);
+      await db
+        .update(users)
+        .set({ role: "admin" })
+        .where(eq(users.clerkId, adminClerkId));
+      console.log(`Admin role confirmed for: ${adminClerkId}`);
     }
   } else {
     console.log(
-      "Tip: Set ADMIN_CLERK_ID, ADMIN_EMAIL, ADMIN_NAME env vars to seed the initial admin user.\n" +
-      "Or: The first user who signs in will be auto-provisioned with role=employee;\n" +
-      "    an admin can promote them via PATCH /api/users/:userId.",
+      "Tip: Set ADMIN_CLERK_ID env var to seed the initial admin user.\n" +
+        "     First user to sign in is auto-provisioned as employee;\n" +
+        "     promote via PATCH /api/users/:userId.",
     );
   }
 

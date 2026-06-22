@@ -47,7 +47,7 @@ export async function getUserBalance(userId: number, hireDateStr: string | null)
         eq(conEdRequests.employeeId, userId),
         sql`${conEdRequests.createdAt} >= ${yearStart}`,
         inArray(conEdRequests.status, [
-          "bo_approved",
+          "awaiting_receipt",
           "receipt_submitted",
           "reimbursed",
         ]),
@@ -62,7 +62,7 @@ export async function getUserBalance(userId: number, hireDateStr: string | null)
       and(
         eq(conEdRequests.employeeId, userId),
         sql`${conEdRequests.createdAt} >= ${yearStart}`,
-        inArray(conEdRequests.status, ["pending_manager", "manager_approved"]),
+        inArray(conEdRequests.status, ["pending_manager", "pending_bo"]),
       ),
     );
 
