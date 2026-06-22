@@ -3,8 +3,24 @@ import { conEdRequests } from "@workspace/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 
 const ANNUAL_BUDGET = 2000;
+const APPROVED_STATUSES = [
+  "awaiting_receipt",
+  "receipt_submitted",
+  "reimbursed",
+] as const;
 
-export function calcAnnualAllocation(hireDateStr: string | null): {
+function roundCurrency(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function parseMoney(value: string | null | undefined) {
+  return parseFloat(value ?? "0");
+}
+
+export function calcAnnualAllocationForYear(
+  hireDateStr: string | null,
+  year: number,
+): {
   allocation: number;
   isProrated: boolean;
   hireMonth: number | null;
@@ -14,19 +30,24 @@ export function calcAnnualAllocation(hireDateStr: string | null): {
   }
 
   const hireDate = new Date(hireDateStr);
-  const currentYear = new Date().getFullYear();
   const hireYear = hireDate.getFullYear();
 
-  if (hireYear < currentYear) {
+  if (hireYear > year) {
+    return { allocation: 0, isProrated: false, hireMonth: null };
+  }
+
+  if (hireYear < year) {
     return { allocation: ANNUAL_BUDGET, isProrated: false, hireMonth: null };
   }
 
-  // First year: prorate by hire month (month 1-12, Jan = month 1)
-  const hireMonth = hireDate.getMonth() + 1; // 1-indexed
-  // Formula: $2000 × (13 - hireMonth) / 12
-  const allocation = Math.round((ANNUAL_BUDGET * (13 - hireMonth)) / 12 * 100) / 100;
+  const hireMonth = hireDate.getMonth() + 1;
+  const allocation = roundCurrency((ANNUAL_BUDGET * (13 - hireMonth)) / 12);
 
   return { allocation, isProrated: true, hireMonth };
+}
+
+export function calcAnnualAllocation(hireDateStr: string | null) {
+  return calcAnnualAllocationForYear(hireDateStr, new Date().getFullYear());
 }
 
 export async function getUserBalance(userId: number, hireDateStr: string | null) {
@@ -34,10 +55,9 @@ export async function getUserBalance(userId: number, hireDateStr: string | null)
   const yearStart = new Date(`${year}-01-01`);
   const { allocation, isProrated, hireMonth } = calcAnnualAllocation(hireDateStr);
 
-  // "Used" = BO approved or further (totalApproved counts against budget)
-  const usedRows = await db
+  const approvedRows = await db
     .select({
-      status: conEdRequests.status,
+      createdAt: conEdRequests.createdAt,
       totalRequested: conEdRequests.totalRequested,
       totalApproved: conEdRequests.totalApproved,
     })
@@ -45,16 +65,31 @@ export async function getUserBalance(userId: number, hireDateStr: string | null)
     .where(
       and(
         eq(conEdRequests.employeeId, userId),
-        sql`${conEdRequests.createdAt} >= ${yearStart}`,
-        inArray(conEdRequests.status, [
-          "awaiting_receipt",
-          "receipt_submitted",
-          "reimbursed",
-        ]),
+        inArray(conEdRequests.status, APPROVED_STATUSES),
       ),
     );
 
-  // "Pending" = still in manager/BO approval pipeline
+  const approvedByYear = new Map<number, number>();
+  for (const row of approvedRows) {
+    const approvedYear = row.createdAt.getFullYear();
+    const amount = parseMoney(row.totalApproved ?? row.totalRequested);
+    approvedByYear.set(approvedYear, (approvedByYear.get(approvedYear) ?? 0) + amount);
+  }
+
+  const approvedYears = [...approvedByYear.keys()];
+  const hireYear = hireDateStr ? new Date(hireDateStr).getFullYear() : year;
+  const firstRelevantYear = Math.min(year, hireYear, ...approvedYears);
+  let carryoverDebt = 0;
+
+  for (let balanceYear = firstRelevantYear; balanceYear < year; balanceYear += 1) {
+    const yearAllocation = calcAnnualAllocationForYear(hireDateStr, balanceYear).allocation;
+    const yearSpend = approvedByYear.get(balanceYear) ?? 0;
+    carryoverDebt = Math.max(0, carryoverDebt + yearSpend - yearAllocation);
+  }
+
+  const availableAllocation = Math.max(0, allocation - carryoverDebt);
+  const usedAmount = approvedByYear.get(year) ?? 0;
+
   const pendingRows = await db
     .select({ totalRequested: conEdRequests.totalRequested })
     .from(conEdRequests)
@@ -66,24 +101,21 @@ export async function getUserBalance(userId: number, hireDateStr: string | null)
       ),
     );
 
-  let usedAmount = 0;
-  for (const row of usedRows) {
-    usedAmount += parseFloat(row.totalApproved ?? row.totalRequested ?? "0");
-  }
-
   let pendingAmount = 0;
   for (const row of pendingRows) {
-    pendingAmount += parseFloat(row.totalRequested ?? "0");
+    pendingAmount += parseMoney(row.totalRequested);
   }
 
-  const remainingAmount = Math.max(0, allocation - usedAmount);
+  const remainingAmount = Math.max(0, availableAllocation - usedAmount);
 
   return {
     userId,
-    annualAllocation: allocation,
-    usedAmount: Math.round(usedAmount * 100) / 100,
-    remainingAmount: Math.round(remainingAmount * 100) / 100,
-    pendingAmount: Math.round(pendingAmount * 100) / 100,
+    annualAllocation: roundCurrency(allocation),
+    availableAllocation: roundCurrency(availableAllocation),
+    carryoverDebt: roundCurrency(carryoverDebt),
+    usedAmount: roundCurrency(usedAmount),
+    remainingAmount: roundCurrency(remainingAmount),
+    pendingAmount: roundCurrency(pendingAmount),
     year,
     isProrated,
     hireMonth,

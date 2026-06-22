@@ -79,7 +79,11 @@ router.get("/users/:userId/balance", requireAuth, async (req: Request, res: Resp
       return;
     }
 
-    if (caller.role === "manager" && targetUser.clinicId !== caller.clinicId) {
+    if (
+      caller.role === "manager" &&
+      caller.id !== targetUser.id &&
+      (!caller.clinicId || targetUser.clinicId !== caller.clinicId)
+    ) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
@@ -188,7 +192,11 @@ router.get("/users/:userId", requireAuth, async (req: Request, res: Response) =>
     }
 
     // Manager can only view members of their clinic
-    if (caller.role === "manager" && targetUser.clinicId !== caller.clinicId && caller.id !== targetUser.id) {
+    if (
+      caller.role === "manager" &&
+      caller.id !== targetUser.id &&
+      (!caller.clinicId || targetUser.clinicId !== caller.clinicId)
+    ) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }

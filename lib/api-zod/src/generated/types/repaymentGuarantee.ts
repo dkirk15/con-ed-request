@@ -11,5 +11,7 @@ export interface RepaymentGuarantee {
   requestId: number;
   employeeId: number;
   signedName: string;
+  /** @nullable */
+  signedDate?: string | null;
   signedAt: Date;
 }

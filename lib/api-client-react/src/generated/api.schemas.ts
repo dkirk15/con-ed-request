@@ -97,8 +97,12 @@ export interface BalanceInfo {
   userId: number;
   annualAllocation: number;
   usedAmount: number;
+  /** Annual allocation after carry-forward CE advance debt is applied. */
+  availableAllocation: number;
   remainingAmount: number;
   pendingAmount?: number;
+  /** Prior-year advanced CE balance applied against this year's allocation. */
+  carryoverDebt: number;
   year: number;
   isProrated: boolean;
   /** @nullable */
@@ -127,6 +131,8 @@ export interface RepaymentGuarantee {
   requestId: number;
   employeeId: number;
   signedName: string;
+  /** @nullable */
+  signedDate?: string | null;
   signedAt: string;
 }
 
@@ -177,6 +183,8 @@ export interface ConEdRequest {
   rentalCar?: number | null;
   /** @nullable */
   parking?: number | null;
+  /** @nullable */
+  otherCosts?: number | null;
   totalRequested: number;
   /** @nullable */
   approvedTuition?: number | null;
@@ -240,6 +248,8 @@ export interface ConEdRequestInput {
   rentalCar?: number | null;
   /** @nullable */
   parking?: number | null;
+  /** @nullable */
+  otherCosts?: number | null;
   totalRequested: number;
 }
 
@@ -261,7 +271,16 @@ export interface ConEdRequestUpdate {
   rentalCar?: number | null;
   /** @nullable */
   parking?: number | null;
+  /** @nullable */
+  otherCosts?: number | null;
   totalRequested?: number;
+}
+
+export interface SubmitRequestInput {
+  /** Employee's full legal name (required when over budget) */
+  guaranteeSignedName?: string;
+  /** Date the guarantee was signed (required when over budget) */
+  guaranteeSignedDate?: string;
 }
 
 export interface DenialInput {
@@ -286,6 +305,8 @@ export interface BOApprovalInput {
 
 export interface RepaymentGuaranteeInput {
   signedName: string;
+  /** @nullable */
+  signedDate?: string | null;
 }
 
 export interface ReceiptInput {

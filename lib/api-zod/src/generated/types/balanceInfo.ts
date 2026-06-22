@@ -10,8 +10,12 @@ export interface BalanceInfo {
   userId: number;
   annualAllocation: number;
   usedAmount: number;
+  /** Annual allocation after carry-forward CE advance debt is applied. */
+  availableAllocation: number;
   remainingAmount: number;
   pendingAmount?: number;
+  /** Prior-year advanced CE balance applied against this year's allocation. */
+  carryoverDebt: number;
   year: number;
   isProrated: boolean;
   /** @nullable */

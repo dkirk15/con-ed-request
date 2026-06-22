@@ -34,6 +34,7 @@ const formSchema = z.object({
   airfare: z.coerce.number().min(0).optional(),
   rentalCar: z.coerce.number().min(0).optional(),
   parking: z.coerce.number().min(0).optional(),
+  otherCosts: z.coerce.number().min(0).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -43,6 +44,8 @@ interface BalanceData {
   usedAmount: number;
   pendingAmount: number;
   remainingAmount: number;
+  availableAllocation?: number;
+  carryoverDebt?: number;
   year: number;
 }
 
@@ -77,6 +80,7 @@ export default function NewRequestPage() {
       airfare: 0,
       rentalCar: 0,
       parking: 0,
+      otherCosts: 0,
     },
   });
 
@@ -88,7 +92,8 @@ export default function NewRequestPage() {
       (Number(values.lodging) || 0) +
       (Number(values.airfare) || 0) +
       (Number(values.rentalCar) || 0) +
-      (Number(values.parking) || 0)
+      (Number(values.parking) || 0) +
+      (Number(values.otherCosts) || 0)
     );
   };
 
@@ -181,10 +186,18 @@ export default function NewRequestPage() {
 
       {balanceData && (
         <div className="flex items-center gap-6 bg-slate-50 rounded-lg border border-slate-200 px-5 py-3 text-sm">
-          <span className="text-slate-500">Annual budget:</span>
+          <span className="text-slate-500">Available budget:</span>
           <span className="font-semibold">
-            {formatCurrency(balanceData.annualAllocation)}
+            {formatCurrency(balanceData.availableAllocation ?? balanceData.annualAllocation)}
           </span>
+          {balanceData.carryoverDebt ? (
+            <>
+              <span className="text-slate-500">Carry-forward debt:</span>
+              <span className="font-semibold text-amber-700">
+                {formatCurrency(balanceData.carryoverDebt)}
+              </span>
+            </>
+          ) : null}
           <span className="text-slate-500">Used / Pending:</span>
           <span className="font-semibold">
             {formatCurrency(balanceData.usedAmount)} /{" "}
@@ -198,6 +211,16 @@ export default function NewRequestPage() {
           </span>
         </div>
       )}
+
+      <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Wait for approval before purchasing</AlertTitle>
+        <AlertDescription>
+          Submit this request and wait for both manager and Business Office approval
+          before registering, paying for the course, or booking travel. Receipt upload
+          becomes available after final approval.
+        </AlertDescription>
+      </Alert>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -298,6 +321,7 @@ export default function NewRequestPage() {
                     ["airfare", "Airfare"],
                     ["rentalCar", "Rental Car"],
                     ["parking", "Parking / Tolls"],
+                    ["otherCosts", "Other Costs"],
                   ] as const
                 ).map(([name, label]) => (
                   <FormField
@@ -347,8 +371,9 @@ export default function NewRequestPage() {
                   <AlertDescription>
                     This request exceeds your remaining annual budget of{" "}
                     {formatCurrency(remainingBudget ?? 0)}. Per OSS policy, you
-                    must sign a repayment guarantee acknowledging you are
-                    responsible for any amount that cannot be funded.
+                    must sign a repayment guarantee acknowledging that advanced
+                    CE funding will be repaid from future CE accruals, with any
+                    remaining balance due if employment ends.
                   </AlertDescription>
                 </Alert>
               )}
@@ -363,10 +388,10 @@ export default function NewRequestPage() {
                   Repayment Guarantee Required
                 </CardTitle>
                 <CardDescription className="text-orange-700">
-                  By signing below, you acknowledge that any amount approved
-                  beyond your remaining budget ({formatCurrency(remainingBudget ?? 0)}) may be
-                  subject to repayment if you leave OSS within 12 months of
-                  reimbursement.
+                  By signing below, you acknowledge that any approved amount
+                  beyond your remaining budget ({formatCurrency(remainingBudget ?? 0)})
+                  will be repaid through future CE benefits, with any remaining
+                  balance due if your employment with OSS ends.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">

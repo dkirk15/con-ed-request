@@ -27,7 +27,7 @@ Continuing Education request management web app for **Olympic Sports & Spine** (
 |-------|-----------|
 | `clinics` | `id` (serial PK), `name` (text) |
 | `users` | `id` (serial PK), `clerkId` (text, unique), `name`, `email`, `role`, `clinicId` (FK), `managerId`, `hireDate` (date) |
-| `con_ed_requests` | `id` (serial PK), `employeeId` (FK), `status`, `courseNames`, `courseDates`, `ceuCount`, `location`, `tuition`, `lodging`, `airfare`, `rentalCar`, `parking`, `totalRequested`, `approvedTuition`, `approvedLodging`, `approvedAirfare`, `approvedRentalCar`, `approvedParking`, `approvedOther`, `totalApproved`, `managerId`, `managerApprovedAt`, `managerDeniedAt`, `managerDenialReason`, `boApproverId`, `boApprovedAt`, `boDeniedAt`, `boDenialReason`, `requiresRepaymentGuarantee` (boolean) |
+| `con_ed_requests` | `id` (serial PK), `employeeId` (FK), `status`, `courseNames`, `courseDates`, `ceuCount`, `location`, `tuition`, `lodging`, `airfare`, `rentalCar`, `parking`, `otherCosts`, `totalRequested`, `approvedTuition`, `approvedLodging`, `approvedAirfare`, `approvedRentalCar`, `approvedParking`, `approvedOther`, `totalApproved`, `managerId`, `managerApprovedAt`, `managerDeniedAt`, `managerDenialReason`, `boApproverId`, `boApprovedAt`, `boDeniedAt`, `boDenialReason`, `requiresRepaymentGuarantee` (boolean) |
 | `repayment_guarantees` | `id` (serial PK), `requestId` (FK), `employeeId` (FK), `signedName`, `signedDate`, `signedAt` |
 | `receipts` | `id` (serial PK), `requestId` (FK), `fileUrl`, `fileName`, `uploadedAt` |
 | `reimbursements` | `id` (serial PK), `requestId` (FK), `paycheckDate` (date), `markedById` (FK), `markedAt` |
@@ -38,9 +38,9 @@ Continuing Education request management web app for **Olympic Sports & Spine** (
 | Method | Route | Purpose | Who |
 |--------|-------|---------|-----|
 | GET | `/api/requests` | List requests (scoped by role) | Any |
-| POST | `/api/requests` | Create draft request | Employee |
+| POST | `/api/requests` | Create draft request | Employee/Manager |
 | GET | `/api/requests/:id` | Get request details | Owner + relevant approvers |
-| PATCH | `/api/requests/:id` | Update request (only while pending_manager) | Owner |
+| PATCH | `/api/requests/:id` | Update request (only while draft) | Owner |
 | POST | `/api/requests/:id/submit` | Submit draft for approval (enforces repayment guarantee if over budget) | Owner |
 | POST | `/api/requests/:id/cancel` | Cancel request (draft, pending_manager, pending_bo) | Owner |
 | POST | `/api/requests/:id/manager-approve` | Manager/Admin approve | Manager/Admin |
@@ -75,7 +75,7 @@ Continuing Education request management web app for **Olympic Sports & Spine** (
 | `/` | Sign-in (Clerk redirect) | Any |
 | `/dashboard` | Role-based dashboard | Any |
 | `/requests` | Request list (scoped) | Any |
-| `/requests/new` | New request form | Employee |
+| `/requests/new` | New request form | Employee/Manager |
 | `/requests/:id` | Request detail (with actions) | Any |
 | `/users` | User list (Admin only) | Admin |
 | `/users/:id` | User detail + balance | Admin |
@@ -86,8 +86,10 @@ Continuing Education request management web app for **Olympic Sports & Spine** (
 ### Budget Balance
 - Annual allocation: **$2,000**
 - **First year**: prorated by hire month: `round(2000 * (13 - hireMonth) / 12, 2)`
-- **Reset**: January 1 each year (full $2,000)
-- **Used**: calculated from approved amounts (not requested amounts) on requests in statuses: `pending_bo`, `bo_approved`, `awaiting_receipt`, `receipt_submitted`, `reimbursed`
+- **Reset**: January 1 each year, reduced by any outstanding advanced CE funding debt from prior years
+- **Used**: calculated from approved amounts (not requested amounts) on BO-approved requests in statuses: `awaiting_receipt`, `receipt_submitted`, `reimbursed`
+- **Pending**: calculated separately from requested amounts on requests still in the manager/BO approval pipeline
+- **Advanced CE debt**: approved funding above the employee's remaining balance carries forward against future CE accruals; e.g. a $3,000 approved course against a $2,000 balance leaves $1,000 available the following year. Implemented in `artifacts/api-server/src/lib/balance.ts`.
 
 ### Request Status Lifecycle
 ```
@@ -99,7 +101,7 @@ draft → pending_manager → pending_bo → awaiting_receipt → receipt_submit
 - **draft**: Created by employee. Employee sees, others don't. Employee can submit (with guarantee if over budget), cancel, or edit.
 - **pending_manager**: Submitted. Manager sees + can approve/deny. Manager's clinic scope enforced.
 - **pending_bo**: Manager approved. BO sees + can approve/deny with amounts.
-- **awaiting_receipt**: BO approved. Employee uploads receipt (moves to `receipt_submitted`).
+- **awaiting_receipt**: BO approved. Employee uploads receipt (moves to `receipt_submitted`). The UI should make clear that employees should wait for manager and BO approval before purchasing/registering.
 - **receipt_submitted**: Accounting sees + reimburses.
 - **reimbursed**: Accounting marked paycheck date.
 
@@ -107,12 +109,12 @@ draft → pending_manager → pending_bo → awaiting_receipt → receipt_submit
 - When a request exceeds remaining budget, `requiresRepaymentGuarantee` is set on the request
 - **Enforced at `POST /api/requests/:id/submit`** (not at manager approval)
 - Employee must sign digitally with name + date before submission
-- After submission, the guarantee record is stored
+- After submission, the guarantee record is stored even if the Business Office later approves an amount within the employee's remaining balance
 
 ### Access Control
 - **Employee**: See own requests, own dashboard
-- **Manager**: See `pending_manager` requests in their clinic (null clinicId returns empty list, not all users)
-- **Business Office**: See all pending + awaiting receipt
+- **Manager**: See/approve `pending_manager` requests from employees in the clinic they manage (null clinicId returns empty list, not all users); managers can also submit their own CE requests
+- **Business Office**: See all requests pending BO approval + awaiting receipt
 - **Accounting**: See `receipt_submitted` + reimbursement actions
 - **Admin**: See all users, all requests, all dashboards
 
@@ -138,6 +140,12 @@ These were proposed as follow-up tasks but were cancelled:
 1. **M365 Provisioning UI** — Enable admin to invite/provision staff directly from inside the portal. Currently users sign up via Clerk SSO and appear in DB after first login.
 2. **Admin User Management** — Full CRUD for staff accounts (clinic assignment, role changes, manager linking) inside the portal. Currently only basic create/update in `/users`.
 3. **Email Notifications** — Notify employees/managers when requests are approved, denied, or need action. Currently no notification system.
+
+## Clarified Requirements / Implementation Notes
+- **Requested other costs**: Implemented as `otherCosts` on requests. Business Office still has a separate `approvedOther` amount.
+- **Database push needed**: Deployments need `pnpm --filter @workspace/db run push` (or the equivalent Replit DB schema push) so `con_ed_requests.other_costs` exists.
+- **Purchase-before-approval guidance**: New request UI tells employees to wait for manager and BO approval before registering/purchasing. Receipt upload is restricted to BO-approved requests.
+- **PTO**: Out of scope for this portal.
 
 ## Files to Know
 - `lib/db/src/schema/index.ts` — Drizzle schema (source of truth)

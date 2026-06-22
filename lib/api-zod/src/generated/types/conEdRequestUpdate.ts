@@ -24,5 +24,7 @@ export interface ConEdRequestUpdate {
   rentalCar?: number | null;
   /** @nullable */
   parking?: number | null;
+  /** @nullable */
+  otherCosts?: number | null;
   totalRequested?: number;
 }

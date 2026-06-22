@@ -67,6 +67,7 @@ export async function formatRequestSimple(row: typeof conEdRequests.$inferSelect
     airfare: row.airfare ? parseFloat(row.airfare) : null,
     rentalCar: row.rentalCar ? parseFloat(row.rentalCar) : null,
     parking: row.parking ? parseFloat(row.parking) : null,
+    otherCosts: row.otherCosts ? parseFloat(row.otherCosts) : null,
     totalRequested: parseFloat(row.totalRequested),
     approvedTuition: row.approvedTuition ? parseFloat(row.approvedTuition) : null,
     approvedLodging: row.approvedLodging ? parseFloat(row.approvedLodging) : null,

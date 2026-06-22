@@ -8,7 +8,7 @@ import {
   receipts,
   reimbursements,
 } from "@workspace/db/schema";
-import { eq, and, inArray, or } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import {
   CreateRequestBody,
   UpdateRequestBody,
@@ -35,6 +35,16 @@ import { requireAuth, requireRole } from "../lib/auth";
 import { getUserBalance } from "../lib/balance";
 
 const router: IRouter = Router();
+const SUBMITTED_STATUSES = [
+  "pending_manager",
+  "pending_bo",
+  "manager_denied",
+  "bo_denied",
+  "awaiting_receipt",
+  "receipt_submitted",
+  "reimbursed",
+  "cancelled",
+] as const;
 
 async function formatRequest(req_row: typeof conEdRequests.$inferSelect) {
   const [employee] = await db
@@ -116,6 +126,7 @@ async function formatRequest(req_row: typeof conEdRequests.$inferSelect) {
     airfare: req_row.airfare ? parseFloat(req_row.airfare) : null,
     rentalCar: req_row.rentalCar ? parseFloat(req_row.rentalCar) : null,
     parking: req_row.parking ? parseFloat(req_row.parking) : null,
+    otherCosts: req_row.otherCosts ? parseFloat(req_row.otherCosts) : null,
     totalRequested: parseFloat(req_row.totalRequested),
     approvedTuition: req_row.approvedTuition ? parseFloat(req_row.approvedTuition) : null,
     approvedLodging: req_row.approvedLodging ? parseFloat(req_row.approvedLodging) : null,
@@ -199,6 +210,7 @@ router.get("/requests", requireAuth, async (req: Request, res: Response) => {
         return;
       }
       conditions.push(inArray(conEdRequests.employeeId, ids));
+      conditions.push(inArray(conEdRequests.status, SUBMITTED_STATUSES));
     }
     // business_office, accounting, admin see all
 
@@ -232,6 +244,11 @@ router.post("/requests", requireAuth, async (req: Request, res: Response) => {
       return;
     }
     const user = req.dbUser!;
+    if (user.role !== "employee" && user.role !== "manager") {
+      res.status(403).json({ error: "Only employees and managers can submit CE requests" });
+      return;
+    }
+
     const {
       courseNames,
       courseDates,
@@ -242,6 +259,7 @@ router.post("/requests", requireAuth, async (req: Request, res: Response) => {
       airfare,
       rentalCar,
       parking,
+      otherCosts,
       totalRequested,
     } = parsed.data;
 
@@ -275,6 +293,7 @@ router.post("/requests", requireAuth, async (req: Request, res: Response) => {
         airfare: airfare != null ? String(airfare) : null,
         rentalCar: rentalCar != null ? String(rentalCar) : null,
         parking: parking != null ? String(parking) : null,
+        otherCosts: otherCosts != null ? String(otherCosts) : null,
         totalRequested: String(totalRequested),
         managerId,
         status: "draft",
@@ -321,8 +340,12 @@ router.post(
       const guaranteeSignedDate: string | undefined =
         typeof body.guaranteeSignedDate === "string" ? body.guaranteeSignedDate.trim() || undefined : undefined;
 
-      // Enforce repayment guarantee at submission time for over-budget requests
-      if (existing.requiresRepaymentGuarantee) {
+      const balance = await getUserBalance(user.id, user.hireDate);
+      const requiresRepaymentGuarantee =
+        parseFloat(existing.totalRequested) > balance.remainingAmount;
+
+      // Enforce repayment guarantee at submission time for over-budget requests.
+      if (requiresRepaymentGuarantee) {
         const [existingGuarantee] = await db
           .select({ id: repaymentGuarantees.id })
           .from(repaymentGuarantees)
@@ -347,7 +370,11 @@ router.post(
 
       const [updated] = await db
         .update(conEdRequests)
-        .set({ status: "pending_manager", updatedAt: new Date() })
+        .set({
+          status: "pending_manager",
+          requiresRepaymentGuarantee,
+          updatedAt: new Date(),
+        })
         .where(eq(conEdRequests.id, requestId))
         .returning();
 
@@ -382,8 +409,20 @@ router.get("/requests/:requestId", requireAuth, async (req: Request, res: Respon
       return;
     }
 
-    // Manager can only view requests from their clinic
+    // Managers can view their own requests. Other drafts are private until submitted.
     if (user.role === "manager") {
+      if (row.employeeId === user.id) {
+        res.json(await formatRequest(row));
+        return;
+      }
+      if (row.status === "draft") {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+      if (!user.clinicId) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
       const [emp] = await db
         .select({ clinicId: users.clinicId })
         .from(users)
@@ -424,8 +463,8 @@ router.patch("/requests/:requestId", requireAuth, async (req: Request, res: Resp
       return;
     }
 
-    // Can only edit while still pending manager review
-    if (existing.status !== "pending_manager") {
+    // Can only edit while still a draft.
+    if (existing.status !== "draft") {
       res.status(400).json({ error: "Request cannot be edited once submitted for approval" });
       return;
     }
@@ -441,7 +480,13 @@ router.patch("/requests/:requestId", requireAuth, async (req: Request, res: Resp
     if (data.airfare !== undefined) updates.airfare = data.airfare != null ? String(data.airfare) : null;
     if (data.rentalCar !== undefined) updates.rentalCar = data.rentalCar != null ? String(data.rentalCar) : null;
     if (data.parking !== undefined) updates.parking = data.parking != null ? String(data.parking) : null;
+    if (data.otherCosts !== undefined) updates.otherCosts = data.otherCosts != null ? String(data.otherCosts) : null;
     if (data.totalRequested !== undefined) updates.totalRequested = String(data.totalRequested);
+
+    const nextTotalRequested =
+      data.totalRequested !== undefined ? data.totalRequested : parseFloat(existing.totalRequested);
+    const balance = await getUserBalance(req.dbUser!.id, req.dbUser!.hireDate);
+    updates.requiresRepaymentGuarantee = nextTotalRequested > balance.remainingAmount;
 
     const [updated] = await db
       .update(conEdRequests)
@@ -492,9 +537,9 @@ router.post("/requests/:requestId/cancel", requireAuth, async (req: Request, res
 });
 
 async function verifyManagerClinicAccess(
-  managerId: number,
   managerClinicId: number | null,
   requestId: number,
+  bypassClinicCheck = false,
 ): Promise<{ ok: boolean; row?: typeof conEdRequests.$inferSelect }> {
   const [row] = await db
     .select()
@@ -503,15 +548,17 @@ async function verifyManagerClinicAccess(
     .limit(1);
   if (!row) return { ok: false };
 
-  // Admins bypass clinic check; managers must match clinic
-  if (managerClinicId !== null) {
-    const [emp] = await db
-      .select({ clinicId: users.clinicId })
-      .from(users)
-      .where(eq(users.id, row.employeeId))
-      .limit(1);
-    if (!emp || emp.clinicId !== managerClinicId) return { ok: false };
-  }
+  // Admins bypass clinic check; managers must have a clinic and match it.
+  if (bypassClinicCheck) return { ok: true, row };
+  if (managerClinicId === null) return { ok: false };
+
+  const [emp] = await db
+    .select({ clinicId: users.clinicId })
+    .from(users)
+    .where(eq(users.id, row.employeeId))
+    .limit(1);
+  if (!emp || emp.clinicId !== managerClinicId) return { ok: false };
+
   return { ok: true, row };
 }
 
@@ -525,7 +572,11 @@ router.post(
       const user = req.dbUser!;
       const clinicId = user.role === "manager" ? user.clinicId : null;
 
-      const { ok, row: reqRow } = await verifyManagerClinicAccess(user.id, clinicId, requestId);
+      const { ok, row: reqRow } = await verifyManagerClinicAccess(
+        clinicId,
+        requestId,
+        user.role === "admin",
+      );
       if (!ok || !reqRow) {
         res.status(400).json({ error: "Request not found or not eligible for manager approval" });
         return;
@@ -580,7 +631,11 @@ router.post(
       }
 
       const clinicId = user.role === "manager" ? user.clinicId : null;
-      const { ok } = await verifyManagerClinicAccess(user.id, clinicId, requestId);
+      const { ok } = await verifyManagerClinicAccess(
+        clinicId,
+        requestId,
+        user.role === "admin",
+      );
       if (!ok) {
         res.status(400).json({ error: "Request not found or not eligible for denial" });
         return;
@@ -782,6 +837,27 @@ router.get(
 
       // Manager can only see their clinic's employees' receipts
       if (user.role === "manager") {
+        if (parent.employeeId === user.id) {
+          const rows = await db
+            .select()
+            .from(receipts)
+            .where(eq(receipts.requestId, requestId));
+
+          res.json(
+            rows.map((r) => ({
+              id: r.id,
+              requestId: r.requestId,
+              fileUrl: r.fileUrl,
+              fileName: r.fileName ?? null,
+              uploadedAt: r.uploadedAt.toISOString(),
+            })),
+          );
+          return;
+        }
+        if (!user.clinicId) {
+          res.status(403).json({ error: "Forbidden" });
+          return;
+        }
         const [emp] = await db
           .select({ clinicId: users.clinicId })
           .from(users)
