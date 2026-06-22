@@ -8,7 +8,7 @@ Correct 25 OSS clinic locations (both seed.ts and seed.mjs must match exactly):
 Auburn, Bonney Lake, Business Office, Covington, Federal Way, Frederickson,
 Gig Harbor – Kimball Drive, Gig Harbor – YMCA, Graham, Kent, Lakewood,
 Olympia – Eastside, Olympia – McPhee, Olympia – Westside, Parkland,
-Puyallup – 112th Ave SE, Puyallup – East Main, Puyallup – Sunrise, Puyallup – South Hill,
+Puyallup 112th, Puyallup – East Main, Puyallup – Sunrise, Puyallup – South Hill,
 Spanaway, Sumner, Tacoma – Allenmore, Tacoma – Mall Blvd, Tacoma – Pearl St,
 University Place
 

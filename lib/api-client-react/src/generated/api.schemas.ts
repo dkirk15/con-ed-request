@@ -75,6 +75,8 @@ export interface UserInput {
   managerId?: number | null;
   /** @nullable */
   hireDate?: string | null;
+  /** @nullable */
+  conEdAllocation?: number | null;
 }
 
 export type UserUpdateRole = typeof UserUpdateRole[keyof typeof UserUpdateRole];
@@ -89,6 +91,7 @@ export const UserUpdateRole = {
 } as const;
 
 export interface UserUpdate {
+  name?: string;
   role?: UserUpdateRole;
   /** @nullable */
   clinicId?: number | null;

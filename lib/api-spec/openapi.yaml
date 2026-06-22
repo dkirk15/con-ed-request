@@ -744,10 +744,15 @@ components:
         hireDate:
           type: ["string", "null"]
           format: date
+        conEdAllocation:
+          type: ["number", "null"]
+          format: float
 
     UserUpdate:
       type: object
       properties:
+        name:
+          type: string
         role:
           type: string
           enum: [employee, manager, business_office, accounting, admin]

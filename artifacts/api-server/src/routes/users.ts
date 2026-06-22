@@ -210,8 +210,18 @@ router.get("/users/:userId", requireAuth, async (req: Request, res: Response) =>
   }
 });
 
-// PATCH /api/users/:userId — admin only
-router.patch("/users/:userId", requireRole("admin"), async (req: Request, res: Response) => {
+// PATCH /api/users/:userId — admin or own profile (self can only update name)
+router.patch("/users/:userId", requireAuth, async (req: Request, res: Response) => {
+  const caller = req.dbUser!;
+  const targetUserId = parseInt(req.params.userId as string);
+
+  const isSelf = caller.id === targetUserId;
+  const isAdmin = caller.role === "admin";
+
+  if (!isSelf && !isAdmin) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   try {
     const parsed = UpdateUserParams.safeParse({ userId: parseInt(req.params.userId as string) });
     if (!parsed.success) {
@@ -225,21 +235,26 @@ router.patch("/users/:userId", requireRole("admin"), async (req: Request, res: R
     }
 
     const updates: Partial<typeof users.$inferInsert> = {};
-    if (bodyParsed.data.role !== undefined) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      updates.role = bodyParsed.data.role as any;
+    if (bodyParsed.data.name !== undefined) {
+      updates.name = bodyParsed.data.name;
     }
-    if (bodyParsed.data.clinicId !== undefined) {
-      updates.clinicId = bodyParsed.data.clinicId ?? null;
-    }
-    if (bodyParsed.data.managerId !== undefined) {
-      updates.managerId = bodyParsed.data.managerId ?? null;
-    }
-    if (bodyParsed.data.hireDate !== undefined) {
-      updates.hireDate = bodyParsed.data.hireDate ? (bodyParsed.data.hireDate as unknown as string) : null;
-    }
-    if (bodyParsed.data.conEdAllocation !== undefined) {
-      updates.conEdAllocation = bodyParsed.data.conEdAllocation != null ? String(bodyParsed.data.conEdAllocation) : null;
+    if (isAdmin) {
+      if (bodyParsed.data.role !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        updates.role = bodyParsed.data.role as any;
+      }
+      if (bodyParsed.data.clinicId !== undefined) {
+        updates.clinicId = bodyParsed.data.clinicId ?? null;
+      }
+      if (bodyParsed.data.managerId !== undefined) {
+        updates.managerId = bodyParsed.data.managerId ?? null;
+      }
+      if (bodyParsed.data.hireDate !== undefined) {
+        updates.hireDate = bodyParsed.data.hireDate ? (bodyParsed.data.hireDate as unknown as string) : null;
+      }
+      if (bodyParsed.data.conEdAllocation !== undefined) {
+        updates.conEdAllocation = bodyParsed.data.conEdAllocation != null ? String(bodyParsed.data.conEdAllocation) : null;
+      }
     }
 
     const [user] = await db

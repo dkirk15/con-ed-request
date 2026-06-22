@@ -8,6 +8,7 @@
 import type { UserUpdateRole } from './userUpdateRole';
 
 export interface UserUpdate {
+  name?: string;
   role?: UserUpdateRole;
   /** @nullable */
   clinicId?: number | null;

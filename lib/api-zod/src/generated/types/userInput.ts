@@ -18,4 +18,6 @@ export interface UserInput {
   managerId?: number | null;
   /** @nullable */
   hireDate?: Date | null;
+  /** @nullable */
+  conEdAllocation?: number | null;
 }

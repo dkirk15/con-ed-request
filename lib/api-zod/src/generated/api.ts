@@ -70,7 +70,8 @@ export const CreateUserBody = zod.object({
   "role": zod.enum(['employee', 'manager', 'business_office', 'accounting', 'admin']),
   "clinicId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
-  "hireDate": zod.coerce.date().nullish()
+  "hireDate": zod.coerce.date().nullish(),
+  "conEdAllocation": zod.number().nullish()
 })
 
 
@@ -105,6 +106,7 @@ export const UpdateUserParams = zod.object({
 })
 
 export const UpdateUserBody = zod.object({
+  "name": zod.string().optional(),
   "role": zod.enum(['employee', 'manager', 'business_office', 'accounting', 'admin']).optional(),
   "clinicId": zod.number().nullish(),
   "managerId": zod.number().nullish(),
