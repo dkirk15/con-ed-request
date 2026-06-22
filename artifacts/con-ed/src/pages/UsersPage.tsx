@@ -63,7 +63,7 @@ export default function UsersPage() {
               <TableHead>Role</TableHead>
               <TableHead>Clinic</TableHead>
               <TableHead>Manager</TableHead>
-              {me?.role === "admin" && <TableHead className="text-right">Action</TableHead>}
+              <TableHead className="text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -95,7 +95,7 @@ export default function UsersPage() {
                   <TableCell><RoleBadge role={user.role} /></TableCell>
                   <TableCell>{user.clinicName || "—"}</TableCell>
                   <TableCell>{user.managerName || "—"}</TableCell>
-                  {me?.role === "admin" && (
+                  {(me?.role === "admin" || me?.id === user.id) && (
                     <TableCell className="text-right">
                       <Link href={`/users/${user.id}`}>
                         <Button variant="ghost" size="sm">Edit</Button>

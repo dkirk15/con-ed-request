@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useLocation, useParams } from "wouter";
-import { useGetUser, useUpdateUser, useListClinics, useListUsers, getGetUserQueryKey } from "@workspace/api-client-react";
+import { useGetUser, useUpdateUser, useListClinics, useListUsers, useGetMe, getGetUserQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,6 +31,7 @@ import { ROLE_LABELS } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const formSchema = z.object({
+  name: z.string().min(1, "Name is required"),
   role: z.enum(["employee", "manager", "business_office", "accounting", "admin"]),
   clinicId: z.coerce.number().optional().nullable(),
   managerId: z.coerce.number().optional().nullable(),
@@ -47,18 +48,23 @@ export default function UserDetailPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: user, isLoading: isUserLoading } = useGetUser(id, { 
-    query: { enabled: !!id && !isNaN(id), queryKey: getGetUserQueryKey(id) } 
+  const { data: me } = useGetMe();
+  const isAdmin = me?.role === "admin";
+  const isSelf = me?.id === id;
+
+  const { data: user, isLoading: isUserLoading } = useGetUser(id, {
+    query: { enabled: !!id && !isNaN(id), queryKey: getGetUserQueryKey(id) }
   });
-  
+
   const { data: clinics } = useListClinics();
   const { data: potentialManagers } = useListUsers({ role: "manager" });
-  
+
   const updateUser = useUpdateUser();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      name: "",
       role: "employee",
       clinicId: null,
       managerId: null,
@@ -73,6 +79,7 @@ export default function UserDetailPage() {
     if (user && initRef.current !== id) {
       initRef.current = id;
       form.reset({
+        name: user.name,
         role: user.role as any,
         clinicId: user.clinicId,
         managerId: user.managerId,
@@ -83,16 +90,18 @@ export default function UserDetailPage() {
   }, [user, id, form]);
 
   const onSubmit = (data: FormValues) => {
+    const payload: any = { name: data.name };
+    if (isAdmin) {
+      payload.role = data.role;
+      payload.clinicId = data.clinicId || null;
+      payload.managerId = data.managerId || null;
+      payload.hireDate = data.hireDate || null;
+      payload.conEdAllocation = data.conEdAllocation ?? null;
+    }
     updateUser.mutate(
       {
         userId: id,
-        data: {
-          role: data.role,
-          clinicId: data.clinicId || null,
-          managerId: data.managerId || null,
-          hireDate: data.hireDate || null,
-          conEdAllocation: data.conEdAllocation ?? null,
-        },
+        data: payload,
       },
       {
         onSuccess: () => {
@@ -143,123 +152,143 @@ export default function UserDetailPage() {
           <Card className="shadow-sm border-slate-200">
             <CardHeader>
               <CardTitle className="font-serif">User Configuration</CardTitle>
-              <CardDescription>Update role, clinic assignment, and manager</CardDescription>
+              <CardDescription>
+                {isAdmin ? "Update role, clinic assignment, and manager" : "Update your profile name"}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>System Role</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {Object.entries(ROLE_LABELS).map(([val, label]) => (
-                          <SelectItem key={val} value={val}>{label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>Determines access level within the portal</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <FormField
                 control={form.control}
-                name="clinicId"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Clinic Assignment</FormLabel>
-                    <Select onValueChange={(val) => field.onChange(val === "none" ? null : parseInt(val))} value={field.value?.toString() || "none"}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a clinic" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="max-h-72 overflow-y-auto">
-                        <SelectItem value="none">No Clinic</SelectItem>
-                        {clinics?.map((c) => (
-                          <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="managerId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Direct Manager</FormLabel>
-                    <Select onValueChange={(val) => field.onChange(val === "none" ? null : parseInt(val))} value={field.value?.toString() || "none"}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a manager" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">No Manager</SelectItem>
-                        {potentialManagers?.map((m) => (
-                          <SelectItem key={m.id} value={m.id.toString()}>{m.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>Required for employees to submit requests</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="hireDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Hire Date</FormLabel>
+                    <FormLabel>Full Name</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} value={field.value || ""} />
+                      <Input {...field} value={field.value || ""} />
                     </FormControl>
-                    <FormDescription>Used to calculate prorated annual CEU allocations</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="conEdAllocation"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Annual Con-Ed Allocation</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">$</span>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          className="pl-7"
-                          placeholder="Leave blank to use default"
-                          value={field.value ?? ""}
-                          onChange={(e) => field.onChange(e.target.value === "" ? null : parseFloat(e.target.value))}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormDescription>Override the calculated allocation. Leave blank to use the default (hire-date prorated $2,000/yr).</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {isAdmin && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>System Role</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a role" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {Object.entries(ROLE_LABELS).map(([val, label]) => (
+                              <SelectItem key={val} value={val}>{label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>Determines access level within the portal</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="clinicId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Clinic Assignment</FormLabel>
+                        <Select onValueChange={(val) => field.onChange(val === "none" ? null : parseInt(val))} value={field.value?.toString() || "none"}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a clinic" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent className="max-h-72 overflow-y-auto">
+                            <SelectItem value="none">No Clinic</SelectItem>
+                            {clinics?.map((c) => (
+                              <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="managerId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Direct Manager</FormLabel>
+                        <Select onValueChange={(val) => field.onChange(val === "none" ? null : parseInt(val))} value={field.value?.toString() || "none"}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a manager" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="none">No Manager</SelectItem>
+                            {potentialManagers?.map((m) => (
+                              <SelectItem key={m.id} value={m.id.toString()}>{m.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>Required for employees to submit requests</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="hireDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Hire Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} value={field.value || ""} />
+                        </FormControl>
+                        <FormDescription>Used to calculate prorated annual CEU allocations</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="conEdAllocation"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Annual Con-Ed Allocation</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">$</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              className="pl-7"
+                              placeholder="Leave blank to use default"
+                              value={field.value ?? ""}
+                              onChange={(e) => field.onChange(e.target.value === "" ? null : parseFloat(e.target.value))}
+                            />
+                          </div>
+                        </FormControl>
+                        <FormDescription>Override the calculated allocation. Leave blank to use the default (hire-date prorated $2,000/yr).</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
 
             </CardContent>
           </Card>
