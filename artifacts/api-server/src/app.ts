@@ -43,8 +43,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Clerk middleware — attaches auth state to all requests
 app.use(
-  clerkMiddleware({
-    ...(process.env.NODE_ENV === "production"
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  clerkMiddleware(
+    (process.env.NODE_ENV === "production"
       ? {
           proxyUrl: (req: express.Request) => {
             const protocol = req.headers["x-forwarded-proto"] || "https";
@@ -52,8 +53,8 @@ app.use(
             return `${protocol}://${host}${CLERK_PROXY_PATH}`;
           },
         }
-      : {}),
-  }),
+      : {}) as any,
+  ),
 );
 
 app.use("/api", router);

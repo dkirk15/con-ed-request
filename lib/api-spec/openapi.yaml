@@ -245,6 +245,47 @@ paths:
               schema:
                 $ref: "#/components/schemas/ConEdRequest"
 
+  /requests/{requestId}/submit:
+    post:
+      operationId: submitRequest
+      tags: [requests]
+      summary: Submit a draft request for manager review
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                guaranteeSignedName:
+                  type: string
+                  description: Employee's full legal name (required when over budget)
+                guaranteeSignedDate:
+                  type: string
+                  description: Date the guarantee was signed (required when over budget)
+      responses:
+        "200":
+          description: Request submitted for manager review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConEdRequest"
+        "400":
+          description: Bad request (e.g. not a draft, or missing guarantee for over-budget request)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
   /requests/{requestId}/cancel:
     post:
       operationId: cancelRequest

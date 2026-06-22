@@ -178,7 +178,8 @@ router.get("/requests", requireAuth, async (req: Request, res: Response) => {
       conditions.push(
         eq(
           conEdRequests.status,
-          parsed.data.status as typeof conEdRequests.status.dataType,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          parsed.data.status as any,
         ),
       );
     }
@@ -295,7 +296,7 @@ router.post(
   requireAuth,
   async (req: Request, res: Response) => {
     try {
-      const requestId = parseInt(req.params.requestId);
+      const requestId = parseInt(req.params.requestId as string);
       const user = req.dbUser!;
 
       const [existing] = await db
@@ -361,7 +362,7 @@ router.post(
 // GET /api/requests/:requestId
 router.get("/requests/:requestId", requireAuth, async (req: Request, res: Response) => {
   try {
-    const requestId = parseInt(req.params.requestId);
+    const requestId = parseInt(req.params.requestId as string);
     const user = req.dbUser!;
 
     const [row] = await db
@@ -405,7 +406,7 @@ router.get("/requests/:requestId", requireAuth, async (req: Request, res: Respon
 // PATCH /api/requests/:requestId
 router.patch("/requests/:requestId", requireAuth, async (req: Request, res: Response) => {
   try {
-    const requestId = parseInt(req.params.requestId);
+    const requestId = parseInt(req.params.requestId as string);
     const parsed = UpdateRequestBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Invalid input" });
@@ -458,7 +459,7 @@ router.patch("/requests/:requestId", requireAuth, async (req: Request, res: Resp
 // POST /api/requests/:requestId/cancel
 router.post("/requests/:requestId/cancel", requireAuth, async (req: Request, res: Response) => {
   try {
-    const requestId = parseInt(req.params.requestId);
+    const requestId = parseInt(req.params.requestId as string);
     const [existing] = await db
       .select()
       .from(conEdRequests)
@@ -520,7 +521,7 @@ router.post(
   requireRole("manager", "admin"),
   async (req: Request, res: Response) => {
     try {
-      const requestId = parseInt(req.params.requestId);
+      const requestId = parseInt(req.params.requestId as string);
       const user = req.dbUser!;
       const clinicId = user.role === "manager" ? user.clinicId : null;
 
@@ -570,7 +571,7 @@ router.post(
   requireRole("manager", "admin"),
   async (req: Request, res: Response) => {
     try {
-      const requestId = parseInt(req.params.requestId);
+      const requestId = parseInt(req.params.requestId as string);
       const user = req.dbUser!;
       const parsed = ManagerDenyRequestBody.safeParse(req.body);
       if (!parsed.success) {
@@ -611,7 +612,7 @@ router.post(
   requireRole("business_office", "admin"),
   async (req: Request, res: Response) => {
     try {
-      const requestId = parseInt(req.params.requestId);
+      const requestId = parseInt(req.params.requestId as string);
       const parsed = BoApproveRequestBody.safeParse(req.body);
       if (!parsed.success) {
         res.status(400).json({ error: "Invalid approval data" });
@@ -671,7 +672,7 @@ router.post(
   requireRole("business_office", "admin"),
   async (req: Request, res: Response) => {
     try {
-      const requestId = parseInt(req.params.requestId);
+      const requestId = parseInt(req.params.requestId as string);
       const parsed = BoDenyRequestBody.safeParse(req.body);
       if (!parsed.success) {
         res.status(400).json({ error: "Denial reason required" });
@@ -709,7 +710,7 @@ router.post(
   requireAuth,
   async (req: Request, res: Response) => {
     try {
-      const requestId = parseInt(req.params.requestId);
+      const requestId = parseInt(req.params.requestId as string);
       const parsed = SignRepaymentGuaranteeBody.safeParse(req.body);
       if (!parsed.success) {
         res.status(400).json({ error: "Signed name required" });
@@ -758,7 +759,7 @@ router.get(
   requireAuth,
   async (req: Request, res: Response) => {
     try {
-      const requestId = parseInt(req.params.requestId);
+      const requestId = parseInt(req.params.requestId as string);
       const user = req.dbUser!;
 
       // Verify access: fetch the parent request first
@@ -819,7 +820,7 @@ router.post(
   requireAuth,
   async (req: Request, res: Response) => {
     try {
-      const requestId = parseInt(req.params.requestId);
+      const requestId = parseInt(req.params.requestId as string);
       const parsed = SubmitReceiptBody.safeParse(req.body);
       if (!parsed.success) {
         res.status(400).json({ error: "File URL required" });
@@ -878,7 +879,7 @@ router.post(
   requireRole("accounting", "admin"),
   async (req: Request, res: Response) => {
     try {
-      const requestId = parseInt(req.params.requestId);
+      const requestId = parseInt(req.params.requestId as string);
       const parsed = MarkReimbursedBody.safeParse(req.body);
       if (!parsed.success) {
         res.status(400).json({ error: "Paycheck date required" });
@@ -906,7 +907,7 @@ router.post(
         .insert(reimbursements)
         .values({
           requestId,
-          paycheckDate: parsed.data.paycheckDate,
+          paycheckDate: parsed.data.paycheckDate as unknown as string,
           markedById: req.dbUser!.id,
         })
         .returning();

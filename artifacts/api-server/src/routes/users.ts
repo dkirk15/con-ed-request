@@ -64,7 +64,7 @@ router.get("/users/me", requireAuth, async (req: Request, res: Response) => {
 // GET /api/users/:userId/balance — own or admin only
 router.get("/users/:userId/balance", requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = parseInt(req.params.userId);
+    const userId = parseInt(req.params.userId as string);
     const caller = req.dbUser!;
 
     // Employees can only see their own balance; managers can see their clinic members; admin sees all
@@ -100,7 +100,8 @@ router.get("/users", requireRole("admin", "manager"), async (req: Request, res: 
 
     if (parsed.success) {
       if (parsed.data.role) {
-        conditions.push(eq(users.role, parsed.data.role as typeof users.role.dataType));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        conditions.push(eq(users.role, parsed.data.role as any));
       }
       if (parsed.data.clinicId != null) {
         conditions.push(eq(users.clinicId, Number(parsed.data.clinicId)));
@@ -144,10 +145,11 @@ router.post("/users", requireRole("admin"), async (req: Request, res: Response) 
         clerkId,
         name,
         email,
-        role: role as typeof users.role.dataType,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      role: role as any,
         clinicId: clinicId ?? null,
         managerId: managerId ?? null,
-        hireDate: hireDate ?? null,
+        hireDate: hireDate ? (hireDate as unknown as string) : null,
       })
       .returning();
 
@@ -161,7 +163,7 @@ router.post("/users", requireRole("admin"), async (req: Request, res: Response) 
 // GET /api/users/:userId — own profile, or manager for clinic members, or admin
 router.get("/users/:userId", requireAuth, async (req: Request, res: Response) => {
   try {
-    const parsed = GetUserParams.safeParse({ userId: parseInt(req.params.userId) });
+    const parsed = GetUserParams.safeParse({ userId: parseInt(req.params.userId as string) });
     if (!parsed.success) {
       res.status(400).json({ error: "Invalid user ID" });
       return;
@@ -201,7 +203,7 @@ router.get("/users/:userId", requireAuth, async (req: Request, res: Response) =>
 // PATCH /api/users/:userId — admin only
 router.patch("/users/:userId", requireRole("admin"), async (req: Request, res: Response) => {
   try {
-    const parsed = UpdateUserParams.safeParse({ userId: parseInt(req.params.userId) });
+    const parsed = UpdateUserParams.safeParse({ userId: parseInt(req.params.userId as string) });
     if (!parsed.success) {
       res.status(400).json({ error: "Invalid user ID" });
       return;
@@ -214,7 +216,8 @@ router.patch("/users/:userId", requireRole("admin"), async (req: Request, res: R
 
     const updates: Partial<typeof users.$inferInsert> = {};
     if (bodyParsed.data.role !== undefined) {
-      updates.role = bodyParsed.data.role as typeof users.role.dataType;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      updates.role = bodyParsed.data.role as any;
     }
     if (bodyParsed.data.clinicId !== undefined) {
       updates.clinicId = bodyParsed.data.clinicId ?? null;
@@ -223,7 +226,7 @@ router.patch("/users/:userId", requireRole("admin"), async (req: Request, res: R
       updates.managerId = bodyParsed.data.managerId ?? null;
     }
     if (bodyParsed.data.hireDate !== undefined) {
-      updates.hireDate = bodyParsed.data.hireDate ?? null;
+      updates.hireDate = bodyParsed.data.hireDate ? (bodyParsed.data.hireDate as unknown as string) : null;
     }
 
     const [user] = await db

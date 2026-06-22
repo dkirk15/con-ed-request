@@ -28,7 +28,7 @@ const CLINIC_NAMES = [
   "Puyallup – East Main",
   "Puyallup – Sunrise",
   "Puyallup – South Hill",
-  "Renton",
+  "Graham",
   "Spanaway",
   "Sumner",
   "Tacoma – Allenmore",
