@@ -1,5 +1,5 @@
 import { Switch, Route, Redirect, useLocation, Router as WouterRouter } from "wouter";
-import { ReactNode, useEffect } from "react";
+import { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -90,13 +90,14 @@ function AppRoutes() {
 /**
  * Registers Clerk's getToken() as the Bearer token provider for every API
  * fetch call. Must live inside <ClerkProvider>.
+ * Runs synchronously during render (not useEffect) so the getter is in place
+ * before any React Query hook fires its first request.
  */
 function ClerkTokenSync() {
   const { getToken } = useAuth();
-  useEffect(() => {
-    setAuthTokenGetter(() => getToken());
-    return () => setAuthTokenGetter(null);
-  }, [getToken]);
+  // Intentional synchronous side-effect during render — setAuthTokenGetter
+  // only writes a module-level variable and never triggers a re-render.
+  setAuthTokenGetter(() => getToken());
   return null;
 }
 
