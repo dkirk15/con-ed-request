@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation, useParams } from "wouter";
 import { 
   useGetRequest, 
@@ -117,6 +117,8 @@ export default function RequestDetailPage() {
   const signRepaymentMutation = useSignRepaymentGuarantee();
   const markReimbursedMutation = useMarkReimbursed();
   const submitReceiptMutation = useSubmitReceipt();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [denyReason, setDenyReason] = useState("");
   const [signedName, setSignedName] = useState("");
@@ -340,16 +342,18 @@ export default function RequestDetailPage() {
           )}
 
           {isMyRequest && request.status === "awaiting_receipt" && (
-            <div className="relative">
-              <input 
-                type="file" 
-                id="receipt-upload" 
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-                onChange={handleFileUpload} 
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={handleFileUpload}
                 accept="image/*,application/pdf"
               />
-              <Button variant="outline"><Upload className="mr-2 h-4 w-4" /> Upload Receipt</Button>
-            </div>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="mr-2 h-4 w-4" /> Upload Receipt
+              </Button>
+            </>
           )}
 
           {isAccounting && request.status === "receipt_submitted" && (
