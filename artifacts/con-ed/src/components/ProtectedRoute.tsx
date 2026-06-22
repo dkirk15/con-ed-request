@@ -1,6 +1,6 @@
-import { ClerkProvider, SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
+import { SignedIn, SignedOut, RedirectToSignIn, useClerk } from "@clerk/clerk-react";
 import { useGetMe } from "@workspace/api-client-react";
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
@@ -23,8 +23,17 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
 function AuthenticatedUserWrapper({ children }: { children: ReactNode }) {
   const { data: user, isLoading, error } = useGetMe();
+  const { signOut } = useClerk();
 
-  if (isLoading) {
+  const is401 = (error as any)?.response?.status === 401 || (error as any)?.status === 401;
+
+  useEffect(() => {
+    if (is401) {
+      signOut();
+    }
+  }, [is401, signOut]);
+
+  if (isLoading || is401) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-50">
         <Spinner className="h-8 w-8" />
