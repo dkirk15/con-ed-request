@@ -1,4 +1,5 @@
 export const STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
   pending_manager: "Pending Manager Approval",
   manager_approved: "Manager Approved",
   manager_denied: "Manager Denied",
@@ -12,6 +13,7 @@ export const STATUS_LABELS: Record<string, string> = {
 };
 
 export const STATUS_COLORS: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  draft: "outline",
   pending_manager: "secondary",
   manager_approved: "default",
   manager_denied: "destructive",

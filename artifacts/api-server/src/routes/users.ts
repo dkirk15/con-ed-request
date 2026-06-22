@@ -108,7 +108,11 @@ router.get("/users", requireRole("admin", "manager"), async (req: Request, res: 
     }
 
     // Managers can only see their clinic's staff
-    if (req.dbUser?.role === "manager" && req.dbUser.clinicId) {
+    if (req.dbUser?.role === "manager") {
+      if (!req.dbUser.clinicId) {
+        res.json([]);
+        return;
+      }
       conditions.push(eq(users.clinicId, req.dbUser.clinicId));
     }
 

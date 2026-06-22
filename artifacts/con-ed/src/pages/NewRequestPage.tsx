@@ -112,27 +112,31 @@ export default function NewRequestPage() {
       { data: { ...data, totalRequested } },
       {
         onSuccess: async (response) => {
-          if (isOverBudget) {
-            try {
-              await customFetch(
-                `/api/requests/${response.id}/repayment-guarantee`,
-                {
-                  method: "POST",
-                  body: JSON.stringify({
-                    signedName: guaranteeName.trim(),
-                    signedDate: guaranteeDate,
-                  }),
-                },
-              );
-            } catch (err) {
-              toast({
-                title: "Warning",
-                description:
-                  "Request submitted but repayment guarantee could not be recorded. Please contact your manager.",
-                variant: "destructive",
-              });
-            }
+          // Immediately submit the draft — passes guarantee data for over-budget requests
+          try {
+            await customFetch(`/api/requests/${response.id}/submit`, {
+              method: "POST",
+              body: JSON.stringify(
+                isOverBudget
+                  ? {
+                      guaranteeSignedName: guaranteeName.trim(),
+                      guaranteeSignedDate: guaranteeDate,
+                    }
+                  : {},
+              ),
+            });
+          } catch (err: unknown) {
+            const msg =
+              err instanceof Error ? err.message : "Failed to submit request";
+            toast({
+              title: "Submission failed",
+              description: msg,
+              variant: "destructive",
+            });
+            setLocation(`/requests/${response.id}`);
+            return;
           }
+
           queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
           queryClient.invalidateQueries({
             queryKey: ["/api/dashboard/employee/balance"],

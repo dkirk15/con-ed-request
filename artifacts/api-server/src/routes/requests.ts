@@ -276,7 +276,7 @@ router.post("/requests", requireAuth, async (req: Request, res: Response) => {
         parking: parking != null ? String(parking) : null,
         totalRequested: String(totalRequested),
         managerId,
-        status: "pending_manager",
+        status: "draft",
         requiresRepaymentGuarantee,
       })
       .returning();
@@ -287,6 +287,76 @@ router.post("/requests", requireAuth, async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// POST /api/requests/:requestId/submit
+// Moves a draft request to pending_manager, validating guarantee for over-budget requests.
+router.post(
+  "/requests/:requestId/submit",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    try {
+      const requestId = parseInt(req.params.requestId);
+      const user = req.dbUser!;
+
+      const [existing] = await db
+        .select()
+        .from(conEdRequests)
+        .where(eq(conEdRequests.id, requestId))
+        .limit(1);
+
+      if (!existing || existing.employeeId !== user.id) {
+        res.status(404).json({ error: "Request not found" });
+        return;
+      }
+
+      if (existing.status !== "draft") {
+        res.status(400).json({ error: "Only draft requests can be submitted" });
+        return;
+      }
+
+      const body = req.body ?? {};
+      const guaranteeSignedName: string | undefined =
+        typeof body.guaranteeSignedName === "string" ? body.guaranteeSignedName.trim() || undefined : undefined;
+      const guaranteeSignedDate: string | undefined =
+        typeof body.guaranteeSignedDate === "string" ? body.guaranteeSignedDate.trim() || undefined : undefined;
+
+      // Enforce repayment guarantee at submission time for over-budget requests
+      if (existing.requiresRepaymentGuarantee) {
+        const [existingGuarantee] = await db
+          .select({ id: repaymentGuarantees.id })
+          .from(repaymentGuarantees)
+          .where(eq(repaymentGuarantees.requestId, requestId))
+          .limit(1);
+
+        if (!existingGuarantee) {
+          if (!guaranteeSignedName || !guaranteeSignedDate) {
+            res.status(400).json({
+              error: "This request exceeds your annual budget. A repayment guarantee (signed name and date) is required before submission.",
+            });
+            return;
+          }
+          await db.insert(repaymentGuarantees).values({
+            requestId,
+            employeeId: user.id,
+            signedName: guaranteeSignedName,
+            signedDate: guaranteeSignedDate,
+          });
+        }
+      }
+
+      const [updated] = await db
+        .update(conEdRequests)
+        .set({ status: "pending_manager", updatedAt: new Date() })
+        .where(eq(conEdRequests.id, requestId))
+        .returning();
+
+      res.json(await formatRequest(updated));
+    } catch (err) {
+      req.log.error({ err }, "submitRequest error");
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
 
 // GET /api/requests/:requestId
 router.get("/requests/:requestId", requireAuth, async (req: Request, res: Response) => {
@@ -401,7 +471,7 @@ router.post("/requests/:requestId/cancel", requireAuth, async (req: Request, res
     }
 
     // Only cancellable before BO review
-    const cancellableStatuses = ["pending_manager", "pending_bo"];
+    const cancellableStatuses = ["draft", "pending_manager", "pending_bo"];
     if (!cancellableStatuses.includes(existing.status)) {
       res.status(400).json({ error: "Request cannot be cancelled at this stage" });
       return;

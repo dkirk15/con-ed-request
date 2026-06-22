@@ -10,6 +10,7 @@ export type ConEdRequestStatus = typeof ConEdRequestStatus[keyof typeof ConEdReq
 
 
 export const ConEdRequestStatus = {
+  draft: 'draft',
   pending_manager: 'pending_manager',
   manager_approved: 'manager_approved',
   manager_denied: 'manager_denied',

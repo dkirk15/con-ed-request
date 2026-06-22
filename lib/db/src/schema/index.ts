@@ -19,6 +19,7 @@ export const roleEnum = pgEnum("role", [
 ]);
 
 export const requestStatusEnum = pgEnum("request_status", [
+  "draft",
   "pending_manager",
   "manager_approved",
   "manager_denied",
@@ -54,7 +55,7 @@ export const conEdRequests = pgTable("con_ed_requests", {
   employeeId: integer("employee_id")
     .notNull()
     .references(() => users.id),
-  status: requestStatusEnum("status").notNull().default("pending_manager"),
+  status: requestStatusEnum("status").notNull().default("draft"),
   courseNames: text("course_names").notNull(),
   courseDates: text("course_dates"),
   ceuCount: numeric("ceu_count", { precision: 5, scale: 1 }),

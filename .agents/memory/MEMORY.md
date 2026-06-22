@@ -1,2 +1,2 @@
-- [OSS Con-Ed clerk package](clerk-package.md) — design subagent uses @clerk/clerk-react (not @clerk/react); install both in artifact
-- [OSS Con-Ed balance logic](balance-logic.md) — $2K/yr prorated first year: allocation = 2000×(13-hireMonth)/12
+- [OSS request lifecycle](oss-request-lifecycle.md) — draft→pending_manager→pending_bo→awaiting_receipt→receipt_submitted→reimbursed; guarantee enforced at submit, not manager-approve.
+- [OSS clinics](oss-clinics.md) — authoritative 25-clinic list; Enumclaw/Issaquah/Lacey/Monroe/Mukilteo are NOT OSS locations.

@@ -225,7 +225,25 @@ export default function RequestDetailPage() {
         
         {/* Actions Menu */}
         <div className="flex flex-wrap gap-2">
-          {isMyRequest && request.status === "pending_manager" && (
+          {isMyRequest && request.status === "draft" && (
+            <Button
+              onClick={async () => {
+                try {
+                  await customFetch(`/api/requests/${id}/submit`, { method: "POST", body: JSON.stringify({}) });
+                  toast({ title: "Submitted", description: "Your request has been submitted for manager review." });
+                  queryClient.invalidateQueries({ queryKey: getGetRequestQueryKey(id) });
+                  queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
+                } catch (err: any) {
+                  toast({ title: "Error", description: err.message || "Failed to submit", variant: "destructive" });
+                }
+              }}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Submit Request
+            </Button>
+          )}
+
+          {isMyRequest && (request.status === "draft" || request.status === "pending_manager") && (
             <Button variant="destructive" onClick={() => handleAction(cancelMutation, id, "Request cancelled")}>
               Cancel Request
             </Button>
