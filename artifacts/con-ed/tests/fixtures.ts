@@ -1,0 +1,90 @@
+import { test as base, expect } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import { createClerkUser, deleteClerkUser, signIn } from "./helpers/clerk";
+import { insertUser, type Role } from "./helpers/db";
+
+export interface TestUser {
+  clerkId: string;
+  dbId: number;
+  email: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  role: Role;
+  clinicId: number | null;
+  managerId: number | null;
+}
+
+export interface ProvisionUserInput {
+  role: Role;
+  firstName?: string;
+  lastName?: string;
+  clinicId?: number | null;
+  managerId?: number | null;
+  hireDate?: string | null;
+}
+
+interface Fixtures {
+  /**
+   * Creates a Clerk user (dev instance) and a matching DB user row with the
+   * requested role/clinic, so that when the app provisions the user on first
+   * request it finds the pre-seeded record. All created Clerk users are deleted
+   * during fixture teardown.
+   */
+  provisionUser: (input: ProvisionUserInput) => Promise<TestUser>;
+  /** Programmatically signs the given user in within the current browser page. */
+  signInAs: (user: TestUser) => Promise<void>;
+}
+
+export const test = base.extend<Fixtures>({
+  provisionUser: async ({}, use) => {
+    const createdClerkIds: string[] = [];
+
+    const provision = async (input: ProvisionUserInput): Promise<TestUser> => {
+      const id = randomUUID().slice(0, 8);
+      const firstName = input.firstName ?? "E2E";
+      const lastName = input.lastName ?? id;
+      const name = `${firstName} ${lastName}`;
+      const email = `e2e.${id}+clerk_test@example.com`;
+
+      const clerkId = await createClerkUser({ firstName, lastName, email });
+      createdClerkIds.push(clerkId);
+
+      const dbId = await insertUser({
+        clerkId,
+        name,
+        email,
+        role: input.role,
+        clinicId: input.clinicId ?? null,
+        managerId: input.managerId ?? null,
+        hireDate: input.hireDate ?? null,
+      });
+
+      return {
+        clerkId,
+        dbId,
+        email,
+        name,
+        firstName,
+        lastName,
+        role: input.role,
+        clinicId: input.clinicId ?? null,
+        managerId: input.managerId ?? null,
+      };
+    };
+
+    await use(provision);
+
+    for (const clerkId of createdClerkIds) {
+      await deleteClerkUser(clerkId);
+    }
+  },
+
+  signInAs: async ({ page }, use) => {
+    await use(async (user: TestUser) => {
+      await signIn(page, user.email);
+    });
+  },
+});
+
+export { expect };
