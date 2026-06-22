@@ -27,7 +27,7 @@ function AuthenticatedUserWrapper({ children }: { children: ReactNode }) {
   if (isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-50">
-        <Spinner size="lg" />
+        <Spinner className="h-8 w-8" />
       </div>
     );
   }

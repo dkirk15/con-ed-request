@@ -137,8 +137,8 @@ router.get("/storage/objects/*path", requireAuth, async (req: Request, res: Resp
           }
         }
       }
-      // If no receipt record found (e.g. path doesn't match stored URL format), deny for employees
-      else if (caller.role === "employee") {
+      // If no receipt record found, deny both employees and managers
+      else {
         res.status(403).json({ error: "Forbidden" });
         return;
       }

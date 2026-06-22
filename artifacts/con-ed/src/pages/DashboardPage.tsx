@@ -286,7 +286,7 @@ function BODashboard() {
             <CardTitle className="text-lg font-serif">Awaiting Business Office Approval</CardTitle>
             <CardDescription>Requests approved by managers, waiting for final BO sign-off</CardDescription>
           </div>
-          <Link href="/requests?status=pending_bo">
+          <Link href="/requests?status=manager_approved">
             <Button variant="outline" size="sm">View All</Button>
           </Link>
         </CardHeader>

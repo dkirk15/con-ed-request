@@ -254,7 +254,7 @@ export default function RequestDetailPage() {
             </>
           )}
 
-          {isBO && request.status === "pending_bo" && (
+          {isBO && request.status === "manager_approved" && (
             <>
               <Dialog>
                 <DialogTrigger asChild>
@@ -321,7 +321,7 @@ export default function RequestDetailPage() {
             </>
           )}
 
-          {isMyRequest && request.status === "awaiting_receipt" && (
+          {isMyRequest && request.status === "bo_approved" && (
             <div className="relative">
               <input 
                 type="file" 
