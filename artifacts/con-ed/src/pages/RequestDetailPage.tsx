@@ -341,7 +341,7 @@ export default function RequestDetailPage() {
             </>
           )}
 
-          {isMyRequest && request.status === "awaiting_receipt" && (
+          {isMyRequest && request.status === "awaiting_receipt" && (user.role === "employee" || user.role === "manager") && (
             <>
               <input
                 ref={fileInputRef}
