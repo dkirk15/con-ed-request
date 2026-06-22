@@ -44,4 +44,12 @@ test("employee creates and submits an in-budget request", async ({
   expect(row?.status).toBe("pending_manager");
   expect(Number(row?.total_requested)).toBe(500);
   expect(row?.requires_repayment_guarantee).toBe(false);
+
+  // The submitted request appears in the employee's Requests list as pending.
+  await page.goto("/requests");
+  const requestRow = page
+    .getByRole("row")
+    .filter({ hasText: "E2E Advanced Manual Therapy" });
+  await expect(requestRow).toBeVisible();
+  await expect(requestRow.getByText("Pending Manager Approval")).toBeVisible();
 });

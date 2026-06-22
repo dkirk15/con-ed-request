@@ -27,13 +27,26 @@ test.describe("Business Office review", () => {
     await page.goto(`/requests/${requestId}`);
 
     await page.getByRole("button", { name: "Final Approve" }).click();
+
+    // The approval dialog exposes one number input per cost category, in order:
+    // Tuition, Lodging, Airfare, Rental Car, Parking, Other. The BO can adjust
+    // each before confirming; total_approved must equal their sum.
+    const dialog = page.getByRole("dialog");
+    const amounts = dialog.locator('input[type="number"]');
+    await amounts.nth(0).fill("500"); // Tuition
+    await amounts.nth(1).fill("100"); // Lodging
+    await amounts.nth(5).fill("50"); // Other
+
     await page.getByRole("button", { name: "Confirm Approval" }).click();
 
     await expect(page.getByText("Awaiting Receipt")).toBeVisible();
 
     const row = await getRequest(requestId);
     expect(row?.status).toBe("awaiting_receipt");
-    expect(Number(row?.total_approved)).toBe(600);
+    expect(Number(row?.approved_tuition)).toBe(500);
+    expect(Number(row?.approved_lodging)).toBe(100);
+    expect(Number(row?.approved_other)).toBe(50);
+    expect(Number(row?.total_approved)).toBe(650);
     expect(row?.bo_approver_id).toBe(bo.dbId);
   });
 

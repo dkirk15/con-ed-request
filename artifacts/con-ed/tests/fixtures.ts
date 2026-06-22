@@ -24,6 +24,14 @@ export interface ProvisionUserInput {
   hireDate?: string | null;
 }
 
+export interface SignedUpUser {
+  clerkId: string;
+  email: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+}
+
 interface Fixtures {
   /**
    * Creates a Clerk user (dev instance) and a matching DB user row with the
@@ -32,8 +40,18 @@ interface Fixtures {
    * during fixture teardown.
    */
   provisionUser: (input: ProvisionUserInput) => Promise<TestUser>;
+  /**
+   * Creates a Clerk user only — no DB row. Used to exercise the app's
+   * auto-provision path (first authenticated request inserts a `role=employee`
+   * record), after which a test can promote the account with `setRole`. All
+   * created Clerk users are deleted during fixture teardown.
+   */
+  signUpUser: (input?: {
+    firstName?: string;
+    lastName?: string;
+  }) => Promise<SignedUpUser>;
   /** Programmatically signs the given user in within the current browser page. */
-  signInAs: (user: TestUser) => Promise<void>;
+  signInAs: (user: { email: string }) => Promise<void>;
 }
 
 export const test = base.extend<Fixtures>({
@@ -80,8 +98,34 @@ export const test = base.extend<Fixtures>({
     }
   },
 
+  signUpUser: async ({}, use) => {
+    const createdClerkIds: string[] = [];
+
+    const signUp = async (input?: {
+      firstName?: string;
+      lastName?: string;
+    }): Promise<SignedUpUser> => {
+      const id = randomUUID().slice(0, 8);
+      const firstName = input?.firstName ?? "E2E";
+      const lastName = input?.lastName ?? id;
+      const name = `${firstName} ${lastName}`;
+      const email = `e2e.${id}+clerk_test@example.com`;
+
+      const clerkId = await createClerkUser({ firstName, lastName, email });
+      createdClerkIds.push(clerkId);
+
+      return { clerkId, email, name, firstName, lastName };
+    };
+
+    await use(signUp);
+
+    for (const clerkId of createdClerkIds) {
+      await deleteClerkUser(clerkId);
+    }
+  },
+
   signInAs: async ({ page }, use) => {
-    await use(async (user: TestUser) => {
+    await use(async (user: { email: string }) => {
       await signIn(page, user.email);
     });
   },

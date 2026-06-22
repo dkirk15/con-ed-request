@@ -158,6 +158,54 @@ export async function getRequest(id: number): Promise<RequestRow | undefined> {
   return rows[0];
 }
 
+export interface UserRow {
+  id: number;
+  role: Role;
+  email: string;
+  name: string;
+  clinic_id: number | null;
+  manager_id: number | null;
+  hire_date: string | null;
+  [key: string]: unknown;
+}
+
+export async function getUserByEmail(
+  email: string,
+): Promise<UserRow | undefined> {
+  const rows = await query<UserRow>("SELECT * FROM users WHERE email = $1", [
+    email,
+  ]);
+  return rows[0];
+}
+
+/**
+ * Updates a user's role/assignment by email. Mirrors what an admin does after
+ * Clerk auto-provisions a brand-new account as `employee`: the DB record is
+ * promoted to its real role and given a clinic/manager.
+ */
+export async function setRole(
+  email: string,
+  input: {
+    role: Role;
+    clinicId?: number | null;
+    managerId?: number | null;
+    hireDate?: string | null;
+  },
+): Promise<void> {
+  await query(
+    `UPDATE users
+       SET role = $1, clinic_id = $2, manager_id = $3, hire_date = $4
+     WHERE email = $5`,
+    [
+      input.role,
+      input.clinicId ?? null,
+      input.managerId ?? null,
+      input.hireDate ?? null,
+      email,
+    ],
+  );
+}
+
 export async function getRepaymentGuarantee(
   requestId: number,
 ): Promise<Record<string, unknown> | undefined> {
