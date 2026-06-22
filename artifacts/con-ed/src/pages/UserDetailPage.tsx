@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useLocation, useParams } from "wouter";
-import { useGetUser, useUpdateUser, useListClinics, useListUsers, useGetMe, getGetUserQueryKey } from "@workspace/api-client-react";
+import { useGetUser, useUpdateUser, useListClinics, useListUsers, useGetMe, getGetUserQueryKey, customFetch } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,10 +23,21 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { Link } from "wouter";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ROLE_LABELS } from "@/lib/constants";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -60,6 +71,24 @@ export default function UserDetailPage() {
   const { data: potentialManagers } = useListUsers({ role: "manager" });
 
   const updateUser = useUpdateUser();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await customFetch(`/api/users/${id}`, { method: "DELETE" });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({ title: "User deleted", description: `${user?.name} has been removed.` });
+      setLocation("/users");
+    } catch (err: any) {
+      toast({
+        title: "Delete failed",
+        description: err.message || "Failed to delete user",
+        variant: "destructive",
+      });
+      setIsDeleting(false);
+    }
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -293,13 +322,45 @@ export default function UserDetailPage() {
             </CardContent>
           </Card>
 
-          <div className="flex justify-end gap-4">
-            <Link href="/users">
-              <Button type="button" variant="outline">Cancel</Button>
-            </Link>
-            <Button type="submit" disabled={updateUser.isPending} className="min-w-[150px]">
-              {updateUser.isPending ? "Saving..." : "Save Changes"}
-            </Button>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              {isAdmin && !isSelf && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" variant="destructive" disabled={isDeleting}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      {isDeleting ? "Deleting..." : "Delete User"}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete {user.name}?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This permanently removes the user account for <strong>{user.email}</strong>.
+                        This action cannot be undone. Users with existing CE requests cannot be deleted.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDelete}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Delete User
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
+            <div className="flex gap-4">
+              <Link href="/users">
+                <Button type="button" variant="outline">Cancel</Button>
+              </Link>
+              <Button type="submit" disabled={updateUser.isPending} className="min-w-[150px]">
+                {updateUser.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
           </div>
         </form>
       </Form>

@@ -19,14 +19,27 @@ let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
 let _impersonatedRole: string | null = null;
 
+const IMPERSONATION_STORAGE_KEY = "oss_impersonated_role";
+
 /**
  * Set a role to impersonate on every outgoing request.
  * When set, an `X-Impersonate-Role` header is attached to every fetch call.
  * The API server honours this header only for admin users.
  * Pass `null` to clear impersonation.
+ *
+ * Writes to both the module-level variable AND sessionStorage so that
+ * customFetch can always read the correct role even if Vite creates
+ * multiple module instances during HMR.
  */
 export function setImpersonatedRole(role: string | null): void {
   _impersonatedRole = role;
+  if (typeof sessionStorage !== "undefined") {
+    if (role) {
+      sessionStorage.setItem(IMPERSONATION_STORAGE_KEY, role);
+    } else {
+      sessionStorage.removeItem(IMPERSONATION_STORAGE_KEY);
+    }
+  }
 }
 
 /**
@@ -370,8 +383,14 @@ export async function customFetch<T = unknown>(
   }
 
   // Attach impersonation header when an admin is testing as another role.
-  if (_impersonatedRole) {
-    headers.set("x-impersonate-role", _impersonatedRole);
+  // Falls back to sessionStorage so HMR module reloads never lose the value.
+  const impersonatedRole =
+    _impersonatedRole ??
+    (typeof sessionStorage !== "undefined"
+      ? sessionStorage.getItem(IMPERSONATION_STORAGE_KEY)
+      : null);
+  if (impersonatedRole) {
+    headers.set("x-impersonate-role", impersonatedRole);
   }
 
   const requestInfo = { method, url: resolveUrl(input) };

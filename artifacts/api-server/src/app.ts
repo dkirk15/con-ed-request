@@ -57,6 +57,13 @@ app.use(
   ),
 );
 
+// Tell browsers the response varies by impersonation header so the HTTP
+// cache never serves an admin-role response to an impersonated-role request.
+app.use("/api", (_req, res, next) => {
+  res.setHeader("Vary", "X-Impersonate-Role");
+  next();
+});
+
 app.use("/api", router);
 
 export default app;

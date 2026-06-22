@@ -34,7 +34,10 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       } else {
         sessionStorage.removeItem(STORAGE_KEY);
       }
-      queryClient.invalidateQueries();
+      // clear() wipes ALL cached data AND ETags so the next fetch is
+      // a fresh request without If-None-Match, guaranteeing the server
+      // returns the impersonated role instead of a 304 Not Modified.
+      queryClient.clear();
     },
     [queryClient],
   );

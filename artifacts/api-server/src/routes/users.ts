@@ -275,4 +275,36 @@ router.patch("/users/:userId", requireAuth, async (req: Request, res: Response) 
   }
 });
 
+// DELETE /api/users/:userId — admin only, cannot delete self
+router.delete("/users/:userId", requireRole("admin"), async (req: Request, res: Response) => {
+  try {
+    const parsed = z.object({ userId: z.coerce.number().int().positive() }).safeParse(req.params);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid user ID" });
+      return;
+    }
+    const { userId } = parsed.data;
+
+    if (req.dbUser!.id === userId) {
+      res.status(400).json({ error: "You cannot delete your own account" });
+      return;
+    }
+
+    const [deleted] = await db.delete(users).where(eq(users.id, userId)).returning({ id: users.id });
+    if (!deleted) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    res.status(204).send();
+  } catch (err: any) {
+    if (err?.code === "23503") {
+      res.status(409).json({ error: "Cannot delete user with existing requests or records. Remove their data first." });
+      return;
+    }
+    req.log.error({ err }, "deleteUser error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;
