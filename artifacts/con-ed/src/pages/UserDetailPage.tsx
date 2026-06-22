@@ -179,7 +179,7 @@ export default function UserDetailPage() {
                           <SelectValue placeholder="Select a clinic" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent className="max-h-72 overflow-y-auto">
                         <SelectItem value="none">No Clinic</SelectItem>
                         {clinics?.map((c) => (
                           <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
