@@ -32,6 +32,7 @@ import {
   ListRequestsQueryParams,
 } from "@workspace/api-zod";
 import { requireAuth, requireRole } from "../lib/auth";
+import { getUserBalance } from "../lib/balance";
 
 const router: IRouter = Router();
 
@@ -243,7 +244,7 @@ router.post("/requests", requireAuth, async (req: Request, res: Response) => {
       totalRequested,
     } = parsed.data;
 
-    // Assign manager from employee's clinic
+    // Assign manager from employee's profile or clinic lookup
     let managerId: number | null = null;
     if (user.managerId) {
       managerId = user.managerId;
@@ -255,6 +256,10 @@ router.post("/requests", requireAuth, async (req: Request, res: Response) => {
         .limit(1);
       managerId = mgr?.id ?? null;
     }
+
+    // Compute over-budget: if this request would push the employee over their allocation
+    const balance = await getUserBalance(user.id, user.hireDate);
+    const requiresRepaymentGuarantee = totalRequested > balance.remainingAmount;
 
     const [newRequest] = await db
       .insert(conEdRequests)
@@ -272,6 +277,7 @@ router.post("/requests", requireAuth, async (req: Request, res: Response) => {
         totalRequested: String(totalRequested),
         managerId,
         status: "pending_manager",
+        requiresRepaymentGuarantee,
       })
       .returning();
 
@@ -347,6 +353,12 @@ router.patch("/requests/:requestId", requireAuth, async (req: Request, res: Resp
       return;
     }
 
+    // Can only edit while still pending manager review
+    if (existing.status !== "pending_manager") {
+      res.status(400).json({ error: "Request cannot be edited once submitted for approval" });
+      return;
+    }
+
     const data = parsed.data;
     const updates: Partial<typeof conEdRequests.$inferInsert> = { updatedAt: new Date() };
     if (data.courseNames !== undefined) updates.courseNames = data.courseNames;
@@ -385,6 +397,13 @@ router.post("/requests/:requestId/cancel", requireAuth, async (req: Request, res
 
     if (!existing || existing.employeeId !== req.dbUser!.id) {
       res.status(404).json({ error: "Request not found" });
+      return;
+    }
+
+    // Only cancellable before BO approval
+    const cancellableStatuses = ["pending_manager", "pending_bo"];
+    if (!cancellableStatuses.includes(existing.status)) {
+      res.status(400).json({ error: "Request cannot be cancelled at this stage" });
       return;
     }
 
@@ -653,6 +672,39 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const requestId = parseInt(req.params.requestId);
+      const user = req.dbUser!;
+
+      // Verify access: fetch the parent request first
+      const [parent] = await db
+        .select()
+        .from(conEdRequests)
+        .where(eq(conEdRequests.id, requestId))
+        .limit(1);
+
+      if (!parent) {
+        res.status(404).json({ error: "Request not found" });
+        return;
+      }
+
+      // Employee can only see their own receipts
+      if (user.role === "employee" && parent.employeeId !== user.id) {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+
+      // Manager can only see their clinic's employees' receipts
+      if (user.role === "manager") {
+        const [emp] = await db
+          .select({ clinicId: users.clinicId })
+          .from(users)
+          .where(eq(users.id, parent.employeeId))
+          .limit(1);
+        if (!emp || emp.clinicId !== user.clinicId) {
+          res.status(403).json({ error: "Forbidden" });
+          return;
+        }
+      }
+
       const rows = await db
         .select()
         .from(receipts)
@@ -698,6 +750,12 @@ router.post(
         return;
       }
 
+      // Only allowed once BO has approved and we're awaiting a receipt
+      if (existing.status !== "awaiting_receipt") {
+        res.status(400).json({ error: "Receipt can only be submitted once the Business Office has approved this request" });
+        return;
+      }
+
       const [receipt] = await db
         .insert(receipts)
         .values({
@@ -737,6 +795,23 @@ router.post(
       const parsed = MarkReimbursedBody.safeParse(req.body);
       if (!parsed.success) {
         res.status(400).json({ error: "Paycheck date required" });
+        return;
+      }
+
+      // Verify request exists and is in receipt_submitted status
+      const [existingReq] = await db
+        .select()
+        .from(conEdRequests)
+        .where(eq(conEdRequests.id, requestId))
+        .limit(1);
+
+      if (!existingReq) {
+        res.status(404).json({ error: "Request not found" });
+        return;
+      }
+
+      if (existingReq.status !== "receipt_submitted") {
+        res.status(400).json({ error: "Request must have a submitted receipt before reimbursement" });
         return;
       }
 

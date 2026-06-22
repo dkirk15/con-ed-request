@@ -68,7 +68,7 @@ const useBoDenyRequest = () => {
 const useSignRepaymentGuarantee = () => {
   return useMutation({
     mutationFn: ({ id, signedName }: { id: number, signedName: string }) => 
-      customFetch(`/api/requests/${id}/sign-repayment-guarantee`, { 
+      customFetch(`/api/requests/${id}/repayment-guarantee`, { 
         method: "POST", 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ signedName }) 

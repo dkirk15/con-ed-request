@@ -54,41 +54,37 @@ async function formatUser(user: typeof users.$inferSelect) {
 // GET /api/users/me
 router.get("/users/me", requireAuth, async (req: Request, res: Response) => {
   try {
-    const { userId: clerkId } = getAuth(req);
-    if (!clerkId) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
-
-    let [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.clerkId, clerkId))
-      .limit(1);
-
-    // Auto-provision user from Clerk data if not in DB
-    if (!user) {
-      res.status(403).json({ error: "User not provisioned. Contact your administrator." });
-      return;
-    }
-
-    res.json(await formatUser(user));
+    res.json(await formatUser(req.dbUser!));
   } catch (err) {
     req.log.error({ err }, "getMe error");
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// GET /api/users/:userId/balance
+// GET /api/users/:userId/balance — own or admin only
 router.get("/users/:userId/balance", requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.userId);
-    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    if (!user) {
+    const caller = req.dbUser!;
+
+    // Employees can only see their own balance; managers can see their clinic members; admin sees all
+    if (caller.role === "employee" && caller.id !== userId) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const [targetUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!targetUser) {
       res.status(404).json({ error: "User not found" });
       return;
     }
-    const balance = await getUserBalance(user.id, user.hireDate);
+
+    if (caller.role === "manager" && targetUser.clinicId !== caller.clinicId) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    const balance = await getUserBalance(targetUser.id, targetUser.hireDate);
     res.json(balance);
   } catch (err) {
     req.log.error({ err }, "getUserBalance error");
@@ -96,15 +92,10 @@ router.get("/users/:userId/balance", requireAuth, async (req: Request, res: Resp
   }
 });
 
-// GET /api/users
+// GET /api/users — admin or manager (managers see only their clinic)
 router.get("/users", requireRole("admin", "manager"), async (req: Request, res: Response) => {
   try {
     const parsed = ListUsersQueryParams.safeParse(req.query);
-    const filters: Parameters<typeof db.select>[0] extends undefined
-      ? unknown[]
-      : unknown[] = [];
-
-    let query = db.select().from(users);
     const conditions = [];
 
     if (parsed.success) {
@@ -116,7 +107,7 @@ router.get("/users", requireRole("admin", "manager"), async (req: Request, res: 
       }
     }
 
-    // Managers can only see their clinic's employees
+    // Managers can only see their clinic's staff
     if (req.dbUser?.role === "manager" && req.dbUser.clinicId) {
       conditions.push(eq(users.clinicId, req.dbUser.clinicId));
     }
@@ -133,7 +124,7 @@ router.get("/users", requireRole("admin", "manager"), async (req: Request, res: 
   }
 });
 
-// POST /api/users
+// POST /api/users — admin only
 router.post("/users", requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const parsed = CreateUserBody.safeParse(req.body);
@@ -163,7 +154,7 @@ router.post("/users", requireRole("admin"), async (req: Request, res: Response) 
   }
 });
 
-// GET /api/users/:userId
+// GET /api/users/:userId — own profile, or manager for clinic members, or admin
 router.get("/users/:userId", requireAuth, async (req: Request, res: Response) => {
   try {
     const parsed = GetUserParams.safeParse({ userId: parseInt(req.params.userId) });
@@ -171,26 +162,39 @@ router.get("/users/:userId", requireAuth, async (req: Request, res: Response) =>
       res.status(400).json({ error: "Invalid user ID" });
       return;
     }
+    const caller = req.dbUser!;
 
-    const [user] = await db
+    const [targetUser] = await db
       .select()
       .from(users)
       .where(eq(users.id, parsed.data.userId))
       .limit(1);
 
-    if (!user) {
+    if (!targetUser) {
       res.status(404).json({ error: "User not found" });
       return;
     }
 
-    res.json(await formatUser(user));
+    // Employee can only view own profile
+    if (caller.role === "employee" && caller.id !== targetUser.id) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    // Manager can only view members of their clinic
+    if (caller.role === "manager" && targetUser.clinicId !== caller.clinicId && caller.id !== targetUser.id) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+
+    res.json(await formatUser(targetUser));
   } catch (err) {
     req.log.error({ err }, "getUser error");
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-// PATCH /api/users/:userId
+// PATCH /api/users/:userId — admin only
 router.patch("/users/:userId", requireRole("admin"), async (req: Request, res: Response) => {
   try {
     const parsed = UpdateUserParams.safeParse({ userId: parseInt(req.params.userId) });
