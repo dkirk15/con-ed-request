@@ -1,0 +1,2 @@
+- [OSS request lifecycle](oss-request-lifecycle.md) — draft→pending_manager→pending_bo→awaiting_receipt→receipt_submitted→reimbursed; guarantee enforced at submit, not manager-approve.
+- [OSS clinics](oss-clinics.md) — authoritative 25-clinic list; Enumclaw/Issaquah/Lacey/Monroe/Mukilteo are NOT OSS locations.
