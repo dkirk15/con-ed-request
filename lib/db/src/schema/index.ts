@@ -65,6 +65,7 @@ export const conEdRequests = pgTable("con_ed_requests", {
   airfare: numeric("airfare", { precision: 10, scale: 2 }),
   rentalCar: numeric("rental_car", { precision: 10, scale: 2 }),
   parking: numeric("parking", { precision: 10, scale: 2 }),
+  otherCosts: numeric("other_costs", { precision: 10, scale: 2 }),
   totalRequested: numeric("total_requested", { precision: 10, scale: 2 }).notNull(),
   approvedTuition: numeric("approved_tuition", { precision: 10, scale: 2 }),
   approvedLodging: numeric("approved_lodging", { precision: 10, scale: 2 }),

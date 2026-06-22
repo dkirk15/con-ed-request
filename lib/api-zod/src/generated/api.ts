@@ -147,7 +147,7 @@ export const ListRequestsResponseItem = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeEmail": zod.string().nullish(),
   "clinicName": zod.string().nullish(),
-  "status": zod.enum(['pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
   "courseNames": zod.string(),
   "courseDates": zod.string().nullish(),
   "ceuCount": zod.number().nullish(),
@@ -157,6 +157,7 @@ export const ListRequestsResponseItem = zod.object({
   "airfare": zod.number().nullish(),
   "rentalCar": zod.number().nullish(),
   "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
   "totalRequested": zod.number(),
   "approvedTuition": zod.number().nullish(),
   "approvedLodging": zod.number().nullish(),
@@ -182,6 +183,7 @@ export const ListRequestsResponseItem = zod.object({
   "requestId": zod.number(),
   "employeeId": zod.number(),
   "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date()
 }).nullish(),
   "receipts": zod.array(zod.object({
@@ -206,7 +208,7 @@ export const ListRequestsResponse = zod.array(ListRequestsResponseItem)
 
 
 /**
- * @summary Submit a new con-ed request
+ * @summary Create a draft con-ed request
  */
 export const CreateRequestBody = zod.object({
   "courseNames": zod.string(),
@@ -218,6 +220,7 @@ export const CreateRequestBody = zod.object({
   "airfare": zod.number().nullish(),
   "rentalCar": zod.number().nullish(),
   "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
   "totalRequested": zod.number()
 })
 
@@ -235,7 +238,7 @@ export const GetRequestResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeEmail": zod.string().nullish(),
   "clinicName": zod.string().nullish(),
-  "status": zod.enum(['pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
   "courseNames": zod.string(),
   "courseDates": zod.string().nullish(),
   "ceuCount": zod.number().nullish(),
@@ -245,6 +248,7 @@ export const GetRequestResponse = zod.object({
   "airfare": zod.number().nullish(),
   "rentalCar": zod.number().nullish(),
   "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
   "totalRequested": zod.number(),
   "approvedTuition": zod.number().nullish(),
   "approvedLodging": zod.number().nullish(),
@@ -270,6 +274,7 @@ export const GetRequestResponse = zod.object({
   "requestId": zod.number(),
   "employeeId": zod.number(),
   "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date()
 }).nullish(),
   "receipts": zod.array(zod.object({
@@ -309,6 +314,7 @@ export const UpdateRequestBody = zod.object({
   "airfare": zod.number().nullish(),
   "rentalCar": zod.number().nullish(),
   "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
   "totalRequested": zod.number().optional()
 })
 
@@ -318,7 +324,7 @@ export const UpdateRequestResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeEmail": zod.string().nullish(),
   "clinicName": zod.string().nullish(),
-  "status": zod.enum(['pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
   "courseNames": zod.string(),
   "courseDates": zod.string().nullish(),
   "ceuCount": zod.number().nullish(),
@@ -328,6 +334,7 @@ export const UpdateRequestResponse = zod.object({
   "airfare": zod.number().nullish(),
   "rentalCar": zod.number().nullish(),
   "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
   "totalRequested": zod.number(),
   "approvedTuition": zod.number().nullish(),
   "approvedLodging": zod.number().nullish(),
@@ -353,6 +360,84 @@ export const UpdateRequestResponse = zod.object({
   "requestId": zod.number(),
   "employeeId": zod.number(),
   "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
+  "signedAt": zod.coerce.date()
+}).nullish(),
+  "receipts": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "fileUrl": zod.string(),
+  "fileName": zod.string().nullish(),
+  "uploadedAt": zod.coerce.date()
+})).optional(),
+  "reimbursement": zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "paycheckDate": zod.coerce.date(),
+  "markedById": zod.number().nullish(),
+  "markedByName": zod.string().nullish(),
+  "markedAt": zod.coerce.date()
+}).nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Submit a draft request for manager review
+ */
+export const SubmitRequestParams = zod.object({
+  "requestId": zod.coerce.number()
+})
+
+export const SubmitRequestBody = zod.object({
+  "guaranteeSignedName": zod.string().optional().describe('Employee\'s full legal name (required when over budget)'),
+  "guaranteeSignedDate": zod.string().optional().describe('Date the guarantee was signed (required when over budget)')
+})
+
+export const SubmitRequestResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "employeeName": zod.string().nullish(),
+  "employeeEmail": zod.string().nullish(),
+  "clinicName": zod.string().nullish(),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "courseNames": zod.string(),
+  "courseDates": zod.string().nullish(),
+  "ceuCount": zod.number().nullish(),
+  "location": zod.string().nullish(),
+  "tuition": zod.number().nullish(),
+  "lodging": zod.number().nullish(),
+  "airfare": zod.number().nullish(),
+  "rentalCar": zod.number().nullish(),
+  "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
+  "totalRequested": zod.number(),
+  "approvedTuition": zod.number().nullish(),
+  "approvedLodging": zod.number().nullish(),
+  "approvedAirfare": zod.number().nullish(),
+  "approvedRentalCar": zod.number().nullish(),
+  "approvedParking": zod.number().nullish(),
+  "approvedOther": zod.number().nullish(),
+  "totalApproved": zod.number().nullish(),
+  "managerId": zod.number().nullish(),
+  "managerName": zod.string().nullish(),
+  "managerApprovedAt": zod.coerce.date().nullish(),
+  "managerDeniedAt": zod.coerce.date().nullish(),
+  "managerDenialReason": zod.string().nullish(),
+  "boApproverId": zod.number().nullish(),
+  "boApproverName": zod.string().nullish(),
+  "boApprovedAt": zod.coerce.date().nullish(),
+  "boDeniedAt": zod.coerce.date().nullish(),
+  "boDenialReason": zod.string().nullish(),
+  "remainingBalanceAfter": zod.number().nullish(),
+  "requiresRepaymentGuarantee": zod.boolean().optional(),
+  "repaymentGuarantee": zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "employeeId": zod.number(),
+  "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date()
 }).nullish(),
   "receipts": zod.array(zod.object({
@@ -388,7 +473,7 @@ export const CancelRequestResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeEmail": zod.string().nullish(),
   "clinicName": zod.string().nullish(),
-  "status": zod.enum(['pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
   "courseNames": zod.string(),
   "courseDates": zod.string().nullish(),
   "ceuCount": zod.number().nullish(),
@@ -398,6 +483,7 @@ export const CancelRequestResponse = zod.object({
   "airfare": zod.number().nullish(),
   "rentalCar": zod.number().nullish(),
   "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
   "totalRequested": zod.number(),
   "approvedTuition": zod.number().nullish(),
   "approvedLodging": zod.number().nullish(),
@@ -423,6 +509,7 @@ export const CancelRequestResponse = zod.object({
   "requestId": zod.number(),
   "employeeId": zod.number(),
   "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date()
 }).nullish(),
   "receipts": zod.array(zod.object({
@@ -458,7 +545,7 @@ export const ManagerApproveRequestResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeEmail": zod.string().nullish(),
   "clinicName": zod.string().nullish(),
-  "status": zod.enum(['pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
   "courseNames": zod.string(),
   "courseDates": zod.string().nullish(),
   "ceuCount": zod.number().nullish(),
@@ -468,6 +555,7 @@ export const ManagerApproveRequestResponse = zod.object({
   "airfare": zod.number().nullish(),
   "rentalCar": zod.number().nullish(),
   "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
   "totalRequested": zod.number(),
   "approvedTuition": zod.number().nullish(),
   "approvedLodging": zod.number().nullish(),
@@ -493,6 +581,7 @@ export const ManagerApproveRequestResponse = zod.object({
   "requestId": zod.number(),
   "employeeId": zod.number(),
   "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date()
 }).nullish(),
   "receipts": zod.array(zod.object({
@@ -532,7 +621,7 @@ export const ManagerDenyRequestResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeEmail": zod.string().nullish(),
   "clinicName": zod.string().nullish(),
-  "status": zod.enum(['pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
   "courseNames": zod.string(),
   "courseDates": zod.string().nullish(),
   "ceuCount": zod.number().nullish(),
@@ -542,6 +631,7 @@ export const ManagerDenyRequestResponse = zod.object({
   "airfare": zod.number().nullish(),
   "rentalCar": zod.number().nullish(),
   "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
   "totalRequested": zod.number(),
   "approvedTuition": zod.number().nullish(),
   "approvedLodging": zod.number().nullish(),
@@ -567,6 +657,7 @@ export const ManagerDenyRequestResponse = zod.object({
   "requestId": zod.number(),
   "employeeId": zod.number(),
   "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date()
 }).nullish(),
   "receipts": zod.array(zod.object({
@@ -612,7 +703,7 @@ export const BoApproveRequestResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeEmail": zod.string().nullish(),
   "clinicName": zod.string().nullish(),
-  "status": zod.enum(['pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
   "courseNames": zod.string(),
   "courseDates": zod.string().nullish(),
   "ceuCount": zod.number().nullish(),
@@ -622,6 +713,7 @@ export const BoApproveRequestResponse = zod.object({
   "airfare": zod.number().nullish(),
   "rentalCar": zod.number().nullish(),
   "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
   "totalRequested": zod.number(),
   "approvedTuition": zod.number().nullish(),
   "approvedLodging": zod.number().nullish(),
@@ -647,6 +739,7 @@ export const BoApproveRequestResponse = zod.object({
   "requestId": zod.number(),
   "employeeId": zod.number(),
   "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date()
 }).nullish(),
   "receipts": zod.array(zod.object({
@@ -686,7 +779,7 @@ export const BoDenyRequestResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeEmail": zod.string().nullish(),
   "clinicName": zod.string().nullish(),
-  "status": zod.enum(['pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
   "courseNames": zod.string(),
   "courseDates": zod.string().nullish(),
   "ceuCount": zod.number().nullish(),
@@ -696,6 +789,7 @@ export const BoDenyRequestResponse = zod.object({
   "airfare": zod.number().nullish(),
   "rentalCar": zod.number().nullish(),
   "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
   "totalRequested": zod.number(),
   "approvedTuition": zod.number().nullish(),
   "approvedLodging": zod.number().nullish(),
@@ -721,6 +815,7 @@ export const BoDenyRequestResponse = zod.object({
   "requestId": zod.number(),
   "employeeId": zod.number(),
   "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date()
 }).nullish(),
   "receipts": zod.array(zod.object({
@@ -752,7 +847,7 @@ export const SignRepaymentGuaranteeParams = zod.object({
 
 export const SignRepaymentGuaranteeBody = zod.object({
   "signedName": zod.string(),
-  "signedDate": zod.string().optional()
+  "signedDate": zod.string().nullish()
 })
 
 
@@ -806,8 +901,10 @@ export const GetEmployeeDashboardResponse = zod.object({
   "userId": zod.number(),
   "annualAllocation": zod.number(),
   "usedAmount": zod.number(),
+  "availableAllocation": zod.number().describe('Annual allocation after carry-forward CE advance debt is applied.'),
   "remainingAmount": zod.number(),
   "pendingAmount": zod.number().optional(),
+  "carryoverDebt": zod.number().describe('Prior-year advanced CE balance applied against this year\'s allocation.'),
   "year": zod.number(),
   "isProrated": zod.boolean(),
   "hireMonth": zod.number().nullish()
@@ -824,7 +921,7 @@ export const GetEmployeeDashboardResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeEmail": zod.string().nullish(),
   "clinicName": zod.string().nullish(),
-  "status": zod.enum(['pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
   "courseNames": zod.string(),
   "courseDates": zod.string().nullish(),
   "ceuCount": zod.number().nullish(),
@@ -834,6 +931,7 @@ export const GetEmployeeDashboardResponse = zod.object({
   "airfare": zod.number().nullish(),
   "rentalCar": zod.number().nullish(),
   "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
   "totalRequested": zod.number(),
   "approvedTuition": zod.number().nullish(),
   "approvedLodging": zod.number().nullish(),
@@ -859,6 +957,7 @@ export const GetEmployeeDashboardResponse = zod.object({
   "requestId": zod.number(),
   "employeeId": zod.number(),
   "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date()
 }).nullish(),
   "receipts": zod.array(zod.object({
@@ -890,8 +989,10 @@ export const GetManagerDashboardResponse = zod.object({
   "userId": zod.number(),
   "annualAllocation": zod.number(),
   "usedAmount": zod.number(),
+  "availableAllocation": zod.number().describe('Annual allocation after carry-forward CE advance debt is applied.'),
   "remainingAmount": zod.number(),
   "pendingAmount": zod.number().optional(),
+  "carryoverDebt": zod.number().describe('Prior-year advanced CE balance applied against this year\'s allocation.'),
   "year": zod.number(),
   "isProrated": zod.boolean(),
   "hireMonth": zod.number().nullish()
@@ -902,7 +1003,7 @@ export const GetManagerDashboardResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeEmail": zod.string().nullish(),
   "clinicName": zod.string().nullish(),
-  "status": zod.enum(['pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
   "courseNames": zod.string(),
   "courseDates": zod.string().nullish(),
   "ceuCount": zod.number().nullish(),
@@ -912,6 +1013,7 @@ export const GetManagerDashboardResponse = zod.object({
   "airfare": zod.number().nullish(),
   "rentalCar": zod.number().nullish(),
   "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
   "totalRequested": zod.number(),
   "approvedTuition": zod.number().nullish(),
   "approvedLodging": zod.number().nullish(),
@@ -937,6 +1039,7 @@ export const GetManagerDashboardResponse = zod.object({
   "requestId": zod.number(),
   "employeeId": zod.number(),
   "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date()
 }).nullish(),
   "receipts": zod.array(zod.object({
@@ -976,7 +1079,7 @@ export const GetBoDashboardResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeEmail": zod.string().nullish(),
   "clinicName": zod.string().nullish(),
-  "status": zod.enum(['pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
   "courseNames": zod.string(),
   "courseDates": zod.string().nullish(),
   "ceuCount": zod.number().nullish(),
@@ -986,6 +1089,7 @@ export const GetBoDashboardResponse = zod.object({
   "airfare": zod.number().nullish(),
   "rentalCar": zod.number().nullish(),
   "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
   "totalRequested": zod.number(),
   "approvedTuition": zod.number().nullish(),
   "approvedLodging": zod.number().nullish(),
@@ -1011,6 +1115,7 @@ export const GetBoDashboardResponse = zod.object({
   "requestId": zod.number(),
   "employeeId": zod.number(),
   "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date()
 }).nullish(),
   "receipts": zod.array(zod.object({
@@ -1037,7 +1142,7 @@ export const GetBoDashboardResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeEmail": zod.string().nullish(),
   "clinicName": zod.string().nullish(),
-  "status": zod.enum(['pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
   "courseNames": zod.string(),
   "courseDates": zod.string().nullish(),
   "ceuCount": zod.number().nullish(),
@@ -1047,6 +1152,7 @@ export const GetBoDashboardResponse = zod.object({
   "airfare": zod.number().nullish(),
   "rentalCar": zod.number().nullish(),
   "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
   "totalRequested": zod.number(),
   "approvedTuition": zod.number().nullish(),
   "approvedLodging": zod.number().nullish(),
@@ -1072,6 +1178,7 @@ export const GetBoDashboardResponse = zod.object({
   "requestId": zod.number(),
   "employeeId": zod.number(),
   "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date()
 }).nullish(),
   "receipts": zod.array(zod.object({
@@ -1107,7 +1214,7 @@ export const GetAccountingDashboardResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeEmail": zod.string().nullish(),
   "clinicName": zod.string().nullish(),
-  "status": zod.enum(['pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
   "courseNames": zod.string(),
   "courseDates": zod.string().nullish(),
   "ceuCount": zod.number().nullish(),
@@ -1117,6 +1224,7 @@ export const GetAccountingDashboardResponse = zod.object({
   "airfare": zod.number().nullish(),
   "rentalCar": zod.number().nullish(),
   "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
   "totalRequested": zod.number(),
   "approvedTuition": zod.number().nullish(),
   "approvedLodging": zod.number().nullish(),
@@ -1142,6 +1250,7 @@ export const GetAccountingDashboardResponse = zod.object({
   "requestId": zod.number(),
   "employeeId": zod.number(),
   "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date()
 }).nullish(),
   "receipts": zod.array(zod.object({
@@ -1168,7 +1277,7 @@ export const GetAccountingDashboardResponse = zod.object({
   "employeeName": zod.string().nullish(),
   "employeeEmail": zod.string().nullish(),
   "clinicName": zod.string().nullish(),
-  "status": zod.enum(['pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
   "courseNames": zod.string(),
   "courseDates": zod.string().nullish(),
   "ceuCount": zod.number().nullish(),
@@ -1178,6 +1287,7 @@ export const GetAccountingDashboardResponse = zod.object({
   "airfare": zod.number().nullish(),
   "rentalCar": zod.number().nullish(),
   "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
   "totalRequested": zod.number(),
   "approvedTuition": zod.number().nullish(),
   "approvedLodging": zod.number().nullish(),
@@ -1203,6 +1313,7 @@ export const GetAccountingDashboardResponse = zod.object({
   "requestId": zod.number(),
   "employeeId": zod.number(),
   "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date()
 }).nullish(),
   "receipts": zod.array(zod.object({
@@ -1279,8 +1390,10 @@ export const GetUserBalanceResponse = zod.object({
   "userId": zod.number(),
   "annualAllocation": zod.number(),
   "usedAmount": zod.number(),
+  "availableAllocation": zod.number().describe('Annual allocation after carry-forward CE advance debt is applied.'),
   "remainingAmount": zod.number(),
   "pendingAmount": zod.number().optional(),
+  "carryoverDebt": zod.number().describe('Prior-year advanced CE balance applied against this year\'s allocation.'),
   "year": zod.number(),
   "isProrated": zod.boolean(),
   "hireMonth": zod.number().nullish()

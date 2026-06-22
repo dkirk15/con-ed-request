@@ -42,6 +42,7 @@ import type {
   ReimbursementInput,
   RepaymentGuarantee,
   RepaymentGuaranteeInput,
+  SubmitRequestInput,
   UploadUrlRequest,
   UploadUrlResponse,
   User,
@@ -689,7 +690,7 @@ export const getCreateRequestUrl = () => {
 }
 
 /**
- * @summary Submit a new con-ed request
+ * @summary Create a draft con-ed request
  */
 export const createRequest = async (conEdRequestInput: ConEdRequestInput, options?: RequestInit): Promise<ConEdRequest> => {
 
@@ -738,7 +739,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CreateRequestMutationError = ErrorType<unknown>
 
     /**
- * @summary Submit a new con-ed request
+ * @summary Create a draft con-ed request
  */
 export const useCreateRequest = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRequest>>, TError,{data: BodyType<ConEdRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -898,6 +899,78 @@ export const useUpdateRequest = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateRequestMutationOptions(options));
+    }
+
+export const getSubmitRequestUrl = (requestId: number,) => {
+
+
+
+
+  return `/api/requests/${requestId}/submit`
+}
+
+/**
+ * @summary Submit a draft request for manager review
+ */
+export const submitRequest = async (requestId: number,
+    submitRequestInput?: SubmitRequestInput, options?: RequestInit): Promise<ConEdRequest> => {
+
+  return customFetch<ConEdRequest>(getSubmitRequestUrl(requestId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      submitRequestInput,)
+  }
+);}
+
+
+
+
+export const getSubmitRequestMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitRequest>>, TError,{requestId: number;data?: BodyType<SubmitRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitRequest>>, TError,{requestId: number;data?: BodyType<SubmitRequestInput>}, TContext> => {
+
+const mutationKey = ['submitRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitRequest>>, {requestId: number;data?: BodyType<SubmitRequestInput>}> = (props) => {
+          const {requestId,data} = props ?? {};
+
+          return  submitRequest(requestId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitRequestMutationResult = NonNullable<Awaited<ReturnType<typeof submitRequest>>>
+    export type SubmitRequestMutationBody = BodyType<SubmitRequestInput> | undefined
+    export type SubmitRequestMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Submit a draft request for manager review
+ */
+export const useSubmitRequest = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitRequest>>, TError,{requestId: number;data?: BodyType<SubmitRequestInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitRequest>>,
+        TError,
+        {requestId: number;data?: BodyType<SubmitRequestInput>},
+        TContext
+      > => {
+      return useMutation(getSubmitRequestMutationOptions(options));
     }
 
 export const getCancelRequestUrl = (requestId: number,) => {

@@ -1,2 +1,3 @@
 - [OSS request lifecycle](oss-request-lifecycle.md) — draft→pending_manager→pending_bo→awaiting_receipt→receipt_submitted→reimbursed; guarantee enforced at submit, not manager-approve.
-- [OSS clinics](oss-clinics.md) — authoritative 25-clinic list; Enumclaw/Issaquah/Lacey/Monroe/Mukilteo are NOT OSS locations.
+- [OSS clinics](oss-clinics.md) — authoritative 25-clinic list; Enumclaw/Issaquah/Lacey/Monroe/Mukilteo/Renton are NOT OSS locations.
+- [OSS balance logic](balance-logic.md) — $2,000/year, prorated first year; prior-year overspend carries forward as debt reducing next year's allocation.

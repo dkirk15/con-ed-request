@@ -33,6 +33,7 @@ export * from './reimbursement';
 export * from './reimbursementInput';
 export * from './repaymentGuarantee';
 export * from './repaymentGuaranteeInput';
+export * from './submitRequestInput';
 export * from './uploadUrlRequest';
 export * from './uploadUrlResponse';
 export * from './user';

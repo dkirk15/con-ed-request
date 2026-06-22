@@ -188,7 +188,7 @@ paths:
     post:
       operationId: createRequest
       tags: [requests]
-      summary: Submit a new con-ed request
+      summary: Create a draft con-ed request
       requestBody:
         required: true
         content:
@@ -261,14 +261,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                guaranteeSignedName:
-                  type: string
-                  description: Employee's full legal name (required when over budget)
-                guaranteeSignedDate:
-                  type: string
-                  description: Date the guarantee was signed (required when over budget)
+              $ref: "#/components/schemas/SubmitRequestInput"
       responses:
         "200":
           description: Request submitted for manager review
@@ -281,10 +274,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+                $ref: "#/components/schemas/ErrorEnvelope"
 
   /requests/{requestId}/cancel:
     post:
@@ -769,7 +759,7 @@ components:
 
     BalanceInfo:
       type: object
-      required: [userId, annualAllocation, usedAmount, remainingAmount, year, isProrated]
+      required: [userId, annualAllocation, availableAllocation, carryoverDebt, usedAmount, remainingAmount, year, isProrated]
       properties:
         userId:
           type: integer
@@ -779,12 +769,20 @@ components:
         usedAmount:
           type: number
           format: float
+        availableAllocation:
+          type: number
+          format: float
+          description: Annual allocation after carry-forward CE advance debt is applied.
         remainingAmount:
           type: number
           format: float
         pendingAmount:
           type: number
           format: float
+        carryoverDebt:
+          type: number
+          format: float
+          description: Prior-year advanced CE balance applied against this year's allocation.
         year:
           type: integer
         isProrated:
@@ -811,6 +809,7 @@ components:
         status:
           type: string
           enum:
+            - draft
             - pending_manager
             - manager_approved
             - manager_denied
@@ -843,6 +842,9 @@ components:
           type: ["number", "null"]
           format: float
         parking:
+          type: ["number", "null"]
+          format: float
+        otherCosts:
           type: ["number", "null"]
           format: float
         totalRequested:
@@ -943,6 +945,9 @@ components:
         parking:
           type: ["number", "null"]
           format: float
+        otherCosts:
+          type: ["number", "null"]
+          format: float
         totalRequested:
           type: number
           format: float
@@ -974,9 +979,22 @@ components:
         parking:
           type: ["number", "null"]
           format: float
+        otherCosts:
+          type: ["number", "null"]
+          format: float
         totalRequested:
           type: number
           format: float
+
+    SubmitRequestInput:
+      type: object
+      properties:
+        guaranteeSignedName:
+          type: string
+          description: Employee's full legal name (required when over budget)
+        guaranteeSignedDate:
+          type: string
+          description: Date the guarantee was signed (required when over budget)
 
     DenialInput:
       type: object
@@ -1025,6 +1043,8 @@ components:
           type: integer
         signedName:
           type: string
+        signedDate:
+          type: ["string", "null"]
         signedAt:
           type: string
           format: date-time
@@ -1035,6 +1055,8 @@ components:
       properties:
         signedName:
           type: string
+        signedDate:
+          type: ["string", "null"]
 
     # ─── Receipt ───────────────────────────────────────────────────────────────
 

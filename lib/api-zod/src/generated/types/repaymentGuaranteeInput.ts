@@ -8,4 +8,6 @@
 
 export interface RepaymentGuaranteeInput {
   signedName: string;
+  /** @nullable */
+  signedDate?: string | null;
 }

@@ -37,6 +37,8 @@ export interface ConEdRequest {
   rentalCar?: number | null;
   /** @nullable */
   parking?: number | null;
+  /** @nullable */
+  otherCosts?: number | null;
   totalRequested: number;
   /** @nullable */
   approvedTuition?: number | null;

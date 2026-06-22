@@ -298,7 +298,7 @@ export default function RequestDetailPage() {
                     approvedAirfare: request.airfare || 0,
                     approvedRentalCar: request.rentalCar || 0,
                     approvedParking: request.parking || 0,
-                    approvedOther: 0,
+                    approvedOther: request.otherCosts || 0,
                   });
                 }
               }}>
@@ -469,10 +469,10 @@ export default function RequestDetailPage() {
                     <td className="px-6 py-3 text-right">{formatCurrency(request.parking)}</td>
                     <td className="px-6 py-3 text-right text-slate-500">{request.approvedParking != null ? formatCurrency(request.approvedParking) : "-"}</td>
                   </tr>
-                  {request.approvedOther != null && request.approvedOther > 0 && (
+                  {((request.otherCosts != null && request.otherCosts > 0) || (request.approvedOther != null && request.approvedOther > 0)) && (
                     <tr>
-                      <td className="px-6 py-3 font-medium">Other (BO Added)</td>
-                      <td className="px-6 py-3 text-right">-</td>
+                      <td className="px-6 py-3 font-medium">Other Costs</td>
+                      <td className="px-6 py-3 text-right">{formatCurrency(request.otherCosts)}</td>
                       <td className="px-6 py-3 text-right text-slate-500">{formatCurrency(request.approvedOther)}</td>
                     </tr>
                   )}

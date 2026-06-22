@@ -47,7 +47,11 @@ function EmployeeDashboard() {
   if (isLoading || !data) return <DashboardSkeleton />;
 
   const { balance, requestCounts, recentRequests } = data;
-  const percentUsed = Math.min(100, Math.round((balance.usedAmount / balance.annualAllocation) * 100));
+  const availableAllocation = balance.availableAllocation ?? balance.annualAllocation;
+  const percentUsed =
+    availableAllocation > 0
+      ? Math.min(100, Math.round((balance.usedAmount / availableAllocation) * 100))
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -61,10 +65,15 @@ function EmployeeDashboard() {
             <div className="flex justify-between items-end mb-2">
               <div className="text-3xl font-bold text-slate-900">{formatCurrency(balance.remainingAmount)} <span className="text-base font-normal text-slate-500">remaining</span></div>
               <div className="text-right text-sm text-slate-500">
-                {formatCurrency(balance.usedAmount)} used of {formatCurrency(balance.annualAllocation)}
+                {formatCurrency(balance.usedAmount)} used of {formatCurrency(availableAllocation)}
               </div>
             </div>
             <Progress value={percentUsed} className="h-3 rounded-full bg-slate-100" />
+            {balance.carryoverDebt ? (
+              <p className="text-sm text-amber-600 mt-2 flex items-center gap-1">
+                <Clock className="h-3 w-3" /> {formatCurrency(balance.carryoverDebt)} carry-forward advance applied
+              </p>
+            ) : null}
             {balance.pendingAmount ? (
               <p className="text-sm text-amber-600 mt-2 flex items-center gap-1">
                 <Clock className="h-3 w-3" /> {formatCurrency(balance.pendingAmount)} currently pending approval
@@ -144,7 +153,11 @@ function ManagerDashboard() {
   if (isLoading || !data) return <DashboardSkeleton />;
 
   const { myBalance, pendingClinicRequests, requestCounts, clinicEmployeeCount } = data;
-  const percentUsed = Math.min(100, Math.round((myBalance.usedAmount / myBalance.annualAllocation) * 100));
+  const availableAllocation = myBalance.availableAllocation ?? myBalance.annualAllocation;
+  const percentUsed =
+    availableAllocation > 0
+      ? Math.min(100, Math.round((myBalance.usedAmount / availableAllocation) * 100))
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -236,7 +249,12 @@ function ManagerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-900 mb-1">{formatCurrency(myBalance.remainingAmount)}</div>
-            <div className="text-sm text-slate-500 mb-3">Remaining of {formatCurrency(myBalance.annualAllocation)}</div>
+            <div className="text-sm text-slate-500 mb-3">Remaining of {formatCurrency(availableAllocation)}</div>
+            {myBalance.carryoverDebt ? (
+              <div className="text-xs text-amber-700 mb-3">
+                {formatCurrency(myBalance.carryoverDebt)} carry-forward advance applied
+              </div>
+            ) : null}
             <Progress value={percentUsed} className="h-2 rounded-full bg-slate-100" />
             <Link href="/account">
               <Button variant="link" className="w-full mt-4 text-primary">View My Profile</Button>
