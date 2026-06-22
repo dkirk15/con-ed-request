@@ -1,17 +1,17 @@
-import { SignIn } from "@clerk/clerk-react";
+import { SignUp } from "@clerk/clerk-react";
 import logo from "@assets/oss-logo-white.png";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-export default function SignInPage() {
+export default function SignUpPage() {
   return (
     <div className="flex min-h-screen w-full bg-slate-50">
       <div className="flex flex-1 flex-col items-center justify-center p-6">
         <div className="w-full max-w-[400px]">
-          <SignIn
+          <SignUp
             routing="path"
-            path={`${basePath}/sign-in`}
-            signUpUrl={`${basePath}/sign-up`}
+            path={`${basePath}/sign-up`}
+            signInUrl={`${basePath}/sign-in`}
             forceRedirectUrl={`${basePath}/dashboard`}
             appearance={{
               elements: {
@@ -25,7 +25,7 @@ export default function SignInPage() {
           />
         </div>
       </div>
-      
+
       <div className="hidden flex-1 bg-secondary flex-col items-center justify-center lg:flex p-12 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10 bg-[url('https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80')] bg-cover bg-center"></div>
         <div className="relative z-10 max-w-md text-center">

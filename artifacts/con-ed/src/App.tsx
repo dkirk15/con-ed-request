@@ -1,10 +1,12 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Redirect, useLocation, Router as WouterRouter } from "wouter";
+import { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClerkProvider } from "@clerk/clerk-react";
 
 import SignInPage from "@/pages/SignInPage";
+import SignUpPage from "@/pages/SignUpPage";
 import DashboardPage from "@/pages/DashboardPage";
 import RequestsPage from "@/pages/RequestsPage";
 import AccountPage from "@/pages/AccountPage";
@@ -26,6 +28,16 @@ const queryClient = new QueryClient({
   },
 });
 
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+// Clerk hands full paths (including the base) to routerPush/routerReplace, but
+// wouter's setLocation re-applies the base — strip it first to avoid doubling.
+function stripBase(path: string): string {
+  return basePath && path.startsWith(basePath)
+    ? path.slice(basePath.length) || "/"
+    : path;
+}
+
 function ProtectedRouter() {
   return (
     <AppLayout>
@@ -43,18 +55,44 @@ function ProtectedRouter() {
   );
 }
 
-function Router() {
+function AppRoutes() {
   return (
     <Switch>
-      <Route path="/" component={SignInPage} />
-      <Route path="/sign-in" component={SignInPage} />
-      <Route path="/sign-up" component={SignInPage} />
+      {/* "/sign-in/*?" and "/sign-up/*?" — the /*? optional wildcard matches both
+          the bare URL and Clerk's OAuth sub-paths (sso-callback, factor-one). */}
+      <Route path="/sign-in/*?" component={SignInPage} />
+      <Route path="/sign-up/*?" component={SignUpPage} />
+      <Route path="/">
+        <Redirect to="/sign-in" />
+      </Route>
       <Route path="/(.*)">
         <ProtectedRoute>
           <ProtectedRouter />
         </ProtectedRoute>
       </Route>
     </Switch>
+  );
+}
+
+function ClerkWithRouter({
+  publishableKey,
+  children,
+}: {
+  publishableKey: string;
+  children: ReactNode;
+}) {
+  const [, setLocation] = useLocation();
+
+  return (
+    <ClerkProvider
+      publishableKey={publishableKey}
+      signInUrl={`${basePath}/sign-in`}
+      signUpUrl={`${basePath}/sign-up`}
+      routerPush={(to) => setLocation(stripBase(to))}
+      routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
+    >
+      {children}
+    </ClerkProvider>
   );
 }
 
@@ -69,16 +107,16 @@ function App() {
   }
 
   return (
-    <ClerkProvider publishableKey={clerkPubKey}>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
-        </TooltipProvider>
-      </QueryClientProvider>
-    </ClerkProvider>
+    <WouterRouter base={basePath}>
+      <ClerkWithRouter publishableKey={clerkPubKey}>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <AppRoutes />
+            <Toaster />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ClerkWithRouter>
+    </WouterRouter>
   );
 }
 

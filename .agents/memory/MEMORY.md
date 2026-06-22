@@ -2,3 +2,4 @@
 - [OSS clinics](oss-clinics.md) — authoritative 25-clinic list; Enumclaw/Issaquah/Lacey/Monroe/Mukilteo/Renton are NOT OSS locations.
 - [OSS balance logic](balance-logic.md) — $2,000/year, prorated first year; prior-year overspend carries forward as debt reducing next year's allocation.
 - [con-ed E2E tests](con-ed-e2e-tests.md) — run synchronously in batches (bg runs get reaped); status-label badge/h4 collisions; cost inputs unreachable by label (use step attr).
+- [Clerk + wouter base-path routing](clerk-routing-base-path.md) — SignIn/SignUp need full base-prefixed paths + wired routerPush, or sign-up reload-loops.
