@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClerkProvider } from "@clerk/clerk-react";
+import { publishableKeyFromHost } from "@clerk/react/internal";
 
 import SignInPage from "@/pages/SignInPage";
 import SignUpPage from "@/pages/SignUpPage";
@@ -27,6 +28,17 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Resolves the key from window.location.hostname so one build can serve multiple
+// Clerk domains; the env var is the fallback. Do not inline the raw env var.
+const clerkPubKey = publishableKeyFromHost(
+  window.location.hostname,
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+);
+
+// Empty in dev (Clerk hits dev FAPI directly), auto-set in prod. Passed to
+// ClerkProvider unconditionally — gating it on PROD/NODE_ENV breaks the prod proxy.
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -86,6 +98,7 @@ function ClerkWithRouter({
   return (
     <ClerkProvider
       publishableKey={publishableKey}
+      proxyUrl={clerkProxyUrl}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
       routerPush={(to) => setLocation(stripBase(to))}
@@ -97,7 +110,6 @@ function ClerkWithRouter({
 }
 
 function App() {
-  const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
   if (!clerkPubKey) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-50 text-red-500">
