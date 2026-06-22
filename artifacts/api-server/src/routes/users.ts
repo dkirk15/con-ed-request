@@ -278,12 +278,11 @@ router.patch("/users/:userId", requireAuth, async (req: Request, res: Response) 
 // DELETE /api/users/:userId — admin only, cannot delete self
 router.delete("/users/:userId", requireRole("admin"), async (req: Request, res: Response) => {
   try {
-    const parsed = z.object({ userId: z.coerce.number().int().positive() }).safeParse(req.params);
-    if (!parsed.success) {
+    const userId = parseInt(String(req.params.userId ?? ""), 10);
+    if (!Number.isFinite(userId) || userId <= 0) {
       res.status(400).json({ error: "Invalid user ID" });
       return;
     }
-    const { userId } = parsed.data;
 
     if (req.dbUser!.id === userId) {
       res.status(400).json({ error: "You cannot delete your own account" });
