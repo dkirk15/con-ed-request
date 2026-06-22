@@ -47,7 +47,7 @@ test("auto-provisioned user promoted to admin edits a user via UI", async ({
     page.getByRole("heading", { name: "Edit User" }),
   ).toBeVisible();
 
-  const roleSelect = page.getByRole("combobox").first();
+  const roleSelect = page.getByTestId("user-role-select");
   await roleSelect.click();
   await page.getByRole("option", { name: "Manager", exact: true }).click();
   // Wait for the Radix Select dropdown to close (trigger reflects the choice)

@@ -182,7 +182,7 @@ export default function UserDetailPage() {
                         <FormLabel>System Role</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger data-testid="user-role-select">
                               <SelectValue placeholder="Select a role" />
                             </SelectTrigger>
                           </FormControl>

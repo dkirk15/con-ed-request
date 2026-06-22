@@ -1,0 +1,140 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e7]:
+        - generic [ref=e9]:
+          - img "OSS Logo" [ref=e10]
+          - generic [ref=e11]:
+            - generic [ref=e12]: Olympic Sports
+            - generic [ref=e13]: "& Spine"
+        - list [ref=e15]:
+          - listitem [ref=e16]:
+            - link "Dashboard" [ref=e17] [cursor=pointer]:
+              - /url: /dashboard
+              - img [ref=e18] [cursor=pointer]
+              - generic [ref=e21] [cursor=pointer]: Dashboard
+          - listitem [ref=e22]:
+            - link "Requests" [ref=e23] [cursor=pointer]:
+              - /url: /requests
+              - img [ref=e24] [cursor=pointer]
+              - generic [ref=e27] [cursor=pointer]: Requests
+          - listitem [ref=e28]:
+            - link "Users" [ref=e29] [cursor=pointer]:
+              - /url: /users
+              - img [ref=e30] [cursor=pointer]
+              - generic [ref=e35] [cursor=pointer]: Users
+        - generic [ref=e36]:
+          - list [ref=e37]:
+            - listitem [ref=e38]:
+              - link "My Account" [ref=e39] [cursor=pointer]:
+                - /url: /account
+                - img [ref=e40] [cursor=pointer]
+                - generic [ref=e44] [cursor=pointer]: My Account
+            - listitem [ref=e45]:
+              - button "Sign Out" [ref=e46]:
+                - img [ref=e47]
+                - generic [ref=e50]: Sign Out
+          - generic [ref=e51]:
+            - generic [ref=e53]: EE
+            - generic [ref=e54]:
+              - generic [ref=e55]: E2E e9312ce5
+              - generic [ref=e56]: admin
+      - main [ref=e57]:
+        - generic [ref=e58]:
+          - img [ref=e59]
+          - generic [ref=e61]: Admin test mode
+          - generic [ref=e62]: —
+          - generic [ref=e63]: "View app as:"
+          - combobox [ref=e64]:
+            - generic: Manager
+            - img [ref=e65]
+          - button "Exit" [ref=e67]:
+            - img
+            - text: Exit
+        - generic [ref=e70]:
+          - generic [ref=e71]:
+            - generic [ref=e72]:
+              - heading "Users" [level=1] [ref=e73]
+              - paragraph [ref=e74]: Directory of staff and system users
+            - combobox [ref=e76]:
+              - generic: All Roles
+              - img [ref=e77]
+          - table [ref=e81]:
+            - rowgroup [ref=e82]:
+              - row "Name Email Role Clinic Manager Action" [ref=e83]:
+                - cell "Name" [ref=e84]
+                - cell "Email" [ref=e85]
+                - cell "Role" [ref=e86]
+                - cell "Clinic" [ref=e87]
+                - cell "Manager" [ref=e88]
+                - cell "Action" [ref=e89]
+            - rowgroup [ref=e90]:
+              - row "David Kirk davidkirk@outlook.com Administrator Auburn David Kirk Edit" [ref=e91]:
+                - cell "David Kirk" [ref=e92]
+                - cell "davidkirk@outlook.com" [ref=e93]
+                - cell "Administrator" [ref=e94]:
+                  - generic [ref=e95]: Administrator
+                - cell "Auburn" [ref=e96]
+                - cell "David Kirk" [ref=e97]
+                - cell "Edit" [ref=e98]:
+                  - link "Edit" [ref=e99] [cursor=pointer]:
+                    - /url: /users/131
+                    - button "Edit" [ref=e100]
+              - row "E2E 65759da6 e2e.65759da6+clerk_test@example.com Accounting — — Edit" [ref=e101]:
+                - cell "E2E 65759da6" [ref=e102]
+                - cell "e2e.65759da6+clerk_test@example.com" [ref=e103]
+                - cell "Accounting" [ref=e104]:
+                  - generic [ref=e105]: Accounting
+                - cell "—" [ref=e106]
+                - cell "—" [ref=e107]
+                - cell "Edit" [ref=e108]:
+                  - link "Edit" [ref=e109] [cursor=pointer]:
+                    - /url: /users/244
+                    - button "Edit" [ref=e110]
+              - row "E2E 72eb5c4f e2e.72eb5c4f+clerk_test@example.com Employee E2E-Clinic-1782165979614-acct — Edit" [ref=e111]:
+                - cell "E2E 72eb5c4f" [ref=e112]
+                - cell "e2e.72eb5c4f+clerk_test@example.com" [ref=e113]
+                - cell "Employee" [ref=e114]:
+                  - generic [ref=e115]: Employee
+                - cell "E2E-Clinic-1782165979614-acct" [ref=e116]
+                - cell "—" [ref=e117]
+                - cell "Edit" [ref=e118]:
+                  - link "Edit" [ref=e119] [cursor=pointer]:
+                    - /url: /users/245
+                    - button "Edit" [ref=e120]
+              - row "E2E e9312ce5 e2e.e9312ce5+clerk_test@example.com Administrator — — Edit" [ref=e121]:
+                - cell "E2E e9312ce5" [ref=e122]
+                - cell "e2e.e9312ce5+clerk_test@example.com" [ref=e123]
+                - cell "Administrator" [ref=e124]:
+                  - generic [ref=e125]: Administrator
+                - cell "—" [ref=e126]
+                - cell "—" [ref=e127]
+                - cell "Edit" [ref=e128]:
+                  - link "Edit" [ref=e129] [cursor=pointer]:
+                    - /url: /users/247
+                    - button "Edit" [ref=e130]
+              - row "E2E bbffea88 e2e.bbffea88+clerk_test@example.com Employee — — Edit" [ref=e131]:
+                - cell "E2E bbffea88" [ref=e132]
+                - cell "e2e.bbffea88+clerk_test@example.com" [ref=e133]
+                - cell "Employee" [ref=e134]:
+                  - generic [ref=e135]: Employee
+                - cell "—" [ref=e136]
+                - cell "—" [ref=e137]
+                - cell "Edit" [ref=e138]:
+                  - link "Edit" [ref=e139] [cursor=pointer]:
+                    - /url: /users/246
+                    - button "Edit" [ref=e140]
+    - region "Notifications (F8)":
+      - list
+  - generic [ref=e141]:
+    - generic [ref=e142]:
+      - text: This is a temporary development preview, and these links are not for public use.
+      - link "Publish your app" [ref=e143] [cursor=pointer]:
+        - /url: https://docs.replit.com/category/replit-deployments?ref=replit-dev-banner
+      - text: for secure sharing or use an invite link.
+    - button "Close banner" [ref=e144] [cursor=pointer]:
+      - img [ref=e145] [cursor=pointer]
+```

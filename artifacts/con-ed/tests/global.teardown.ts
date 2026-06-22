@@ -16,10 +16,10 @@ export default async function globalTeardown() {
     const testClinics = `(SELECT id FROM clinics WHERE name LIKE 'E2E-%')`;
     const testRequests = `(
       SELECT id FROM con_ed_requests
-      WHERE employee_id  IN ${testUsers}
-         OR manager_id   IN ${testUsers}
+      WHERE employee_id    IN ${testUsers}
+         OR manager_id     IN ${testUsers}
          OR bo_approver_id IN ${testUsers}
-         OR clinic_id    IN ${testClinics}
+         OR employee_id IN (SELECT id FROM users WHERE clinic_id IN ${testClinics})
     )`;
 
     await pool.query(`DELETE FROM repayment_guarantees WHERE request_id IN ${testRequests} OR employee_id IN ${testUsers}`);
