@@ -20,9 +20,9 @@ router.get("/dashboard/employee", requireAuth, async (req: Request, res: Respons
 
     const counts = { pending: 0, approved: 0, reimbursed: 0, cancelled: 0 };
     for (const r of allReqs) {
-      if (["pending_manager", "pending_bo"].includes(r.status)) {
+      if (["pending_manager", "manager_approved"].includes(r.status)) {
         counts.pending++;
-      } else if (["bo_approved", "awaiting_receipt", "receipt_submitted"].includes(r.status)) {
+      } else if (["bo_approved", "receipt_submitted"].includes(r.status)) {
         counts.approved++;
       } else if (r.status === "reimbursed") {
         counts.reimbursed++;
@@ -136,13 +136,13 @@ router.get(
       const pendingRows = await db
         .select()
         .from(conEdRequests)
-        .where(eq(conEdRequests.status, "pending_bo"))
+        .where(eq(conEdRequests.status, "manager_approved"))
         .orderBy(conEdRequests.updatedAt);
 
       const awaitingRows = await db
         .select()
         .from(conEdRequests)
-        .where(eq(conEdRequests.status, "awaiting_receipt"))
+        .where(eq(conEdRequests.status, "bo_approved"))
         .orderBy(conEdRequests.updatedAt);
 
       const totalFundingApproved = awaitingRows.reduce(

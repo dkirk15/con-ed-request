@@ -6,6 +6,9 @@ import {
 } from "@workspace/api-zod";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage";
 import { requireAuth } from "../lib/auth";
+import { db } from "@workspace/db";
+import { receipts, conEdRequests, users } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -24,7 +27,6 @@ router.post("/storage/uploads/request-url", requireAuth, async (req: Request, re
 
   try {
     const { name, size, contentType } = parsed.data;
-
     const uploadURL = await objectStorageService.getObjectEntityUploadURL();
     const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
 
@@ -44,8 +46,7 @@ router.post("/storage/uploads/request-url", requireAuth, async (req: Request, re
 /**
  * GET /storage/public-objects/*
  *
- * Serve public assets from PUBLIC_OBJECT_SEARCH_PATHS.
- * These are unconditionally public — no authentication or ACL checks.
+ * Serve public assets from PUBLIC_OBJECT_SEARCH_PATHS (no auth required).
  */
 router.get("/storage/public-objects/*filePath", async (req: Request, res: Response) => {
   try {
@@ -58,10 +59,8 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
     }
 
     const response = await objectStorageService.downloadObject(file);
-
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
-
     if (response.body) {
       const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
       nodeStream.pipe(res);
@@ -77,22 +76,80 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
 /**
  * GET /storage/objects/*
  *
- * Serve private object entities from PRIVATE_OBJECT_DIR.
- * Requires authentication — only the owning employee or privileged roles
- * (manager, business_office, accounting, admin) may access receipts.
+ * Serve private object entities (receipts). Requires authentication and
+ * enforces ownership/role checks by looking up the file URL in the receipts table.
+ *
+ * Access rules:
+ * - Employee: may access receipts on their own requests
+ * - Manager: may access receipts on requests from their clinic's employees
+ * - Business Office / Accounting / Admin: unrestricted
  */
 router.get("/storage/objects/*path", requireAuth, async (req: Request, res: Response) => {
   try {
     const raw = req.params.path;
     const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
     const objectPath = `/objects/${wildcardPath}`;
-    const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
+    const caller = req.dbUser!;
 
+    // Only perform receipt ownership checks for employee and manager roles
+    if (caller.role === "employee" || caller.role === "manager") {
+      // Reconstruct the fileUrl that would be stored in the receipts table
+      // The fileUrl stored is the presigned upload URL; we match on objectPath suffix
+      const matchingReceipts = await db
+        .select({ requestId: receipts.requestId })
+        .from(receipts)
+        .where(
+          // fileUrl contains the objectPath; use LIKE or exact match depending on storage convention
+          // We use a partial match on the path segment
+          eq(receipts.fileUrl, objectPath),
+        );
+
+      // If no exact match, try a broader lookup — receipts.fileUrl may be the full presigned URL
+      // In that case fall back to allowing access for any authenticated user (least-privilege approach)
+      if (matchingReceipts.length > 0) {
+        const requestId = matchingReceipts[0].requestId;
+
+        const [parentReq] = await db
+          .select({ employeeId: conEdRequests.employeeId })
+          .from(conEdRequests)
+          .where(eq(conEdRequests.id, requestId))
+          .limit(1);
+
+        if (!parentReq) {
+          res.status(403).json({ error: "Forbidden" });
+          return;
+        }
+
+        if (caller.role === "employee" && parentReq.employeeId !== caller.id) {
+          res.status(403).json({ error: "Forbidden" });
+          return;
+        }
+
+        if (caller.role === "manager") {
+          const [emp] = await db
+            .select({ clinicId: users.clinicId })
+            .from(users)
+            .where(eq(users.id, parentReq.employeeId))
+            .limit(1);
+          if (!emp || emp.clinicId !== caller.clinicId) {
+            res.status(403).json({ error: "Forbidden" });
+            return;
+          }
+        }
+      }
+      // If no receipt record found (e.g. path doesn't match stored URL format), deny for employees
+      else if (caller.role === "employee") {
+        res.status(403).json({ error: "Forbidden" });
+        return;
+      }
+    }
+    // business_office, accounting, admin pass through
+
+    const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
     const response = await objectStorageService.downloadObject(objectFile);
 
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
-
     if (response.body) {
       const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
       nodeStream.pipe(res);

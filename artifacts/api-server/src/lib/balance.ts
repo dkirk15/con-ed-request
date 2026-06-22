@@ -34,7 +34,7 @@ export async function getUserBalance(userId: number, hireDateStr: string | null)
   const yearStart = new Date(`${year}-01-01`);
   const { allocation, isProrated, hireMonth } = calcAnnualAllocation(hireDateStr);
 
-  // "Used" = any BO-approved or further advanced status (totalApproved counts against budget)
+  // "Used" = BO approved or further (totalApproved counts against budget)
   const usedRows = await db
     .select({
       status: conEdRequests.status,
@@ -48,7 +48,6 @@ export async function getUserBalance(userId: number, hireDateStr: string | null)
         sql`${conEdRequests.createdAt} >= ${yearStart}`,
         inArray(conEdRequests.status, [
           "bo_approved",
-          "awaiting_receipt",
           "receipt_submitted",
           "reimbursed",
         ]),
@@ -63,13 +62,12 @@ export async function getUserBalance(userId: number, hireDateStr: string | null)
       and(
         eq(conEdRequests.employeeId, userId),
         sql`${conEdRequests.createdAt} >= ${yearStart}`,
-        inArray(conEdRequests.status, ["pending_manager", "pending_bo"]),
+        inArray(conEdRequests.status, ["pending_manager", "manager_approved"]),
       ),
     );
 
   let usedAmount = 0;
   for (const row of usedRows) {
-    // Once BO approves, totalApproved is set; fall back to requested if not yet set
     usedAmount += parseFloat(row.totalApproved ?? row.totalRequested ?? "0");
   }
 

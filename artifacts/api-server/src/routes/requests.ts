@@ -400,8 +400,8 @@ router.post("/requests/:requestId/cancel", requireAuth, async (req: Request, res
       return;
     }
 
-    // Only cancellable before BO approval
-    const cancellableStatuses = ["pending_manager", "pending_bo"];
+    // Only cancellable before BO review
+    const cancellableStatuses = ["pending_manager", "manager_approved"];
     if (!cancellableStatuses.includes(existing.status)) {
       res.status(400).json({ error: "Request cannot be cancelled at this stage" });
       return;
@@ -454,16 +454,31 @@ router.post(
       const user = req.dbUser!;
       const clinicId = user.role === "manager" ? user.clinicId : null;
 
-      const { ok } = await verifyManagerClinicAccess(user.id, clinicId, requestId);
-      if (!ok) {
+      const { ok, row: reqRow } = await verifyManagerClinicAccess(user.id, clinicId, requestId);
+      if (!ok || !reqRow) {
         res.status(400).json({ error: "Request not found or not eligible for manager approval" });
         return;
+      }
+
+      // Block approval if repayment guarantee is required but not yet signed
+      if (reqRow.requiresRepaymentGuarantee) {
+        const [guarantee] = await db
+          .select({ id: repaymentGuarantees.id })
+          .from(repaymentGuarantees)
+          .where(eq(repaymentGuarantees.requestId, requestId))
+          .limit(1);
+        if (!guarantee) {
+          res.status(400).json({
+            error: "Employee must sign the repayment guarantee before this over-budget request can be approved",
+          });
+          return;
+        }
       }
 
       const [updated] = await db
         .update(conEdRequests)
         .set({
-          status: "pending_bo",
+          status: "manager_approved",
           managerId: user.id,
           managerApprovedAt: new Date(),
           updatedAt: new Date(),
@@ -539,8 +554,8 @@ router.post(
         .where(eq(conEdRequests.id, requestId))
         .limit(1);
 
-      if (!existing || existing.status !== "pending_bo") {
-        res.status(400).json({ error: "Request not in pending_bo status" });
+      if (!existing || existing.status !== "manager_approved") {
+        res.status(400).json({ error: "Request is not awaiting Business Office review" });
         return;
       }
 
@@ -557,7 +572,7 @@ router.post(
       const [updated] = await db
         .update(conEdRequests)
         .set({
-          status: "awaiting_receipt",
+          status: "bo_approved",
           boApproverId: req.dbUser!.id,
           boApprovedAt: new Date(),
           approvedTuition: approvedTuition != null ? String(approvedTuition) : null,
@@ -602,11 +617,11 @@ router.post(
           boDenialReason: parsed.data.reason,
           updatedAt: new Date(),
         })
-        .where(and(eq(conEdRequests.id, requestId), eq(conEdRequests.status, "pending_bo")))
+        .where(and(eq(conEdRequests.id, requestId), eq(conEdRequests.status, "manager_approved")))
         .returning();
 
       if (!updated) {
-        res.status(400).json({ error: "Request not in pending_bo status" });
+        res.status(400).json({ error: "Request is not awaiting Business Office review" });
         return;
       }
 
@@ -750,8 +765,8 @@ router.post(
         return;
       }
 
-      // Only allowed once BO has approved and we're awaiting a receipt
-      if (existing.status !== "awaiting_receipt") {
+      // Only allowed once BO has approved
+      if (existing.status !== "bo_approved") {
         res.status(400).json({ error: "Receipt can only be submitted once the Business Office has approved this request" });
         return;
       }
