@@ -123,6 +123,7 @@ export default function RequestDetailPage() {
   const [denyReason, setDenyReason] = useState("");
   const [signedName, setSignedName] = useState("");
   const [paycheckDate, setPaycheckDate] = useState("");
+  const [pendingReceiptFile, setPendingReceiptFile] = useState<File | null>(null);
   
   // BO Approval form state
   const [boApprovalData, setBoApprovalData] = useState({
@@ -147,9 +148,14 @@ export default function RequestDetailPage() {
     });
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setPendingReceiptFile(file);
+  };
+
+  const handleReceiptSubmit = async () => {
+    if (!pendingReceiptFile) return;
 
     try {
       // 1. Get presigned URL
@@ -157,25 +163,28 @@ export default function RequestDetailPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: file.name,
-          size: file.size,
-          contentType: file.type,
+          name: pendingReceiptFile.name,
+          size: pendingReceiptFile.size,
+          contentType: pendingReceiptFile.type,
         })
       });
 
-      // 2. Upload to GCS
+      // 2. Upload to object storage
       await fetch(urlRes.uploadURL, {
         method: 'PUT',
-        headers: { 'Content-Type': file.type },
-        body: file,
+        headers: { 'Content-Type': pendingReceiptFile.type },
+        body: pendingReceiptFile,
       });
 
       // 3. Submit receipt to API
       handleAction(submitReceiptMutation, { 
         id, 
         fileUrl: urlRes.objectPath, 
-        fileName: file.name 
-      }, "Receipt uploaded successfully");
+        fileName: pendingReceiptFile.name 
+      }, "Receipt submitted successfully");
+
+      setPendingReceiptFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
       
     } catch (err: any) {
       toast({ title: "Upload Failed", description: err.message, variant: "destructive" });
@@ -348,12 +357,37 @@ export default function RequestDetailPage() {
                 ref={fileInputRef}
                 type="file"
                 className="hidden"
-                onChange={handleFileUpload}
+                onChange={handleFileSelect}
                 accept="image/*,application/pdf"
               />
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="mr-2 h-4 w-4" /> Upload Receipt
-              </Button>
+              {pendingReceiptFile ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-600 truncate max-w-[200px]" title={pendingReceiptFile.name}>
+                    {pendingReceiptFile.name}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setPendingReceiptFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                  >
+                    Change
+                  </Button>
+                  <Button
+                    onClick={handleReceiptSubmit}
+                    disabled={submitReceiptMutation.isPending}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    {submitReceiptMutation.isPending ? "Submitting…" : "Submit Receipt"}
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="mr-2 h-4 w-4" /> Upload Receipt
+                </Button>
+              )}
             </>
           )}
 

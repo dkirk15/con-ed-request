@@ -50,6 +50,9 @@ test("employee uploads a receipt -> receipt_submitted", async ({
     buffer: pngBuffer,
   });
 
+  // File is staged but not yet submitted — click the explicit Submit button.
+  await page.getByRole("button", { name: "Submit Receipt" }).click();
+
   await expect(
     page.getByRole("heading", { name: /Request #\d+/ }).getByText("Receipt Submitted"),
   ).toBeVisible();
