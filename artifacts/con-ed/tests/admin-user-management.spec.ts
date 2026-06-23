@@ -1,6 +1,7 @@
 import { test, expect } from "./fixtures";
-import { getUserByEmail, setRole, insertUser, createClinic } from "./helpers/db";
+import { getUserByEmail, setRole } from "./helpers/db";
 import { createClerkUser, deleteClerkUser } from "./helpers/clerk";
+import { nanoid } from "nanoid";
 
 /**
  * Admin flow: a brand-new Clerk account is auto-provisioned as `employee` on
@@ -10,7 +11,8 @@ import { createClerkUser, deleteClerkUser } from "./helpers/clerk";
  *
  * Note on "create user": the app does not surface a Create User UI because
  * users are auto-provisioned when they first sign in with Clerk. The server
- * supports POST /api/users for programmatic creation; see the second test below.
+ * supports POST /api/users for programmatic creation; the second test below
+ * exercises that endpoint from an authenticated admin browser session.
  */
 test("auto-provisioned user promoted to admin edits a user via UI", async ({
   page,
@@ -73,11 +75,11 @@ test("auto-provisioned user promoted to admin edits a user via UI", async ({
 });
 
 /**
- * Admin creates a user record (server-side, the same path as POST /api/users).
+ * Admin creates a user record via POST /api/users — the real server-side path.
  * Users are auto-provisioned via Clerk on first sign-in; there is no "Create
- * User" form in the UI. This test inserts a DB record directly (same path the
- * server's POST /api/users handler follows) and verifies the user appears in
- * the admin's Users directory.
+ * User" form in the UI. This test calls the API endpoint directly from an
+ * authenticated admin browser session (using the active Clerk session token)
+ * and verifies the created user appears in the admin's Users directory.
  */
 test("admin sees newly created user in Users directory", async ({
   page,
@@ -95,28 +97,47 @@ test("admin sees newly created user in Users directory", async ({
     .toBe("employee");
   await setRole(adminCandidate.email, { role: "admin" });
 
-  // Create a new user record (mimics POST /api/users server path).
-  const newEmail = `e2e-created-${Date.now()}@example.com`;
-  const newClerkId = `clerk_e2e_${Date.now()}`;
-  // Track for cleanup.
-  let clerkIdToDelete: string | null = null;
+  // Create a Clerk account for the new user (so the clerkId is real).
+  const newEmail = `e2e-api-${nanoid(8)}@example.com`;
+  let newClerkId: string | null = null;
   try {
-    clerkIdToDelete = await createClerkUser({
+    newClerkId = await createClerkUser({
       firstName: "E2E",
-      lastName: "Created",
+      lastName: "API",
       email: newEmail,
     });
   } catch {
-    // Clerk user creation optional — DB row is sufficient for directory test.
+    // Best-effort — DB row alone is enough for the directory assertion.
   }
-  await insertUser({
-    clerkId: clerkIdToDelete ?? newClerkId,
-    name: "E2E Created User",
-    email: newEmail,
-    role: "employee",
-  });
 
-  // After a page reload the admin directory should show the newly created user.
+  // Call POST /api/users from the authenticated admin browser session.
+  // window.Clerk.session.getToken() returns the active Clerk JWT which the
+  // API server accepts as a Bearer token via requireAuth / requireRole.
+  const apiStatus = await page.evaluate(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async (args: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const token = await (window as any).Clerk?.session?.getToken();
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(args),
+      });
+      return res.status;
+    },
+    {
+      clerkId: newClerkId ?? `clerk_e2e_${nanoid(8)}`,
+      name: "E2E API User",
+      email: newEmail,
+      role: "employee",
+    },
+  );
+  expect(apiStatus).toBe(201);
+
+  // After a page navigation the admin directory should show the new user.
   await page.goto("/users");
   await expect(
     page.getByRole("heading", { name: "Users", exact: true }),
@@ -124,7 +145,7 @@ test("admin sees newly created user in Users directory", async ({
   await expect(page.getByText(newEmail)).toBeVisible();
 
   // Cleanup Clerk user if created.
-  if (clerkIdToDelete) {
-    await deleteClerkUser(clerkIdToDelete).catch(() => {});
+  if (newClerkId) {
+    await deleteClerkUser(newClerkId).catch(() => {});
   }
 });

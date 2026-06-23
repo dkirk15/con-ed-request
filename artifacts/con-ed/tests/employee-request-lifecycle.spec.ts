@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures";
 import { createClinic, insertRequest, getRequest } from "./helpers/db";
+import type { RequestRow } from "./helpers/db";
 
 function requestIdFromUrl(url: string): number {
   const match = url.match(/\/requests\/(\d+)/);
@@ -58,10 +59,6 @@ test("employee creates and submits an in-budget request", async ({
  * Employee draft lifecycle: a draft created directly in the DB is visible on
  * the request detail page with a "Submit Request" action. Clicking Submit
  * moves it to pending_manager.
- *
- * Note: draft *editing* (PATCH /api/requests/:id) is supported by the API but
- * is not yet surfaced in the UI — the NewRequestPage creates and immediately
- * submits in one step, and RequestDetailPage shows Submit/Cancel for drafts.
  */
 test("employee submits a draft request from the detail page -> pending_manager", async ({
   page,
@@ -108,4 +105,80 @@ test("employee submits a draft request from the detail page -> pending_manager",
   // Confirm the DB row was updated.
   const row = await getRequest(requestId);
   expect(row?.status).toBe("pending_manager");
+});
+
+/**
+ * Employee edits a draft via PATCH /api/requests/:id (called from the
+ * authenticated browser session), then submits it via the UI.
+ *
+ * Draft editing is supported by the API but not yet surfaced in the UI —
+ * the NewRequestPage creates and immediately submits in one step. This test
+ * exercises the edit path through the real API endpoint so the route, auth
+ * guard, and field updates are all covered.
+ */
+test("employee edits a draft via the API then submits via UI -> pending_manager", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-edit`);
+  const manager = await provisionUser({ role: "manager", clinicId });
+  const employee = await provisionUser({
+    role: "employee",
+    clinicId,
+    managerId: manager.dbId,
+  });
+
+  // Seed an initial draft.
+  const requestId = await insertRequest({
+    employeeId: employee.dbId,
+    managerId: manager.dbId,
+    status: "draft",
+    courseNames: "E2E Draft Original Title",
+    tuition: 200,
+    totalRequested: 200,
+  });
+
+  await signInAs(employee);
+  await page.goto(`/requests/${requestId}`);
+  await expect(page.getByText("Draft", { exact: true })).toBeVisible();
+
+  // Edit the draft via PATCH /api/requests/:id from the authenticated session.
+  const patchStatus = await page.evaluate(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async (args: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const token = await (window as any).Clerk?.session?.getToken();
+      const res = await fetch(`/api/requests/${args.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          courseNames: args.courseNames,
+          tuition: args.tuition,
+          totalRequested: args.totalRequested,
+        }),
+      });
+      return res.status;
+    },
+    { id: requestId, courseNames: "E2E Draft Edited Title", tuition: 300, totalRequested: 300 },
+  );
+  expect(patchStatus).toBe(200);
+
+  // Verify the edit is reflected in the DB.
+  const editedRow: RequestRow | undefined = await getRequest(requestId);
+  expect(editedRow?.course_names).toBe("E2E Draft Edited Title");
+  expect(Number(editedRow?.total_requested)).toBe(300);
+
+  // Reload the page so the UI picks up the updated data, then submit via UI.
+  await page.reload();
+  await expect(page.getByText("Draft", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Submit Request" }).click();
+  await expect(page.getByText("Pending Manager Approval")).toBeVisible();
+
+  // DB confirms the final status.
+  const finalRow = await getRequest(requestId);
+  expect(finalRow?.status).toBe("pending_manager");
 });

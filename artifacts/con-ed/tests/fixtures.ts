@@ -1,5 +1,8 @@
 import { test as base, expect } from "@playwright/test";
-import { randomUUID } from "node:crypto";
+import { customAlphabet } from "nanoid";
+// Restrict to lowercase alphanumeric — Clerk normalises email local parts and
+// may strip or alter underscores / hyphens that appear in nanoid's default alphabet.
+const emailId = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 8);
 import { createClerkUser, deleteClerkUser, signIn } from "./helpers/clerk";
 import { insertUser, type Role } from "./helpers/db";
 
@@ -59,7 +62,7 @@ export const test = base.extend<Fixtures>({
     const createdClerkIds: string[] = [];
 
     const provision = async (input: ProvisionUserInput): Promise<TestUser> => {
-      const id = randomUUID().slice(0, 8);
+      const id = emailId();
       const firstName = input.firstName ?? "E2E";
       const lastName = input.lastName ?? id;
       const name = `${firstName} ${lastName}`;
@@ -105,7 +108,7 @@ export const test = base.extend<Fixtures>({
       firstName?: string;
       lastName?: string;
     }): Promise<SignedUpUser> => {
-      const id = randomUUID().slice(0, 8);
+      const id = emailId();
       const firstName = input?.firstName ?? "E2E";
       const lastName = input?.lastName ?? id;
       const name = `${firstName} ${lastName}`;
