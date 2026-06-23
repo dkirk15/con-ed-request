@@ -344,6 +344,7 @@ export default function RequestDetailPage() {
           {isMyRequest && request.status === "awaiting_receipt" && (user.role === "employee" || user.role === "manager") && (
             <>
               <input
+                id="receipt-upload"
                 ref={fileInputRef}
                 type="file"
                 className="hidden"

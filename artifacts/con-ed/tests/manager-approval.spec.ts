@@ -34,6 +34,17 @@ test.describe("Manager review", () => {
     });
 
     await signInAs(manager);
+
+    // Dashboard should show at least 1 request pending the manager's approval.
+    await page.goto("/dashboard");
+    const actionCard = page.locator("text=Action Required").locator("..");
+    await expect(actionCard.locator("text=Requests pending your approval")).toBeVisible();
+    const countText = await page
+      .locator('[class*="text-3xl"][class*="font-bold"][class*="amber"]')
+      .first()
+      .textContent();
+    expect(Number(countText?.trim())).toBeGreaterThanOrEqual(1);
+
     await page.goto(`/requests/${requestId}`);
 
     await page.getByRole("button", { name: "Approve" }).click();

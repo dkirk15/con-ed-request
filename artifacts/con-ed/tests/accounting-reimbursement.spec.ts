@@ -2,8 +2,9 @@ import { test, expect } from "./fixtures";
 import { createClinic, insertRequest, getRequest } from "./helpers/db";
 
 /**
- * Accounting processes requests that have a submitted receipt. Marking a
- * request reimbursed (with a paycheck date) moves it to `reimbursed`.
+ * Accounting processes requests that have a submitted receipt. The dashboard
+ * shows the queue; marking a request reimbursed (with a paycheck date) moves
+ * it to `reimbursed`.
  */
 test("accounting marks a request reimbursed -> reimbursed", async ({
   page,
@@ -24,6 +25,14 @@ test("accounting marks a request reimbursed -> reimbursed", async ({
   });
 
   await signInAs(accounting);
+
+  // Accounting dashboard shows the request in the "Ready for Reimbursement" queue.
+  // CardTitle renders as a <div>, not a heading element, so use getByText.
+  await page.goto("/dashboard");
+  await expect(page.getByText("Ready for Reimbursement")).toBeVisible();
+  // The accounting queue card lists the course name of the seeded request.
+  await expect(page.getByText("E2E Reimbursement Course")).toBeVisible();
+
   await page.goto(`/requests/${requestId}`);
 
   await page.getByRole("button", { name: "Mark Reimbursed" }).click();
