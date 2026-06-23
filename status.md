@@ -1,6 +1,6 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-06-22 by Replit Agent
+Last updated: 2026-06-23 by Replit Agent
 
 ## Current State
 
@@ -21,6 +21,38 @@ Annual CE benefit is $2,000 per employee, prorated in the hire year, with advanc
 - API spec/codegen: `lib/api-spec/openapi.yaml` drives Orval output for `lib/api-zod` and `lib/api-client-react`
 - Database: `lib/db` - Drizzle schema and seed scripts
 - Auth: Clerk with Microsoft SSO; frontend uses `VITE_CLERK_PUBLISHABLE_KEY`, backend uses `CLERK_SECRET_KEY`
+
+---
+
+## Recent Changes (2026-06-23)
+
+### E2E Test Suite Improvements
+
+- **nanoid for email ID generation** — replaced `randomUUID().slice(0, 8)` with
+  `customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 8)` from the `nanoid`
+  package. The default nanoid alphabet includes `_` and `-` which Clerk
+  normalises away when storing emails, breaking the auto-provision lookup;
+  restricting to lowercase alphanumeric fixes it.
+- **Draft-edit test** — new test "edits a draft via the API then submits via UI
+  → pending_manager" exercises `PATCH /api/requests/:id` via `page.evaluate`
+  with a Clerk Bearer token, verifies updated fields appear in the UI, then
+  submits through the UI.
+- **Admin "create user" test uses the real API** — `admin-user-management.spec.ts`
+  now calls `POST /api/users` (the admin-gated endpoint) via `page.evaluate`
+  with `window.Clerk.session.getToken()`, replacing the raw `insertUser` DB
+  helper.
+- Suite now has **20 tests, all passing**.
+
+### UI Changes
+
+- **Employees / Managers plural labels** — admin dashboard user-count cards now
+  read "Employees" and "Managers" (plural) with correct lowercase "s".
+- **Two-step receipt upload** — selecting a file no longer immediately submits.
+  After choosing a file the filename and a "Submit Receipt" button appear; only
+  clicking that button triggers the upload and API call. E2E test updated to
+  match.
+- **"BO" → "CE" in all display labels** — "BO" abbreviation replaced with "CE"
+  in dashboard descriptions, request status dropdown, and approval toast.
 
 ---
 
