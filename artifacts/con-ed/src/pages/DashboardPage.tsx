@@ -419,7 +419,7 @@ function AdminDashboard() {
           <Card key={role} className="shadow-sm border-slate-200">
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-slate-900">{count}</div>
-              <div className="text-xs text-slate-500 capitalize">{role.replace("_", " ")}</div>
+              <div className="text-xs text-slate-500 capitalize">{role.replace("_", " ")}{role === "employee" || role === "manager" ? "s" : ""}</div>
             </CardContent>
           </Card>
         ))}
