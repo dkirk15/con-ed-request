@@ -302,7 +302,7 @@ function BODashboard() {
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div>
             <CardTitle className="text-lg font-serif">Awaiting Business Office Approval</CardTitle>
-            <CardDescription>Requests approved by managers, waiting for final BO sign-off</CardDescription>
+            <CardDescription>Requests approved by managers, waiting for final CE sign-off</CardDescription>
           </div>
           <Link href="/requests?status=pending_bo">
             <Button variant="outline" size="sm">View All</Button>
@@ -366,7 +366,7 @@ function AccountingDashboard() {
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div>
             <CardTitle className="text-lg font-serif">Ready for Reimbursement</CardTitle>
-            <CardDescription>Requests with BO approval and submitted receipts</CardDescription>
+            <CardDescription>Requests with CE approval and submitted receipts</CardDescription>
           </div>
           <Link href="/requests?status=receipt_submitted">
             <Button variant="outline" size="sm">View All</Button>

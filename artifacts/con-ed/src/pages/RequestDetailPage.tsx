@@ -341,7 +341,7 @@ export default function RequestDetailPage() {
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button onClick={() => handleAction(boApproveMutation, { id, data: { ...boApprovalData, totalApproved: totalBoApproved } }, "Request approved by BO")}>
+                    <Button onClick={() => handleAction(boApproveMutation, { id, data: { ...boApprovalData, totalApproved: totalBoApproved } }, "Request approved by CE")}>
                       Confirm Approval
                     </Button>
                   </DialogFooter>

@@ -47,8 +47,8 @@ export default function RequestsPage() {
               <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="pending_manager">Pending Manager</SelectItem>
               <SelectItem value="manager_approved">Manager Approved</SelectItem>
-              <SelectItem value="pending_bo">Pending BO</SelectItem>
-              <SelectItem value="bo_approved">BO Approved</SelectItem>
+              <SelectItem value="pending_bo">Pending CE</SelectItem>
+              <SelectItem value="bo_approved">CE Approved</SelectItem>
               <SelectItem value="awaiting_receipt">Awaiting Receipt</SelectItem>
               <SelectItem value="receipt_submitted">Receipt Submitted</SelectItem>
               <SelectItem value="reimbursed">Reimbursed</SelectItem>
