@@ -278,11 +278,12 @@ router.patch("/users/:userId", requireAuth, async (req: Request, res: Response) 
 // DELETE /api/users/:userId — admin only, cannot delete self
 router.delete("/users/:userId", requireRole("admin"), async (req: Request, res: Response) => {
   try {
-    const userId = parseInt(String(req.params.userId ?? ""), 10);
-    if (!Number.isFinite(userId) || userId <= 0) {
+    const rawUserId = String(req.params.userId ?? "");
+    if (!/^[1-9]\d*$/.test(rawUserId)) {
       res.status(400).json({ error: "Invalid user ID" });
       return;
     }
+    const userId = Number(rawUserId);
 
     if (req.dbUser!.id === userId) {
       res.status(400).json({ error: "You cannot delete your own account" });
@@ -297,7 +298,8 @@ router.delete("/users/:userId", requireRole("admin"), async (req: Request, res: 
 
     res.status(204).send();
   } catch (err: any) {
-    if (err?.code === "23503") {
+    // drizzle wraps the pg error, so the FK SQLSTATE may sit on err.cause.code.
+    if (err?.code === "23503" || err?.cause?.code === "23503") {
       res.status(409).json({ error: "Cannot delete user with existing requests or records. Remove their data first." });
       return;
     }
