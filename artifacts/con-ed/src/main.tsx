@@ -5,18 +5,16 @@ import "./index.css";
 // Clerk dev-mode "needs_client_trust" recovery
 //
 // On a browser that has never visited this Clerk dev instance, FAPI returns
-// needs_client_trust.  The fix is to visit Clerk's dev-browser handshake URL
-// so it can set a dev-browser token, then come back.
-//
-// Problem: Clerk's accounts.dev domain has frame restrictions, so navigating
-// the iframe there just gives a blank page.  Instead we:
-//   1. Suppress the Vite runtime-error overlay (preventDefault).
-//   2. Show a one-button overlay in the page.
-//   3. The button opens the handshake in a NEW TAB (no frame restrictions).
-//      Clerk redirects the new tab back to the app URL with ?__clerk_db_jwt=…
-//      The new tab stores the token in localStorage for this origin.
-//   4. A `storage` listener in the iframe detects the token and auto-reloads,
-//      at which point Clerk finds the token and sign-in proceeds normally.
+// needs_client_trust.  We intercept this in two places:
+//   1. index.html — a MutationObserver + capture-phase listener that runs
+//      before Vite's HMR client injection, preventing the runtime-error
+//      overlay from appearing at all.
+//   2. Here — shows a user-friendly "Complete setup" overlay and opens the
+//      Clerk dev-browser handshake in a new tab (avoids iframe frame
+//      restrictions on clerk.accounts.dev).  localStorage is shared between
+//      this iframe and any new tab on the same origin, so when the new tab
+//      stores the Clerk dev-browser token, a `storage` listener here
+//      auto-reloads the iframe and Clerk proceeds normally.
 //
 // Only active for pk_test_ keys (dev instances).
 
@@ -86,6 +84,7 @@ if (rawKey.startsWith("pk_test_")) {
       document.body.appendChild(overlay);
 
       // Auto-reload when the new tab stores the Clerk dev-browser token.
+      // localStorage is shared across all contexts on the same origin.
       window.addEventListener("storage", (e) => {
         const key = e.key ?? "";
         if (key.includes("clerk") || key.includes("__dev_browser")) {
@@ -94,11 +93,39 @@ if (rawKey.startsWith("pk_test_")) {
       });
     };
 
-    window.addEventListener("error", (e) => maybeHandle(e.error));
-    window.addEventListener("unhandledrejection", (e) => {
-      e.preventDefault(); // suppress Vite runtime-error overlay
-      maybeHandle(e.reason);
-    });
+    // Use capture phase so our listener fires before Vite's bubble-phase listener.
+    // stopImmediatePropagation prevents the runtime-error overlay from seeing it.
+    window.addEventListener(
+      "error",
+      (e) => {
+        if (
+          (e.error instanceof Error
+            ? e.error.message
+            : String(e.error ?? "")
+          ).includes("needs_client_trust")
+        ) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          maybeHandle(e.error);
+        }
+      },
+      true,
+    );
+    window.addEventListener(
+      "unhandledrejection",
+      (e) => {
+        const msg =
+          e.reason instanceof Error
+            ? e.reason.message
+            : String(e.reason ?? "");
+        if (msg.includes("needs_client_trust")) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          maybeHandle(e.reason);
+        }
+      },
+      true,
+    );
   }
 }
 
