@@ -153,6 +153,14 @@ export const CreateClinicBody = zod.object({
 
 
 /**
+ * @summary Delete a clinic (admin only)
+ */
+export const DeleteClinicParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary List con-ed requests (scoped by role)
  */
 export const ListRequestsQueryParams = zod.object({

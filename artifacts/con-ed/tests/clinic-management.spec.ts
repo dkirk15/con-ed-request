@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import { getUserByEmail, setRole, query } from "./helpers/db";
+import { createClinic, getUserByEmail, setRole, query } from "./helpers/db";
 import { nanoid } from "nanoid";
 
 /**
@@ -83,6 +83,116 @@ test("admin adds a new clinic via the UI and cannot add a duplicate", async ({
     // Cleanup any clinic row(s) created by this test.
     await query("DELETE FROM clinics WHERE lower(name) = lower($1)", [
       clinicName,
+    ]);
+  }
+});
+
+/**
+ * Admin deletes a clinic via the UI: opens the confirmation dialog, confirms,
+ * and the row disappears from the directory and the database. A clinic that
+ * still has an employee assigned cannot be deleted (FK guard -> 409 toast,
+ * row preserved).
+ */
+test("admin deletes an empty clinic but cannot delete one with employees", async ({
+  page,
+  provisionUser,
+  signUpUser,
+  signInAs,
+}) => {
+  const emptyClinicName = `E2E Delete Empty ${nanoid(6)}`;
+  const usedClinicName = `E2E Delete Used ${nanoid(6)}`;
+  const guardClinicName = `E2E Delete Guard ${nanoid(6)}`;
+
+  const emptyClinicId = await createClinic(emptyClinicName);
+  const usedClinicId = await createClinic(usedClinicName);
+  const guardClinicId = await createClinic(guardClinicName);
+
+  // An employee occupies the "used" clinic so its delete is blocked by the FK.
+  const employee = await provisionUser({
+    role: "employee",
+    clinicId: usedClinicId,
+  });
+
+  const adminCandidate = await signUpUser();
+  await signInAs(adminCandidate);
+  await page.goto("/dashboard");
+  await expect
+    .poll(async () => (await getUserByEmail(adminCandidate.email))?.role, {
+      timeout: 15_000,
+    })
+    .toBe("employee");
+  await setRole(adminCandidate.email, { role: "admin" });
+
+  try {
+    await page.goto("/clinics");
+    await expect(
+      page.getByRole("heading", { name: "Clinics", exact: true }),
+    ).toBeVisible();
+
+    // Delete the empty clinic: open its confirmation dialog and confirm.
+    await page.getByRole("button", { name: `Delete ${emptyClinicName}` }).click();
+    await expect(
+      page.getByRole("alertdialog").getByText(`Delete ${emptyClinicName}?`),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Delete Clinic" }).click();
+
+    // The row is gone from the UI and the database.
+    await expect(
+      page.getByRole("row").filter({ hasText: emptyClinicName }),
+    ).toHaveCount(0);
+    await expect
+      .poll(async () =>
+        (await query("SELECT id FROM clinics WHERE id = $1", [emptyClinicId]))
+          .length,
+      )
+      .toBe(0);
+
+    // Attempt to delete the clinic that still has an employee -> 409 toast.
+    await page.getByRole("button", { name: `Delete ${usedClinicName}` }).click();
+    await page.getByRole("button", { name: "Delete Clinic" }).click();
+    await expect(
+      page.getByText(
+        "This clinic still has employees assigned to it. Reassign those employees first.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+
+    // The clinic row still exists in the UI and the database.
+    await expect(
+      page.getByRole("row").filter({ hasText: usedClinicName }),
+    ).toBeVisible();
+    const count = (
+      await query("SELECT id FROM clinics WHERE id = $1", [usedClinicId])
+    ).length;
+    expect(count).toBe(1);
+
+    // A malformed ID with a numeric prefix (e.g. "<id>abc") must be rejected
+    // with 400 and must NOT delete the clinic its prefix matches. Guards
+    // against lenient parsing silently deleting clinic <id>.
+    await page.waitForFunction(() =>
+      Boolean(
+        (window as Window & { Clerk?: { session?: unknown } }).Clerk?.session,
+      ),
+    );
+    const malformedStatus = await page.evaluate(async (gid) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const token = await (window as any).Clerk?.session?.getToken();
+      const res = await fetch(`/api/clinics/${gid}abc`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return res.status;
+    }, guardClinicId);
+    expect(malformedStatus).toBe(400);
+    expect(
+      (await query("SELECT id FROM clinics WHERE id = $1", [guardClinicId]))
+        .length,
+    ).toBe(1);
+  } finally {
+    // Cleanup: remove the employee first (FK), then both clinics.
+    await query("DELETE FROM users WHERE id = $1", [employee.dbId]);
+    await query("DELETE FROM clinics WHERE id = ANY($1)", [
+      [emptyClinicId, usedClinicId, guardClinicId],
     ]);
   }
 });

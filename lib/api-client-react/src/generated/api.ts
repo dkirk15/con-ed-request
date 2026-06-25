@@ -669,6 +669,76 @@ export const useCreateClinic = <TError = ErrorType<ErrorEnvelope>,
       return useMutation(getCreateClinicMutationOptions(options));
     }
 
+export const getDeleteClinicUrl = (id: number,) => {
+
+
+
+
+  return `/api/clinics/${id}`
+}
+
+/**
+ * @summary Delete a clinic (admin only)
+ */
+export const deleteClinic = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteClinicUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteClinicMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteClinic>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteClinic>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteClinic'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteClinic>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteClinic(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteClinicMutationResult = NonNullable<Awaited<ReturnType<typeof deleteClinic>>>
+
+    export type DeleteClinicMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Delete a clinic (admin only)
+ */
+export const useDeleteClinic = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteClinic>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteClinic>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteClinicMutationOptions(options));
+    }
+
 export const getListRequestsUrl = (params?: ListRequestsParams,) => {
   const normalizedParams = new URLSearchParams();
 

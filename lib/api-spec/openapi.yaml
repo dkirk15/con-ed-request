@@ -189,6 +189,39 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
 
+  /clinics/{id}:
+    delete:
+      operationId: deleteClinic
+      tags: [clinics]
+      summary: Delete a clinic (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Clinic deleted
+        "400":
+          description: Invalid clinic ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Clinic not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: Clinic still has employees assigned to it
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
   # ─── Con-Ed Requests ─────────────────────────────────────────────────────────
 
   /requests:

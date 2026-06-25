@@ -5,3 +5,4 @@
 - [Clerk + wouter base-path routing](clerk-routing-base-path.md) — SignIn/SignUp need full base-prefixed paths + wired routerPush, or sign-up reload-loops.
 - [Clerk API auth — Bearer token required](clerk-bearer-token.md) — do NOT rely on session cookies; use ClerkTokenSync + setAuthTokenGetter to send Bearer tokens explicitly.
 - [Clerk needs_client_trust](clerk-dev-instance-preview.md) — "needs_client_trust not supported yet" = stale clerk-js v5 from deprecated @clerk/clerk-react; fix = migrate to @clerk/react v6 (Show replaces SignedIn/SignedOut).
+- [Drizzle wraps pg errors](drizzle-error-codes.md) — SQLSTATE (e.g. 23503 FK) is on err.cause.code, not err.code; prefer a count pre-check for 409.

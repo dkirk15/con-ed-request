@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { clinics } from "@workspace/db/schema";
+import { clinics, users } from "@workspace/db/schema";
 import { CreateClinicBody } from "@workspace/api-zod";
 import { requireAuth, requireRole } from "../lib/auth";
 
@@ -50,5 +50,58 @@ router.post("/clinics", requireRole("admin"), async (req: Request, res: Response
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// DELETE /api/clinics/:id — admin only
+router.delete(
+  "/clinics/:id",
+  requireRole("admin"),
+  async (req: Request, res: Response) => {
+    try {
+      const rawId = String(req.params.id ?? "");
+      if (!/^[1-9]\d*$/.test(rawId)) {
+        res.status(400).json({ error: "Invalid clinic ID" });
+        return;
+      }
+      const id = Number(rawId);
+
+      // Refuse deletion while any users still reference this clinic.
+      const [{ count: assigned }] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(users)
+        .where(eq(users.clinicId, id));
+      if (assigned > 0) {
+        res.status(409).json({
+          error:
+            "Cannot delete a clinic that still has employees assigned to it. Reassign those employees first.",
+        });
+        return;
+      }
+
+      const [deleted] = await db
+        .delete(clinics)
+        .where(eq(clinics.id, id))
+        .returning({ id: clinics.id });
+      if (!deleted) {
+        res.status(404).json({ error: "Clinic not found" });
+        return;
+      }
+
+      res.status(204).send();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      // Foreign-key violation: users still reference this clinic.
+      // drizzle wraps the pg error, so the SQLSTATE may sit on err.cause.code.
+      if (err?.code === "23503" || err?.cause?.code === "23503") {
+        res.status(409).json({
+          error:
+            "Cannot delete a clinic that still has employees assigned to it. Reassign those employees first.",
+        });
+        return;
+      }
+      req.log.error({ err }, "deleteClinic error");
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
 
 export default router;
