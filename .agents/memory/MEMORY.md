@@ -4,4 +4,4 @@
 - [con-ed E2E tests](con-ed-e2e-tests.md) — run synchronously in batches (bg runs get reaped); status-label badge/h4 collisions; cost inputs unreachable by label (use step attr).
 - [Clerk + wouter base-path routing](clerk-routing-base-path.md) — SignIn/SignUp need full base-prefixed paths + wired routerPush, or sign-up reload-loops.
 - [Clerk API auth — Bearer token required](clerk-bearer-token.md) — do NOT rely on session cookies; use ClerkTokenSync + setAuthTokenGetter to send Bearer tokens explicitly.
-- [Clerk dev-instance preview login](clerk-dev-instance-preview.md) — needs_client_trust/"too many requests" = dev-instance+iframe friction, not bugs; open in real tab, publish for prod.
+- [Clerk needs_client_trust](clerk-dev-instance-preview.md) — "needs_client_trust not supported yet" = stale clerk-js v5 from deprecated @clerk/clerk-react; fix = migrate to @clerk/react v6 (Show replaces SignedIn/SignedOut).

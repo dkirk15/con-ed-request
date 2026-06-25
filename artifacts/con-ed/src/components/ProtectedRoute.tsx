@@ -1,4 +1,5 @@
-import { SignedIn, SignedOut, RedirectToSignIn, useClerk } from "@clerk/clerk-react";
+import { Show, useClerk } from "@clerk/react";
+import { Redirect } from "wouter";
 import { useGetMe } from "@workspace/api-client-react";
 import { ReactNode } from "react";
 import { Spinner } from "@/components/ui/spinner";
@@ -13,12 +14,12 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   return (
     <>
-      <SignedIn>
+      <Show when="signed-in">
         <AuthenticatedUserWrapper>{children}</AuthenticatedUserWrapper>
-      </SignedIn>
-      <SignedOut>
-        <RedirectToSignIn />
-      </SignedOut>
+      </Show>
+      <Show when="signed-out">
+        <Redirect to="/sign-in" />
+      </Show>
     </>
   );
 }

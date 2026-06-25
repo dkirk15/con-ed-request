@@ -1,4 +1,4 @@
-import { SignUp } from "@clerk/clerk-react";
+import { SignUp } from "@clerk/react";
 import logo from "@assets/oss-logo-white.png";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");

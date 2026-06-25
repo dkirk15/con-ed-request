@@ -1,42 +1,54 @@
 ---
-name: Clerk dev-instance login friction in Replit preview
-description: Why needs_client_trust / "too many requests" appear at login in the dev preview, and what actually fixes it (vs. what makes it worse)
+name: Clerk "needs_client_trust not supported yet" in the preview
+description: Root cause is a stale clerk-js v5 (deprecated @clerk/clerk-react); the fix is migrating to @clerk/react v6. Also covers dev rate limits.
 ---
 
-# Clerk dev-instance login friction in the Replit preview
+# Clerk `needs_client_trust not supported yet`
 
-Login symptoms in the **dev preview** (a cross-origin iframe), especially from a
-browser that has never visited the Clerk dev instance:
+Login error seen in the dev preview (and in a full browser tab), often surfaced via
+the Vite runtime-error overlay:
 
-- `needs_client_trust not supported yet`
-- `Too many requests. Please try again in a bit.` at the password step
+```
+ClerkJS: Response: needs_client_trust not supported yet.
+  at .../npm/@clerk/clerk-js@5.127.0/dist/...
+```
 
-## What these actually are (NOT code bugs)
+## Root cause — stale clerk-js major (PRIMARY)
 
-- **needs_client_trust**: Clerk dev instances run a one-time new-browser trust
-  handshake that cannot complete inside the cross-origin preview iframe. Completing it
-  in a **real browser tab** establishes trust; the iframe then proceeds.
-- **Too many requests**: the Clerk **dev** instance has strict rate limits. Repeated
-  retries — and any auto-reload loop — exhaust them. Transient; resets after a wait.
+The loaded **clerk-js is too old** to handle the `client_trust` handshake Clerk's FAPI
+now requires. The SDK major **determines** which clerk-js major loads from the CDN:
 
-## What makes it worse — do not do this
+- `@clerk/clerk-react` (Core 2, **deprecated, frozen at v5**) → loads **clerk-js@5**,
+  which throws `needs_client_trust not supported yet`.
+- `@clerk/react` (Core 3, **v6**, the canonical package) → loads **clerk-js@6**, which
+  supports the handshake.
 
-Custom error-interception / overlay-suppression plus a `storage`-event reload loop.
-The reload loop hammers FAPI and is what triggers the rate limit. **Why:** keep the
-canonical entry files; brittle workarounds amplify the very rate limit they fight.
+**Correction:** an earlier note here wrongly said "SDK major doesn't change runtime
+clerk-js." That is false — verified by the CDN URL: v5 SDK pulls clerk-js@5, v6 SDK
+pulls clerk-js@6. **Why it matters:** don't dismiss this error as mere iframe/rate-limit
+friction; if the app still imports from `@clerk/clerk-react`, the SDK migration is the fix.
 
-## SDK major does not matter here
+## The fix — migrate to `@clerk/react` (Core 3)
 
-Both Core 2 (`@clerk/clerk-react` v5) and Core 3 (`@clerk/react` v6) load clerk-js from
-the CDN at the latest of their major (no pinned dep), so swapping SDK major does not
-change the runtime clerk-js and won't fix needs_client_trust. **Why:** don't attempt a
-Core2→Core3 migration as a login fix — and note Core 3 drops `SignedIn`/`SignedOut`/
-`RedirectToSignIn` (use `<Show when="...">`), so the swap is non-trivial.
+Swap every `@clerk/clerk-react` import to `@clerk/react`. The hooks/components
+`ClerkProvider`, `useAuth`, `useClerk`, `useUser`, `SignIn`, `SignUp` are unchanged.
+Core 3 **removed** the control components `SignedIn` / `SignedOut` / `RedirectToSignIn`:
 
-## Actual fix path
+- `<SignedIn>` → `<Show when="signed-in">`
+- `<SignedOut>` → `<Show when="signed-out">`
+- `<RedirectToSignIn />` → wouter `<Redirect to="/sign-in" />` (base-relative inside
+  `<WouterRouter base={basePath}>`; resolves to `${basePath}/sign-in`)
 
-1. Remove custom reload/overlay workarounds (back to canonical).
-2. Rate limit is transient — wait, then retry.
-3. New-browser handshake: open the preview in a **full browser tab**, not the iframe.
-4. Real fix for end users: **publish**. Prod uses a separate Clerk PROD instance
-   (pk_live + proxy) with none of the dev rate limits or new-browser friction.
+`Show` is imported from `@clerk/react`. After migrating, remove the now-dead
+`@clerk/clerk-react` dependency so two clerk-js majors can't both be resolvable.
+
+## Secondary friction (real, but not the root cause)
+
+- **"Too many requests"**: the Clerk **dev** instance has strict rate limits; transient,
+  resets after a wait. Do NOT add custom error-interception / overlay-suppression or a
+  `storage`-event reload loop — the loop hammers FAPI and triggers the rate limit.
+- **New-browser trust** in the cross-origin preview iframe: open the app in a full
+  browser tab to complete the one-time handshake. (With clerk-js@6 this is handled
+  properly; it was the stale v5 that hard-failed.)
+- For end users, **publish** — prod uses a separate Clerk PROD instance with none of
+  the dev rate limits.
