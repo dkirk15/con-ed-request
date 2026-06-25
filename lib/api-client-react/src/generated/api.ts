@@ -26,6 +26,7 @@ import type {
   BODashboard,
   BalanceInfo,
   Clinic,
+  ClinicInput,
   ConEdRequest,
   ConEdRequestInput,
   ConEdRequestUpdate,
@@ -596,6 +597,77 @@ export function useListClinics<TData = Awaited<ReturnType<typeof listClinics>>, 
 
 
 
+
+export const getCreateClinicUrl = () => {
+
+
+
+
+  return `/api/clinics`
+}
+
+/**
+ * @summary Create a new clinic (admin only)
+ */
+export const createClinic = async (clinicInput: ClinicInput, options?: RequestInit): Promise<Clinic> => {
+
+  return customFetch<Clinic>(getCreateClinicUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      clinicInput,)
+  }
+);}
+
+
+
+
+export const getCreateClinicMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClinic>>, TError,{data: BodyType<ClinicInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createClinic>>, TError,{data: BodyType<ClinicInput>}, TContext> => {
+
+const mutationKey = ['createClinic'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createClinic>>, {data: BodyType<ClinicInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createClinic(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateClinicMutationResult = NonNullable<Awaited<ReturnType<typeof createClinic>>>
+    export type CreateClinicMutationBody = BodyType<ClinicInput>
+    export type CreateClinicMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Create a new clinic (admin only)
+ */
+export const useCreateClinic = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClinic>>, TError,{data: BodyType<ClinicInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createClinic>>,
+        TError,
+        {data: BodyType<ClinicInput>},
+        TContext
+      > => {
+      return useMutation(getCreateClinicMutationOptions(options));
+    }
 
 export const getListRequestsUrl = (params?: ListRequestsParams,) => {
   const normalizedParams = new URLSearchParams();

@@ -159,6 +159,35 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Clinic"
+    post:
+      operationId: createClinic
+      tags: [clinics]
+      summary: Create a new clinic (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClinicInput"
+      responses:
+        "201":
+          description: Created clinic
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Clinic"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: A clinic with this name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
 
   # ─── Con-Ed Requests ─────────────────────────────────────────────────────────
 
@@ -687,6 +716,15 @@ components:
           type: integer
         name:
           type: string
+
+    ClinicInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
 
     # ─── User ──────────────────────────────────────────────────────────────────
 

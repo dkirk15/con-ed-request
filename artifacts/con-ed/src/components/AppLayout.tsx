@@ -15,7 +15,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Home, FileText, Users, UserCircle, LogOut } from "lucide-react";
+import { Home, FileText, Users, Building2, UserCircle, LogOut } from "lucide-react";
 import logo from "@assets/oss-logo-white.png";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 
@@ -69,6 +69,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <Link href="/users" className="flex items-center gap-3 w-full">
                       <Users className="h-4 w-4" />
                       <span>Users</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {user.role === "admin" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location.startsWith("/clinics")}>
+                    <Link href="/clinics" className="flex items-center gap-3 w-full">
+                      <Building2 className="h-4 w-4" />
+                      <span>Clinics</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

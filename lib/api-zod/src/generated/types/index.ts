@@ -13,6 +13,7 @@ export * from './balanceInfo';
 export * from './bOApprovalInput';
 export * from './bODashboard';
 export * from './clinic';
+export * from './clinicInput';
 export * from './conEdRequest';
 export * from './conEdRequestInput';
 export * from './conEdRequestStatus';

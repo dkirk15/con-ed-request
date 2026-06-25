@@ -18,6 +18,14 @@ export interface Clinic {
   name: string;
 }
 
+export interface ClinicInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  name: string;
+}
+
 export type UserRole = typeof UserRole[keyof typeof UserRole];
 
 

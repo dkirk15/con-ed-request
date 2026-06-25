@@ -141,6 +141,18 @@ export const ListClinicsResponse = zod.array(ListClinicsResponseItem)
 
 
 /**
+ * @summary Create a new clinic (admin only)
+ */
+export const createClinicBodyNameMax = 120;
+
+
+
+export const CreateClinicBody = zod.object({
+  "name": zod.string().min(1).max(createClinicBodyNameMax)
+})
+
+
+/**
  * @summary List con-ed requests (scoped by role)
  */
 export const ListRequestsQueryParams = zod.object({
