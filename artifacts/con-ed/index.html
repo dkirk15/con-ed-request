@@ -16,54 +16,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!--
-      Suppress Vite's runtime-error overlay for Clerk's "needs_client_trust" error.
-      This runs before any other script (including Vite's HMR client injection) so
-      the MutationObserver is in place before the overlay can be inserted.
-      The main.tsx error handler shows our own user-friendly recovery UI instead.
-    -->
-    <script>
-      (function () {
-        var CLERK_TRUST_MSG = "needs_client_trust";
-
-        function removeIfClerkTrust(node) {
-          if (
-            node.nodeType === 1 &&
-            (node.textContent || "").includes(CLERK_TRUST_MSG)
-          ) {
-            node.style.display = "none";
-            node.remove();
-            return true;
-          }
-          return false;
-        }
-
-        new MutationObserver(function (mutations) {
-          mutations.forEach(function (m) {
-            m.addedNodes.forEach(removeIfClerkTrust);
-          });
-        }).observe(document.documentElement, {
-          childList: true,
-          subtree: true,
-        });
-
-        // Belt-and-suspenders: intercept in capture phase before Vite's listener.
-        window.addEventListener(
-          "unhandledrejection",
-          function (e) {
-            var msg =
-              e.reason instanceof Error
-                ? e.reason.message
-                : String(e.reason || "");
-            if (msg.includes(CLERK_TRUST_MSG)) {
-              e.preventDefault();
-              e.stopImmediatePropagation();
-            }
-          },
-          true /* capture phase — fires before bubble-phase listeners */
-        );
-      })();
-    </script>
   </head>
   <body>
     <div id="root"></div>
