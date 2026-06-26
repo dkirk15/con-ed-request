@@ -11,4 +11,6 @@ export interface SubmitRequestInput {
   guaranteeSignedName?: string;
   /** Date the guarantee was signed (required when over budget) */
   guaranteeSignedDate?: string;
+  /** Whether the signer accepted the electronic-signature terms (required when over budget) */
+  guaranteeAcknowledged?: boolean;
 }

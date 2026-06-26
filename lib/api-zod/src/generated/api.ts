@@ -211,7 +211,8 @@ export const ListRequestsResponseItem = zod.object({
   "employeeId": zod.number(),
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
-  "signedAt": zod.coerce.date()
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean()
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -302,7 +303,8 @@ export const GetRequestResponse = zod.object({
   "employeeId": zod.number(),
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
-  "signedAt": zod.coerce.date()
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean()
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -388,7 +390,8 @@ export const UpdateRequestResponse = zod.object({
   "employeeId": zod.number(),
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
-  "signedAt": zod.coerce.date()
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean()
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -419,7 +422,8 @@ export const SubmitRequestParams = zod.object({
 
 export const SubmitRequestBody = zod.object({
   "guaranteeSignedName": zod.string().optional().describe('Employee\'s full legal name (required when over budget)'),
-  "guaranteeSignedDate": zod.string().optional().describe('Date the guarantee was signed (required when over budget)')
+  "guaranteeSignedDate": zod.string().optional().describe('Date the guarantee was signed (required when over budget)'),
+  "guaranteeAcknowledged": zod.boolean().optional().describe('Whether the signer accepted the electronic-signature terms (required when over budget)')
 })
 
 export const SubmitRequestResponse = zod.object({
@@ -465,7 +469,8 @@ export const SubmitRequestResponse = zod.object({
   "employeeId": zod.number(),
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
-  "signedAt": zod.coerce.date()
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean()
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -537,7 +542,8 @@ export const CancelRequestResponse = zod.object({
   "employeeId": zod.number(),
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
-  "signedAt": zod.coerce.date()
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean()
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -609,7 +615,8 @@ export const ManagerApproveRequestResponse = zod.object({
   "employeeId": zod.number(),
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
-  "signedAt": zod.coerce.date()
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean()
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -685,7 +692,8 @@ export const ManagerDenyRequestResponse = zod.object({
   "employeeId": zod.number(),
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
-  "signedAt": zod.coerce.date()
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean()
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -767,7 +775,8 @@ export const BoApproveRequestResponse = zod.object({
   "employeeId": zod.number(),
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
-  "signedAt": zod.coerce.date()
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean()
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -843,7 +852,8 @@ export const BoDenyRequestResponse = zod.object({
   "employeeId": zod.number(),
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
-  "signedAt": zod.coerce.date()
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean()
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -874,7 +884,8 @@ export const SignRepaymentGuaranteeParams = zod.object({
 
 export const SignRepaymentGuaranteeBody = zod.object({
   "signedName": zod.string(),
-  "signedDate": zod.string().nullish()
+  "signedDate": zod.string().nullish(),
+  "acknowledged": zod.boolean().describe('Must be true; the signer acknowledged the electronic-signature terms.')
 })
 
 
@@ -985,7 +996,8 @@ export const GetEmployeeDashboardResponse = zod.object({
   "employeeId": zod.number(),
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
-  "signedAt": zod.coerce.date()
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean()
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -1067,7 +1079,8 @@ export const GetManagerDashboardResponse = zod.object({
   "employeeId": zod.number(),
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
-  "signedAt": zod.coerce.date()
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean()
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -1143,7 +1156,8 @@ export const GetBoDashboardResponse = zod.object({
   "employeeId": zod.number(),
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
-  "signedAt": zod.coerce.date()
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean()
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -1206,7 +1220,8 @@ export const GetBoDashboardResponse = zod.object({
   "employeeId": zod.number(),
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
-  "signedAt": zod.coerce.date()
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean()
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -1278,7 +1293,8 @@ export const GetAccountingDashboardResponse = zod.object({
   "employeeId": zod.number(),
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
-  "signedAt": zod.coerce.date()
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean()
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -1341,7 +1357,8 @@ export const GetAccountingDashboardResponse = zod.object({
   "employeeId": zod.number(),
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
-  "signedAt": zod.coerce.date()
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean()
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),

@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { customFetch } from "@workspace/api-client-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 
 // Adding local mutation definitions since they aren't fully typed out or readily available in our minimal check
@@ -67,11 +68,11 @@ const useBoDenyRequest = () => {
 
 const useSignRepaymentGuarantee = () => {
   return useMutation({
-    mutationFn: ({ id, signedName }: { id: number, signedName: string }) => 
+    mutationFn: ({ id, signedName, acknowledged }: { id: number, signedName: string, acknowledged: boolean }) => 
       customFetch(`/api/requests/${id}/repayment-guarantee`, { 
         method: "POST", 
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signedName }) 
+        body: JSON.stringify({ signedName, acknowledged }) 
       })
   });
 };
@@ -122,6 +123,7 @@ export default function RequestDetailPage() {
 
   const [denyReason, setDenyReason] = useState("");
   const [signedName, setSignedName] = useState("");
+  const [guaranteeAcknowledged, setGuaranteeAcknowledged] = useState(false);
   const [paycheckDate, setPaycheckDate] = useState("");
   const [pendingReceiptFile, setPendingReceiptFile] = useState<File | null>(null);
   
@@ -414,22 +416,34 @@ export default function RequestDetailPage() {
       {isMyRequest && request.requiresRepaymentGuarantee && !request.repaymentGuarantee && request.status !== 'cancelled' && request.status !== 'manager_denied' && request.status !== 'bo_denied' && (
         <Card className="border-amber-200 bg-amber-50 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-amber-900 font-serif flex items-center gap-2"><PenTool className="h-5 w-5" /> Signature Required</CardTitle>
-            <CardDescription className="text-amber-800">
-              This request requires a repayment guarantee. Please sign below to proceed with processing.
+            <CardTitle className="text-amber-900 font-serif flex items-center gap-2"><PenTool className="h-5 w-5" /> OSS Repayment Policy</CardTitle>
+            <CardDescription className="text-amber-800 leading-relaxed">
+              Olympic Sports &amp; Spine (OSS) has advanced to me continuing education funding upon my request. To reimburse OSS for this advance, I agree to designate continuing education benefits that will be accrued through my future work hours in the amount necessary to satisfy this debt. In the event that my employment with OSS is terminated, either voluntarily or involuntarily, I agree to repay OSS for any advanced continuing education balance that remains unsatisfied after all future benefit accruals are applied.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex items-end gap-4">
-            <div className="flex-1 max-w-sm">
-              <label className="text-sm font-medium text-amber-900 mb-1 block">Type your full name to sign</label>
-              <Input value={signedName} onChange={e => setSignedName(e.target.value)} placeholder="Full Name" className="border-amber-200 bg-white" />
+          <CardContent className="space-y-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <Checkbox
+                checked={guaranteeAcknowledged}
+                onCheckedChange={(checked) => setGuaranteeAcknowledged(checked === true)}
+                className="mt-0.5 border-amber-400 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+              />
+              <span className="text-sm text-amber-900">
+                I agree to conduct business electronically and understand that typing my name below acts as my legally binding signature to the full terms of this OSS Repayment Policy.
+              </span>
+            </label>
+            <div className="flex items-end gap-4">
+              <div className="flex-1 max-w-sm">
+                <label className="text-sm font-medium text-amber-900 mb-1 block">Type your full name to sign</label>
+                <Input value={signedName} onChange={e => setSignedName(e.target.value)} placeholder="Full Name" className="border-amber-200 bg-white" />
+              </div>
+              <Button 
+                onClick={() => handleAction(signRepaymentMutation, { id, signedName, acknowledged: guaranteeAcknowledged }, "Repayment guarantee signed")}
+                disabled={!signedName || !guaranteeAcknowledged || signRepaymentMutation.isPending}
+              >
+                Sign Agreement
+              </Button>
             </div>
-            <Button 
-              onClick={() => handleAction(signRepaymentMutation, { id, signedName }, "Repayment guarantee signed")}
-              disabled={!signedName || signRepaymentMutation.isPending}
-            >
-              Sign Agreement
-            </Button>
           </CardContent>
         </Card>
       )}

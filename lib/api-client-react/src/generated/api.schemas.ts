@@ -155,6 +155,7 @@ export interface RepaymentGuarantee {
   /** @nullable */
   signedDate?: string | null;
   signedAt: string;
+  acknowledged: boolean;
 }
 
 export interface Receipt {
@@ -302,6 +303,8 @@ export interface SubmitRequestInput {
   guaranteeSignedName?: string;
   /** Date the guarantee was signed (required when over budget) */
   guaranteeSignedDate?: string;
+  /** Whether the signer accepted the electronic-signature terms (required when over budget) */
+  guaranteeAcknowledged?: boolean;
 }
 
 export interface DenialInput {
@@ -328,6 +331,8 @@ export interface RepaymentGuaranteeInput {
   signedName: string;
   /** @nullable */
   signedDate?: string | null;
+  /** Must be true; the signer acknowledged the electronic-signature terms. */
+  acknowledged: boolean;
 }
 
 export interface ReceiptInput {

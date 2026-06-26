@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import {
   conEdRequests,
@@ -153,7 +154,9 @@ async function formatRequest(req_row: typeof conEdRequests.$inferSelect) {
           requestId: guarantee.requestId,
           employeeId: guarantee.employeeId,
           signedName: guarantee.signedName,
+          signedDate: guarantee.signedDate ?? null,
           signedAt: guarantee.signedAt.toISOString(),
+          acknowledged: guarantee.acknowledged,
         }
       : null,
     receipts: reqReceipts.map((r) => ({
@@ -339,6 +342,7 @@ router.post(
         typeof body.guaranteeSignedName === "string" ? body.guaranteeSignedName.trim() || undefined : undefined;
       const guaranteeSignedDate: string | undefined =
         typeof body.guaranteeSignedDate === "string" ? body.guaranteeSignedDate.trim() || undefined : undefined;
+      const guaranteeAcknowledged: boolean = body.guaranteeAcknowledged === true;
 
       const balance = await getUserBalance(user.id, user.hireDate);
       const requiresRepaymentGuarantee =
@@ -353,17 +357,22 @@ router.post(
           .limit(1);
 
         if (!existingGuarantee) {
-          if (!guaranteeSignedName || !guaranteeSignedDate) {
+          if (!guaranteeSignedName || !guaranteeSignedDate || !guaranteeAcknowledged) {
             res.status(400).json({
-              error: "This request exceeds your annual budget. A repayment guarantee (signed name and date) is required before submission.",
+              error: "This request exceeds your annual budget. A repayment guarantee (signed name, date, and acknowledgment) is required before submission.",
             });
             return;
           }
+          const { sessionId } = getAuth(req);
           await db.insert(repaymentGuarantees).values({
             requestId,
             employeeId: user.id,
             signedName: guaranteeSignedName,
             signedDate: guaranteeSignedDate,
+            email: user.email,
+            ipAddress: req.ip ?? null,
+            sessionId: sessionId ?? null,
+            acknowledged: true,
           });
         }
       }
@@ -771,6 +780,12 @@ router.post(
         res.status(400).json({ error: "Signed name required" });
         return;
       }
+      if (parsed.data.acknowledged !== true) {
+        res.status(400).json({
+          error: "You must accept the electronic-signature acknowledgment to sign.",
+        });
+        return;
+      }
 
       const [existing] = await db
         .select()
@@ -783,6 +798,7 @@ router.post(
         return;
       }
 
+      const { sessionId } = getAuth(req);
       const [guarantee] = await db
         .insert(repaymentGuarantees)
         .values({
@@ -790,6 +806,10 @@ router.post(
           employeeId: req.dbUser!.id,
           signedName: parsed.data.signedName,
           signedDate: parsed.data.signedDate ?? null,
+          email: req.dbUser!.email,
+          ipAddress: req.ip ?? null,
+          sessionId: sessionId ?? null,
+          acknowledged: true,
         })
         .returning();
 
@@ -800,6 +820,7 @@ router.post(
         signedName: guarantee.signedName,
         signedDate: guarantee.signedDate ?? null,
         signedAt: guarantee.signedAt.toISOString(),
+        acknowledged: guarantee.acknowledged,
       });
     } catch (err) {
       req.log.error({ err }, "signRepaymentGuarantee error");

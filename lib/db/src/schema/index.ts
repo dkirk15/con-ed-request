@@ -95,6 +95,10 @@ export const repaymentGuarantees = pgTable("repayment_guarantees", {
   signedName: text("signed_name").notNull(),
   signedDate: text("signed_date"),
   signedAt: timestamp("signed_at").defaultNow().notNull(),
+  email: text("email"),
+  ipAddress: text("ip_address"),
+  sessionId: text("session_id"),
+  acknowledged: boolean("acknowledged").notNull().default(false),
 });
 
 export const receipts = pgTable("receipts", {

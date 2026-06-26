@@ -13,6 +13,10 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
+// Behind the Replit proxy — trust X-Forwarded-* so req.ip reflects the real
+// client IP (and not the proxy address) when auditing signed guarantees.
+app.set("trust proxy", true);
+
 app.use(
   pinoHttp({
     logger,

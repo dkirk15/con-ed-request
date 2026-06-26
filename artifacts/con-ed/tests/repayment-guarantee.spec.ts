@@ -46,11 +46,19 @@ test("over-budget request requires and records a repayment guarantee", async ({
 
   await expect(page.getByText(/Over budget/)).toBeVisible();
 
+  // Submit must stay disabled until both the acknowledgment box is ticked and a
+  // name is typed — the acknowledgment is a hard requirement for over-budget.
+  const submitButton = page.getByRole("button", { name: "Submit Request" });
+
   await page
     .getByPlaceholder("Type your full name to sign")
     .fill(employee.name);
+  await expect(submitButton).toBeDisabled();
 
-  await page.getByRole("button", { name: "Submit Request" }).click();
+  await page.getByRole("checkbox").check();
+  await expect(submitButton).toBeEnabled();
+
+  await submitButton.click();
 
   await expect(page).toHaveURL(/\/requests\/\d+/);
 
@@ -61,4 +69,9 @@ test("over-budget request requires and records a repayment guarantee", async ({
 
   const guarantee = await getRepaymentGuarantee(id);
   expect(guarantee).toBeTruthy();
+  // Acknowledgment + audit trail must be persisted server-side.
+  expect(guarantee?.acknowledged).toBe(true);
+  expect(guarantee?.email).toBe(employee.email);
+  expect(guarantee?.ip_address).toBeTruthy();
+  expect(guarantee?.session_id).toBeTruthy();
 });

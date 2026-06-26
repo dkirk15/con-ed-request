@@ -14,4 +14,5 @@ export interface RepaymentGuarantee {
   /** @nullable */
   signedDate?: string | null;
   signedAt: Date;
+  acknowledged: boolean;
 }

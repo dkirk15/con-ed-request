@@ -1079,6 +1079,9 @@ components:
         guaranteeSignedDate:
           type: string
           description: Date the guarantee was signed (required when over budget)
+        guaranteeAcknowledged:
+          type: boolean
+          description: Whether the signer accepted the electronic-signature terms (required when over budget)
 
     DenialInput:
       type: object
@@ -1117,7 +1120,7 @@ components:
 
     RepaymentGuarantee:
       type: object
-      required: [id, requestId, employeeId, signedName, signedAt]
+      required: [id, requestId, employeeId, signedName, signedAt, acknowledged]
       properties:
         id:
           type: integer
@@ -1132,15 +1135,20 @@ components:
         signedAt:
           type: string
           format: date-time
+        acknowledged:
+          type: boolean
 
     RepaymentGuaranteeInput:
       type: object
-      required: [signedName]
+      required: [signedName, acknowledged]
       properties:
         signedName:
           type: string
         signedDate:
           type: ["string", "null"]
+        acknowledged:
+          type: boolean
+          description: Must be true; the signer acknowledged the electronic-signature terms.
 
     # ─── Receipt ───────────────────────────────────────────────────────────────
 

@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Calculator, AlertTriangle, PenTool } from "lucide-react";
 import { Link } from "wouter";
@@ -59,6 +60,7 @@ export default function NewRequestPage() {
   const [guaranteeDate, setGuaranteeDate] = useState(
     new Date().toISOString().split("T")[0],
   );
+  const [guaranteeAcknowledged, setGuaranteeAcknowledged] = useState(false);
 
   const { data: balanceData } = useQuery<BalanceData>({
     queryKey: ["/api/dashboard/employee/balance"],
@@ -103,11 +105,14 @@ export default function NewRequestPage() {
     remainingBudget !== null && totalRequested > remainingBudget;
 
   const onSubmit = async (data: FormValues) => {
-    if (isOverBudget && (!guaranteeName.trim() || !guaranteeDate.trim())) {
+    if (
+      isOverBudget &&
+      (!guaranteeName.trim() || !guaranteeDate.trim() || !guaranteeAcknowledged)
+    ) {
       toast({
         title: "Repayment guarantee required",
         description:
-          "This request exceeds your available budget. Please sign the repayment guarantee by entering your full name and today's date.",
+          "This request exceeds your available budget. Please read the repayment policy, check the acknowledgment box, and enter your full name and today's date to sign.",
         variant: "destructive",
       });
       return;
@@ -126,6 +131,7 @@ export default function NewRequestPage() {
                   ? {
                       guaranteeSignedName: guaranteeName.trim(),
                       guaranteeSignedDate: guaranteeDate,
+                      guaranteeAcknowledged: true,
                     }
                   : {},
               ),
@@ -371,9 +377,8 @@ export default function NewRequestPage() {
                   <AlertDescription>
                     This request exceeds your remaining annual budget of{" "}
                     {formatCurrency(remainingBudget ?? 0)}. Per OSS policy, you
-                    must sign a repayment guarantee acknowledging that advanced
-                    CE funding will be repaid from future CE accruals, with any
-                    remaining balance due if employment ends.
+                    must review and sign the OSS Repayment Policy below before
+                    submitting.
                   </AlertDescription>
                 </Alert>
               )}
@@ -385,43 +390,59 @@ export default function NewRequestPage() {
               <CardHeader>
                 <CardTitle className="font-serif flex items-center gap-2 text-orange-900">
                   <PenTool className="h-5 w-5" />
-                  Repayment Guarantee Required
+                  OSS Repayment Policy
                 </CardTitle>
-                <CardDescription className="text-orange-700">
-                  By signing below, you acknowledge that any approved amount
-                  beyond your remaining budget ({formatCurrency(remainingBudget ?? 0)})
-                  will be repaid through future CE benefits, with any remaining
-                  balance due if your employment with OSS ends.
+                <CardDescription className="text-orange-800 leading-relaxed">
+                  Olympic Sports &amp; Spine (OSS) has advanced to me continuing
+                  education funding upon my request. To reimburse OSS for this
+                  advance, I agree to designate continuing education benefits
+                  that will be accrued through my future work hours in the amount
+                  necessary to satisfy this debt. In the event that my
+                  employment with OSS is terminated, either voluntarily or
+                  involuntarily, I agree to repay OSS for any advanced continuing
+                  education balance that remains unsatisfied after all future
+                  benefit accruals are applied.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-orange-900">
-                    Full Legal Name <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    placeholder="Type your full name to sign"
-                    value={guaranteeName}
-                    onChange={(e) => setGuaranteeName(e.target.value)}
-                    className="border-orange-300 bg-white"
+              <CardContent className="space-y-6">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <Checkbox
+                    checked={guaranteeAcknowledged}
+                    onCheckedChange={(checked) =>
+                      setGuaranteeAcknowledged(checked === true)
+                    }
+                    className="mt-0.5 border-orange-400 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600"
                   />
+                  <span className="text-sm text-orange-900">
+                    I agree to conduct business electronically and understand
+                    that typing my name below acts as my legally binding
+                    signature to the full terms of this OSS Repayment Policy.
+                  </span>
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-orange-900">
+                      Full Legal Name <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      placeholder="Type your full name to sign"
+                      value={guaranteeName}
+                      onChange={(e) => setGuaranteeName(e.target.value)}
+                      className="border-orange-300 bg-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-orange-900">
+                      Date <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      type="date"
+                      value={guaranteeDate}
+                      onChange={(e) => setGuaranteeDate(e.target.value)}
+                      className="border-orange-300 bg-white"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-orange-900">
-                    Date <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    type="date"
-                    value={guaranteeDate}
-                    onChange={(e) => setGuaranteeDate(e.target.value)}
-                    className="border-orange-300 bg-white"
-                  />
-                </div>
-                <p className="md:col-span-2 text-xs text-orange-600 italic">
-                  This digital signature constitutes a legally binding
-                  acknowledgment of the OSS Continuing Education repayment
-                  policy.
-                </p>
               </CardContent>
             </Card>
           )}
@@ -437,7 +458,9 @@ export default function NewRequestPage() {
               disabled={
                 createRequest.isPending ||
                 (isOverBudget &&
-                  (!guaranteeName.trim() || !guaranteeDate.trim()))
+                  (!guaranteeName.trim() ||
+                    !guaranteeDate.trim() ||
+                    !guaranteeAcknowledged))
               }
               className="min-w-[150px]"
             >
