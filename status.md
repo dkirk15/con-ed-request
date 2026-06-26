@@ -1,6 +1,6 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-06-23 by Replit Agent
+Last updated: 2026-06-26 by Replit Agent
 
 ## Current State
 
@@ -21,6 +21,51 @@ Annual CE benefit is $2,000 per employee, prorated in the hire year, with advanc
 - API spec/codegen: `lib/api-spec/openapi.yaml` drives Orval output for `lib/api-zod` and `lib/api-client-react`
 - Database: `lib/db` - Drizzle schema and seed scripts
 - Auth: Clerk with Microsoft SSO; frontend uses `VITE_CLERK_PUBLISHABLE_KEY`, backend uses `CLERK_SECRET_KEY`
+
+---
+
+## Recent Changes (2026-06-26)
+
+### Repayment Guarantee Overhaul
+
+Full audit-trail enforcement and three-surface viewer for signed repayment agreements.
+
+#### Schema
+
+- Added four columns to `repayment_guarantees`: `acknowledged` (boolean, default false), `email` (text, nullable), `ip_address` (text, nullable), `session_id` (text, nullable).
+
+#### Backend
+
+- Both signing paths now enforce `acknowledged === true` (returns 400 otherwise):
+  - `POST /api/requests/:id/submit` — over-budget employees must sign with the checkbox ticked.
+  - `POST /api/requests/:id/repayment-guarantee` — standalone sign endpoint on the Request Detail page.
+- Both paths capture and persist the signer's **email** (from Clerk session), **IP address** (Express `req.ip`, trust-proxy enabled for the Replit edge), and **Clerk session ID**.
+- `formatRequest` / `formatRequestSimple` both now expose the full audit trail (`acknowledged`, `email`, `ipAddress`, `sessionId`) in API responses.
+- `GET /api/users` batch-fetches all guarantee rows for the visible user list in a single `inArray` query, groups by `employeeId`, and attaches a `repaymentGuarantees` array per user (managers see only their clinic's staff; admin sees all).
+
+#### API Contract
+
+- `RepaymentGuarantee` response schema expanded: `acknowledged`, `email`, `ipAddress`, `sessionId`.
+- `acknowledged` added as a required field to both guarantee-input schemas.
+- `User` schema gains an optional `repaymentGuarantees` array (populated only by the `/api/users` list endpoint).
+- Client and Zod types regenerated via Orval codegen.
+
+#### Frontend
+
+- **New Request form** — verbatim OSS Repayment Policy text replaces the old placeholder; a required acknowledgment checkbox ("I agree to conduct business electronically…") must be ticked before the name field unlocks the Submit button.
+- **Request Detail signing card** — same verbatim text and checkbox; Sign button disabled until both are filled.
+- **New `RepaymentGuaranteeDialog` component** — reusable dialog that renders the verbatim policy + per-guarantee audit record: signed name, user-entered **Date Signed** (`signedDate`), server **Recorded On** timestamp (`signedAt`), acknowledgment status, email, IP address, session ID, and Request #.
+- **Request Detail page** — the "Repayment Guarantee" sidebar card is now a clickable trigger for `RepaymentGuaranteeDialog`, covering both the manager approval view and the Business Office review (same page, no role gate).
+- **Users directory** — new "Repayment Agreement" column with an inline **View (N)** trigger per user; opens the same dialog. Shows "—" for users with no signed guarantees.
+
+#### Tests
+
+- `repayment-guarantee.spec.ts` extended:
+  - Ticks the acknowledgment checkbox before submitting.
+  - Asserts all new audit fields (`acknowledged`, `email`, `ipAddress`, `sessionId`) persist in DB and are returned by the API.
+  - After signing, signs in as an admin, opens `/users`, and verifies the agreement is viewable inline (policy text, signer name, Request #, Date Signed label, Recorded On label).
+- `tests/helpers/clerk.ts` — `signIn` now signs out any active session before re-signing-in, enabling mid-test user switching without "already signed in" errors.
+- Suite: **23 tests, all passing**.
 
 ---
 
@@ -171,7 +216,7 @@ These changes were implemented and pushed via `codex/finish-ce-request-workflow`
 | `clinics` | `id`, `name` |
 | `users` | `id`, `clerkId`, `name`, `email`, `role`, `clinicId`, `managerId`, `hireDate`, `conEdAllocation` |
 | `con_ed_requests` | `id`, `employeeId`, `status`, `courseNames`, `courseDates`, `ceuCount`, `location`, `tuition`, `lodging`, `airfare`, `rentalCar`, `parking`, `otherCosts`, `totalRequested`, approved amount fields, approver/denial fields, `requiresRepaymentGuarantee` |
-| `repayment_guarantees` | `id`, `requestId`, `employeeId`, `signedName`, `signedDate`, `signedAt` |
+| `repayment_guarantees` | `id`, `requestId`, `employeeId`, `signedName`, `signedDate`, `signedAt`, `acknowledged`, `email`, `ip_address`, `session_id` |
 | `receipts` | `id`, `requestId`, `fileUrl`, `fileName`, `uploadedAt` |
 | `reimbursements` | `id`, `requestId`, `paycheckDate`, `markedById`, `markedAt` |
 
@@ -250,7 +295,9 @@ cancelled is allowed from draft, pending_manager, and pending_bo.
 ### Repayment Guarantee
 
 - Required when requested total exceeds remaining balance at submission time.
-- Enforced in `POST /api/requests/:id/submit`.
+- Enforced in `POST /api/requests/:id/submit` (over-budget branch).
+- `acknowledged === true` is required server-side on both the submit path and the standalone sign endpoint; a missing or false value returns 400.
+- Audit trail persisted per signing: email, IP address, Clerk session ID, and acknowledged flag.
 - Stored even if BO later approves less than the original request.
 
 ### Access Control
