@@ -1137,6 +1137,15 @@ components:
           format: date-time
         acknowledged:
           type: boolean
+        email:
+          type: ["string", "null"]
+          description: Signer's email captured at signing time (audit trail).
+        ipAddress:
+          type: ["string", "null"]
+          description: Client IP captured at signing time (audit trail).
+        sessionId:
+          type: ["string", "null"]
+          description: Clerk session id captured at signing time (audit trail).
 
     RepaymentGuaranteeInput:
       type: object

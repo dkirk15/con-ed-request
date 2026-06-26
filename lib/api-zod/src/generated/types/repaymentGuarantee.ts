@@ -15,4 +15,19 @@ export interface RepaymentGuarantee {
   signedDate?: string | null;
   signedAt: Date;
   acknowledged: boolean;
+  /**
+     * Signer's email captured at signing time (audit trail).
+     * @nullable
+     */
+  email?: string | null;
+  /**
+     * Client IP captured at signing time (audit trail).
+     * @nullable
+     */
+  ipAddress?: string | null;
+  /**
+     * Clerk session id captured at signing time (audit trail).
+     * @nullable
+     */
+  sessionId?: string | null;
 }

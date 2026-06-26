@@ -96,6 +96,9 @@ export async function formatRequestSimple(row: typeof conEdRequests.$inferSelect
       signedDate: guarantee.signedDate ?? null,
       signedAt: guarantee.signedAt.toISOString(),
       acknowledged: guarantee.acknowledged,
+      email: guarantee.email ?? null,
+      ipAddress: guarantee.ipAddress ?? null,
+      sessionId: guarantee.sessionId ?? null,
     } : null,
     receipts: reqReceipts.map((r) => ({
       id: r.id,

@@ -212,7 +212,10 @@ export const ListRequestsResponseItem = zod.object({
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date(),
-  "acknowledged": zod.boolean()
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -304,7 +307,10 @@ export const GetRequestResponse = zod.object({
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date(),
-  "acknowledged": zod.boolean()
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -391,7 +397,10 @@ export const UpdateRequestResponse = zod.object({
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date(),
-  "acknowledged": zod.boolean()
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -470,7 +479,10 @@ export const SubmitRequestResponse = zod.object({
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date(),
-  "acknowledged": zod.boolean()
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -543,7 +555,10 @@ export const CancelRequestResponse = zod.object({
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date(),
-  "acknowledged": zod.boolean()
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -616,7 +631,10 @@ export const ManagerApproveRequestResponse = zod.object({
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date(),
-  "acknowledged": zod.boolean()
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -693,7 +711,10 @@ export const ManagerDenyRequestResponse = zod.object({
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date(),
-  "acknowledged": zod.boolean()
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -776,7 +797,10 @@ export const BoApproveRequestResponse = zod.object({
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date(),
-  "acknowledged": zod.boolean()
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -853,7 +877,10 @@ export const BoDenyRequestResponse = zod.object({
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date(),
-  "acknowledged": zod.boolean()
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -997,7 +1024,10 @@ export const GetEmployeeDashboardResponse = zod.object({
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date(),
-  "acknowledged": zod.boolean()
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -1080,7 +1110,10 @@ export const GetManagerDashboardResponse = zod.object({
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date(),
-  "acknowledged": zod.boolean()
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -1157,7 +1190,10 @@ export const GetBoDashboardResponse = zod.object({
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date(),
-  "acknowledged": zod.boolean()
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -1221,7 +1257,10 @@ export const GetBoDashboardResponse = zod.object({
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date(),
-  "acknowledged": zod.boolean()
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -1294,7 +1333,10 @@ export const GetAccountingDashboardResponse = zod.object({
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date(),
-  "acknowledged": zod.boolean()
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),
@@ -1358,7 +1400,10 @@ export const GetAccountingDashboardResponse = zod.object({
   "signedName": zod.string(),
   "signedDate": zod.string().nullish(),
   "signedAt": zod.coerce.date(),
-  "acknowledged": zod.boolean()
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
 }).nullish(),
   "receipts": zod.array(zod.object({
   "id": zod.number(),

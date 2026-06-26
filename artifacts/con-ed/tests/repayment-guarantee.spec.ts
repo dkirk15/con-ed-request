@@ -74,4 +74,24 @@ test("over-budget request requires and records a repayment guarantee", async ({
   expect(guarantee?.email).toBe(employee.email);
   expect(guarantee?.ip_address).toBeTruthy();
   expect(guarantee?.session_id).toBeTruthy();
+
+  // API contract: the request-detail response must surface the audit trail too.
+  const apiGuarantee = await page.evaluate(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async (args: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const token = await (window as any).Clerk?.session?.getToken();
+      const res = await fetch(`/api/requests/${args.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = await res.json();
+      return body.repaymentGuarantee;
+    },
+    { id },
+  );
+  expect(apiGuarantee).toBeTruthy();
+  expect(apiGuarantee.acknowledged).toBe(true);
+  expect(apiGuarantee.email).toBe(employee.email);
+  expect(apiGuarantee.ipAddress).toBeTruthy();
+  expect(apiGuarantee.sessionId).toBeTruthy();
 });
