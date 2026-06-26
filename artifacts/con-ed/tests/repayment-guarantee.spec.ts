@@ -27,6 +27,7 @@ test("over-budget request requires and records a repayment guarantee", async ({
 }) => {
   const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-guarantee`);
   const employee = await provisionUser({ role: "employee", clinicId });
+  const admin = await provisionUser({ role: "admin", clinicId });
 
   await insertRequest({
     employeeId: employee.dbId,
@@ -94,4 +95,22 @@ test("over-budget request requires and records a repayment guarantee", async ({
   expect(apiGuarantee.email).toBe(employee.email);
   expect(apiGuarantee.ipAddress).toBeTruthy();
   expect(apiGuarantee.sessionId).toBeTruthy();
+
+  // Admin/manager Users directory must surface the signed agreement inline and
+  // make it viewable.
+  await signInAs(admin);
+  await page.goto("/users");
+
+  const employeeRow = page.getByRole("row").filter({ hasText: employee.name });
+  const viewAgreement = employeeRow.getByRole("button", { name: /View/ });
+  await expect(viewAgreement).toBeVisible();
+  await viewAgreement.click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("Olympic Sports & Spine");
+  await expect(dialog).toContainText(employee.name);
+  await expect(dialog).toContainText(`Request #${id}`);
+  // Both the user-entered date and the server-recorded timestamp must surface.
+  await expect(dialog).toContainText("Date Signed");
+  await expect(dialog).toContainText("Recorded On");
 });

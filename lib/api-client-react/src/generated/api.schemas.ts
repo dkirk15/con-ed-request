@@ -37,6 +37,32 @@ export const UserRole = {
   admin: 'admin',
 } as const;
 
+export interface RepaymentGuarantee {
+  id: number;
+  requestId: number;
+  employeeId: number;
+  signedName: string;
+  /** @nullable */
+  signedDate?: string | null;
+  signedAt: string;
+  acknowledged: boolean;
+  /**
+     * Signer's email captured at signing time (audit trail).
+     * @nullable
+     */
+  email?: string | null;
+  /**
+     * Client IP captured at signing time (audit trail).
+     * @nullable
+     */
+  ipAddress?: string | null;
+  /**
+     * Clerk session id captured at signing time (audit trail).
+     * @nullable
+     */
+  sessionId?: string | null;
+}
+
 export interface User {
   id: number;
   clerkId: string;
@@ -59,6 +85,8 @@ export interface User {
      */
   conEdAllocation?: number | null;
   createdAt: string;
+  /** Signed repayment agreements for this user. Included only in the user directory listing. */
+  repaymentGuarantees?: RepaymentGuarantee[];
 }
 
 export type UserInputRole = typeof UserInputRole[keyof typeof UserInputRole];
@@ -146,32 +174,6 @@ export const ConEdRequestStatus = {
   reimbursed: 'reimbursed',
   cancelled: 'cancelled',
 } as const;
-
-export interface RepaymentGuarantee {
-  id: number;
-  requestId: number;
-  employeeId: number;
-  signedName: string;
-  /** @nullable */
-  signedDate?: string | null;
-  signedAt: string;
-  acknowledged: boolean;
-  /**
-     * Signer's email captured at signing time (audit trail).
-     * @nullable
-     */
-  email?: string | null;
-  /**
-     * Client IP captured at signing time (audit trail).
-     * @nullable
-     */
-  ipAddress?: string | null;
-  /**
-     * Clerk session id captured at signing time (audit trail).
-     * @nullable
-     */
-  sessionId?: string | null;
-}
 
 export interface Receipt {
   id: number;

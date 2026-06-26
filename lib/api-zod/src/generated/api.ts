@@ -31,7 +31,19 @@ export const GetMeResponse = zod.object({
   "managerName": zod.string().nullish(),
   "hireDate": zod.coerce.date().nullish(),
   "conEdAllocation": zod.number().nullish().describe('Manual annual con-ed allocation override in dollars. When set, replaces the hire-date-prorated calculation.'),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "repaymentGuarantees": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "employeeId": zod.number(),
+  "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
+})).optional().describe('Signed repayment agreements for this user. Included only in the user directory listing.')
 })
 
 
@@ -55,7 +67,19 @@ export const ListUsersResponseItem = zod.object({
   "managerName": zod.string().nullish(),
   "hireDate": zod.coerce.date().nullish(),
   "conEdAllocation": zod.number().nullish().describe('Manual annual con-ed allocation override in dollars. When set, replaces the hire-date-prorated calculation.'),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "repaymentGuarantees": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "employeeId": zod.number(),
+  "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
+})).optional().describe('Signed repayment agreements for this user. Included only in the user directory listing.')
 })
 export const ListUsersResponse = zod.array(ListUsersResponseItem)
 
@@ -94,7 +118,19 @@ export const GetUserResponse = zod.object({
   "managerName": zod.string().nullish(),
   "hireDate": zod.coerce.date().nullish(),
   "conEdAllocation": zod.number().nullish().describe('Manual annual con-ed allocation override in dollars. When set, replaces the hire-date-prorated calculation.'),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "repaymentGuarantees": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "employeeId": zod.number(),
+  "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
+})).optional().describe('Signed repayment agreements for this user. Included only in the user directory listing.')
 })
 
 
@@ -126,7 +162,19 @@ export const UpdateUserResponse = zod.object({
   "managerName": zod.string().nullish(),
   "hireDate": zod.coerce.date().nullish(),
   "conEdAllocation": zod.number().nullish().describe('Manual annual con-ed allocation override in dollars. When set, replaces the hire-date-prorated calculation.'),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "repaymentGuarantees": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "employeeId": zod.number(),
+  "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
+})).optional().describe('Signed repayment agreements for this user. Included only in the user directory listing.')
 })
 
 
@@ -1454,7 +1502,19 @@ export const GetAdminDashboardResponse = zod.object({
   "managerName": zod.string().nullish(),
   "hireDate": zod.coerce.date().nullish(),
   "conEdAllocation": zod.number().nullish().describe('Manual annual con-ed allocation override in dollars. When set, replaces the hire-date-prorated calculation.'),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "repaymentGuarantees": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "employeeId": zod.number(),
+  "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
+})).optional().describe('Signed repayment agreements for this user. Included only in the user directory listing.')
 })),
   "pendingRoleAssignment": zod.array(zod.object({
   "id": zod.number(),
@@ -1468,7 +1528,19 @@ export const GetAdminDashboardResponse = zod.object({
   "managerName": zod.string().nullish(),
   "hireDate": zod.coerce.date().nullish(),
   "conEdAllocation": zod.number().nullish().describe('Manual annual con-ed allocation override in dollars. When set, replaces the hire-date-prorated calculation.'),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "repaymentGuarantees": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "employeeId": zod.number(),
+  "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
+})).optional().describe('Signed repayment agreements for this user. Included only in the user directory listing.')
 })).optional()
 })
 

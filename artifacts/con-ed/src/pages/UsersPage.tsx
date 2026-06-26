@@ -10,8 +10,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { RoleBadge } from "@/components/RoleBadge";
+import { RepaymentGuaranteeDialog } from "@/components/RepaymentGuaranteeDialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users as UsersIcon } from "lucide-react";
+import { Users as UsersIcon, FileSignature } from "lucide-react";
 import { useState } from "react";
 import {
   Select,
@@ -63,6 +64,7 @@ export default function UsersPage() {
               <TableHead>Role</TableHead>
               <TableHead>Clinic</TableHead>
               <TableHead>Manager</TableHead>
+              <TableHead>Repayment Agreement</TableHead>
               <TableHead className="text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
@@ -75,12 +77,13 @@ export default function UsersPage() {
                   <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-20" /></TableCell>
                   {me?.role === "admin" && <TableCell className="text-right"><Skeleton className="h-8 w-16 ml-auto" /></TableCell>}
                 </TableRow>
               ))
             ) : !users || users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={me?.role === "admin" ? 6 : 5} className="h-32 text-center text-slate-500">
+                <TableCell colSpan={me?.role === "admin" ? 7 : 6} className="h-32 text-center text-slate-500">
                   <div className="flex flex-col items-center justify-center">
                     <UsersIcon className="h-10 w-10 text-slate-300 mb-2" />
                     <p>No users found.</p>
@@ -95,6 +98,18 @@ export default function UsersPage() {
                   <TableCell><RoleBadge role={user.role} /></TableCell>
                   <TableCell>{user.clinicName || "—"}</TableCell>
                   <TableCell>{user.managerName || "—"}</TableCell>
+                  <TableCell>
+                    {user.repaymentGuarantees && user.repaymentGuarantees.length > 0 ? (
+                      <RepaymentGuaranteeDialog guarantees={user.repaymentGuarantees}>
+                        <Button variant="outline" size="sm" className="gap-1.5">
+                          <FileSignature className="h-3.5 w-3.5" />
+                          View{user.repaymentGuarantees.length > 1 ? ` (${user.repaymentGuarantees.length})` : ""}
+                        </Button>
+                      </RepaymentGuaranteeDialog>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </TableCell>
                   {(me?.role === "admin" || me?.id === user.id) && (
                     <TableCell className="text-right">
                       <Link href={`/users/${user.id}`}>

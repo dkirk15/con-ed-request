@@ -13,6 +13,7 @@ import { ArrowLeft, Upload, FileText, Check, X, CreditCard, PenTool } from "luci
 import { Link } from "wouter";
 import { formatCurrency, formatDate } from "@/lib/constants";
 import { StatusBadge } from "@/components/StatusBadge";
+import { RepaymentGuaranteeDialog } from "@/components/RepaymentGuaranteeDialog";
 import { useToast } from "@/hooks/use-toast";
 import { customFetch } from "@workspace/api-client-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -636,18 +637,25 @@ export default function RequestDetailPage() {
           </Card>
           
           {request.repaymentGuarantee && (
-            <Card className="shadow-sm border-slate-200">
-              <CardHeader className="border-b border-slate-100 bg-slate-50/50 pb-3">
-                <CardTitle className="text-sm font-serif">Repayment Guarantee</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="text-sm">
-                  <div className="text-slate-500 mb-1">Electronically Signed By</div>
-                  <div className="font-medium">{request.repaymentGuarantee.signedName}</div>
-                  <div className="text-xs text-slate-400 mt-1">{formatDate(request.repaymentGuarantee.signedAt)}</div>
-                </div>
-              </CardContent>
-            </Card>
+            <RepaymentGuaranteeDialog guarantees={[request.repaymentGuarantee]}>
+              <button type="button" className="w-full text-left">
+                <Card className="shadow-sm border-slate-200 transition hover:border-primary/40 hover:shadow cursor-pointer">
+                  <CardHeader className="border-b border-slate-100 bg-slate-50/50 pb-3">
+                    <CardTitle className="text-sm font-serif flex items-center justify-between gap-2">
+                      Repayment Guarantee
+                      <span className="text-xs font-sans font-normal text-primary">View agreement →</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    <div className="text-sm">
+                      <div className="text-slate-500 mb-1">Electronically Signed By</div>
+                      <div className="font-medium">{request.repaymentGuarantee.signedName}</div>
+                      <div className="text-xs text-slate-400 mt-1">{formatDate(request.repaymentGuarantee.signedAt)}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </button>
+            </RepaymentGuaranteeDialog>
           )}
 
         </div>

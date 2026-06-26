@@ -1,8 +1,8 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
-import { users, clinics } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { users, clinics, repaymentGuarantees } from "@workspace/db/schema";
+import { eq, and, inArray } from "drizzle-orm";
 import {
   CreateUserBody,
   UpdateUserBody,
@@ -49,6 +49,21 @@ async function formatUser(user: typeof users.$inferSelect) {
     hireDate: user.hireDate ?? null,
     conEdAllocation: user.conEdAllocation != null ? parseFloat(user.conEdAllocation) : null,
     createdAt: user.createdAt.toISOString(),
+  };
+}
+
+function formatGuarantee(g: typeof repaymentGuarantees.$inferSelect) {
+  return {
+    id: g.id,
+    requestId: g.requestId,
+    employeeId: g.employeeId,
+    signedName: g.signedName,
+    signedDate: g.signedDate ?? null,
+    signedAt: g.signedAt.toISOString(),
+    acknowledged: g.acknowledged,
+    email: g.email ?? null,
+    ipAddress: g.ipAddress ?? null,
+    sessionId: g.sessionId ?? null,
   };
 }
 
@@ -128,7 +143,30 @@ router.get("/users", requireRole("admin", "manager"), async (req: Request, res: 
       : await db.select().from(users);
 
     const formatted = await Promise.all(allUsers.map(formatUser));
-    res.json(formatted);
+
+    // Attach each user's signed repayment agreements for the directory view.
+    const userIds = allUsers.map((u) => u.id);
+    const guaranteesByUser = new Map<number, ReturnType<typeof formatGuarantee>[]>();
+    if (userIds.length) {
+      const guaranteeRows = await db
+        .select()
+        .from(repaymentGuarantees)
+        .where(inArray(repaymentGuarantees.employeeId, userIds));
+      for (const g of guaranteeRows) {
+        const list = guaranteesByUser.get(g.employeeId) ?? [];
+        list.push(formatGuarantee(g));
+        guaranteesByUser.set(g.employeeId, list);
+      }
+    }
+
+    const withGuarantees = formatted.map((u) => ({
+      ...u,
+      repaymentGuarantees: (guaranteesByUser.get(u.id) ?? []).sort((a, b) =>
+        a.signedAt < b.signedAt ? 1 : -1,
+      ),
+    }));
+
+    res.json(withGuarantees);
   } catch (err) {
     req.log.error({ err }, "listUsers error");
     res.status(500).json({ error: "Internal server error" });

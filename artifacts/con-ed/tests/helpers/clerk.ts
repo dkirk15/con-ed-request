@@ -54,6 +54,14 @@ export async function signIn(page: Page, email: string): Promise<void> {
   await setupClerkTestingToken({ page });
   await page.goto("/");
   await clerk.loaded({ page });
+  // Switching users mid-test: Clerk refuses to sign in while a session is
+  // already active ("You're already signed in"), so clear any existing one.
+  const alreadySignedIn = await page.evaluate(() =>
+    Boolean((window as Window & { Clerk?: { user?: unknown } }).Clerk?.user),
+  );
+  if (alreadySignedIn) {
+    await clerk.signOut({ page });
+  }
   await clerk.signIn({ page, emailAddress: email });
   // Ensure the session is fully established (and persisted to the dev browser)
   // before any caller performs a full-page navigation.

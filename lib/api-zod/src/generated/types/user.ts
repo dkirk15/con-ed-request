@@ -5,6 +5,7 @@
  * OSS Continuing Education Portal API
  * OpenAPI spec version: 0.1.0
  */
+import type { RepaymentGuarantee } from './repaymentGuarantee';
 import type { UserRole } from './userRole';
 
 export interface User {
@@ -29,4 +30,6 @@ export interface User {
      */
   conEdAllocation?: number | null;
   createdAt: Date;
+  /** Signed repayment agreements for this user. Included only in the user directory listing. */
+  repaymentGuarantees?: RepaymentGuarantee[];
 }

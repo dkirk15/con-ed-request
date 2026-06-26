@@ -794,6 +794,11 @@ components:
         createdAt:
           type: string
           format: date-time
+        repaymentGuarantees:
+          type: array
+          items:
+            $ref: '#/components/schemas/RepaymentGuarantee'
+          description: Signed repayment agreements for this user. Included only in the user directory listing.
 
     UserInput:
       type: object
