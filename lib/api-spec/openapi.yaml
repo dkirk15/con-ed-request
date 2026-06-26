@@ -1153,6 +1153,7 @@ components:
       properties:
         signedName:
           type: string
+          minLength: 1
         signedDate:
           type: ["string", "null"]
         acknowledged:

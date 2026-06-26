@@ -438,8 +438,8 @@ export default function RequestDetailPage() {
                 <Input value={signedName} onChange={e => setSignedName(e.target.value)} placeholder="Full Name" className="border-amber-200 bg-white" />
               </div>
               <Button 
-                onClick={() => handleAction(signRepaymentMutation, { id, signedName, acknowledged: guaranteeAcknowledged }, "Repayment guarantee signed")}
-                disabled={!signedName || !guaranteeAcknowledged || signRepaymentMutation.isPending}
+                onClick={() => handleAction(signRepaymentMutation, { id, signedName: signedName.trim(), acknowledged: guaranteeAcknowledged }, "Repayment guarantee signed")}
+                disabled={!signedName.trim() || !guaranteeAcknowledged || signRepaymentMutation.isPending}
               >
                 Sign Agreement
               </Button>

@@ -783,6 +783,11 @@ router.post(
         res.status(400).json({ error: "Signed name required" });
         return;
       }
+      const signedName = parsed.data.signedName.trim();
+      if (!signedName) {
+        res.status(400).json({ error: "Signed name required" });
+        return;
+      }
       if (parsed.data.acknowledged !== true) {
         res.status(400).json({
           error: "You must accept the electronic-signature acknowledgment to sign.",
@@ -807,7 +812,7 @@ router.post(
         .values({
           requestId,
           employeeId: req.dbUser!.id,
-          signedName: parsed.data.signedName,
+          signedName,
           signedDate: parsed.data.signedDate ?? null,
           email: req.dbUser!.email,
           ipAddress: req.ip ?? null,

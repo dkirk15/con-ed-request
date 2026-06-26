@@ -343,6 +343,7 @@ export interface BOApprovalInput {
 }
 
 export interface RepaymentGuaranteeInput {
+  /** @minLength 1 */
   signedName: string;
   /** @nullable */
   signedDate?: string | null;

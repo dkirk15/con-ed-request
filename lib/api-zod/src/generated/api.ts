@@ -909,8 +909,11 @@ export const SignRepaymentGuaranteeParams = zod.object({
   "requestId": zod.coerce.number()
 })
 
+
+
+
 export const SignRepaymentGuaranteeBody = zod.object({
-  "signedName": zod.string(),
+  "signedName": zod.string().min(1),
   "signedDate": zod.string().nullish(),
   "acknowledged": zod.boolean().describe('Must be true; the signer acknowledged the electronic-signature terms.')
 })
