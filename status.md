@@ -1,6 +1,6 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-06-26 by Replit Agent
+Last updated: 2026-06-27 by Replit Agent
 
 ## Current State
 
@@ -21,6 +21,53 @@ Annual CE benefit is $2,000 per employee, prorated in the hire year, with advanc
 - API spec/codegen: `lib/api-spec/openapi.yaml` drives Orval output for `lib/api-zod` and `lib/api-client-react`
 - Database: `lib/db` - Drizzle schema and seed scripts
 - Auth: Clerk with Microsoft SSO; frontend uses `VITE_CLERK_PUBLISHABLE_KEY`, backend uses `CLERK_SECRET_KEY`
+
+---
+
+## Recent Changes (2026-06-27)
+
+### Security Scan & Threat Model
+
+A full security scan produced `threat_model.md` at the repo root, documenting
+assets, trust boundaries, and four threat categories for the app.
+
+Three actionable findings were identified and tracked as follow-on tasks:
+
+1. **Admission Control (Spoofing)** — any valid Clerk session is currently
+   auto-provisioned as an app user (`role=employee`). For an internal portal
+   this is too permissive; only explicitly authorized staff should gain access.
+   → Tracked as Task #10 (Authentication Admission Control) — in progress.
+
+2. **Receipt Upload Validation (Tampering)** — uploaded receipts need enforced
+   file-type and size limits, and the upload URL must be bound to a specific
+   authorized request so low-privilege users cannot use it as arbitrary storage.
+   → Tracked as Task #11 (Receipt Upload Security) — pending.
+
+3. **Active-Content in Stored Files (Elevation of Privilege)** — receipt files
+   are served back to higher-privilege reviewers from the app origin. Without
+   `Content-Disposition: attachment` and a strict `Content-Type`, a malicious
+   upload could execute as script in a reviewer's browser session.
+   → Covered under Task #11.
+
+### Dependency Vulnerability Fixes (10 CVEs)
+
+All 10 flagged vulnerabilities resolved; `pnpm audit` now exits clean.
+
+| Severity | Package | Fix | CVE |
+|---|---|---|---|
+| High | vite | `^7.3.2` → `^7.3.5` (catalog) | GHSA-fx2h-pf6j-xcff, GHSA-v6wh-96g9-6wx3 |
+| High | playwright | `@playwright/test` `1.55.0` → `^1.55.1` | GHSA-7mvr-c777-76hp |
+| High | js-cookie | override `>=3.0.7` | GHSA-qjx8-664m-686j |
+| High | uuid | override `>=11.1.1` | GHSA-w5hq-g745-h8pq |
+| Medium | markdown-it | override `>=14.2.0` | GHSA-6v5v-wf23-fmfq |
+| Medium | js-yaml | override `>=4.2.0` | GHSA-h67p-54hq-rp68 |
+| Medium | qs | override `>=6.15.2` | GHSA-q8mj-m7cp-5q26 |
+| Low | @babel/core | override `>=7.29.6` | GHSA-4x5r-pxfx-6jf8 |
+| Low | esbuild | `0.27.3` → `0.28.1` (direct + override) | GHSA-g7r4-m6w7-qqqr |
+
+High/medium transitive deps fixed via `overrides` in `pnpm-workspace.yaml`
+rather than upgrading their parent packages. Both typechecks pass; api-server
+builds cleanly with esbuild 0.28.1.
 
 ---
 
