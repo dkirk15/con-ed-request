@@ -48,7 +48,7 @@ test.describe("Manager review", () => {
     await page.goto(`/requests/${requestId}`);
 
     await page.getByRole("button", { name: "Approve" }).click();
-    await expect(page.getByText("Pending Business Office")).toBeVisible();
+    await expect(page.getByText("Pending CE Approval")).toBeVisible();
 
     const row = await getRequest(requestId);
     expect(row?.status).toBe("pending_bo");
@@ -95,7 +95,7 @@ test.describe("Manager review", () => {
     expect(row?.status).toBe("manager_denied");
   });
 
-  test("manager submits their own request -> routed to their manager", async ({
+  test("manager submits and approves their own request", async ({
     page,
     provisionUser,
     signInAs,
@@ -124,5 +124,11 @@ test.describe("Manager review", () => {
     expect(row?.status).toBe("pending_manager");
     expect(row?.employee_id).toBe(manager.dbId);
     expect(row?.manager_id).toBe(senior.dbId);
+
+    await page.getByRole("button", { name: "Approve" }).click();
+    await expect(page.getByText("Pending CE Approval")).toBeVisible();
+
+    const approvedRow = await getRequest(id);
+    expect(approvedRow?.status).toBe("pending_bo");
   });
 });

@@ -20,6 +20,25 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+const MAX_RECEIPT_SIZE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_RECEIPT_TYPES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
 // Adding local mutation definitions since they aren't fully typed out or readily available in our minimal check
 const useCancelRequest = () => {
@@ -154,6 +173,24 @@ export default function RequestDetailPage() {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!ALLOWED_RECEIPT_TYPES.has(file.type)) {
+      toast({
+        title: "Unsupported receipt type",
+        description: "Choose a PDF, JPG, PNG, or WebP file.",
+        variant: "destructive",
+      });
+      e.target.value = "";
+      return;
+    }
+    if (file.size > MAX_RECEIPT_SIZE_BYTES) {
+      toast({
+        title: "Receipt is too large",
+        description: "Choose a file that is 10 MB or smaller.",
+        variant: "destructive",
+      });
+      e.target.value = "";
+      return;
+    }
     setPendingReceiptFile(file);
   };
 
@@ -166,6 +203,7 @@ export default function RequestDetailPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          requestId: id,
           name: pendingReceiptFile.name,
           size: pendingReceiptFile.size,
           contentType: pendingReceiptFile.type,
@@ -223,11 +261,11 @@ export default function RequestDetailPage() {
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link href="/requests">
-            <Button variant="outline" size="icon" className="h-8 w-8">
+          <Button variant="outline" size="icon" className="h-8 w-8" asChild>
+            <Link href="/requests" aria-label="Back to requests">
               <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <div>
             <h1 className="text-2xl sm:text-3xl font-serif font-bold text-slate-900 tracking-tight flex items-center gap-3">
               Request #{request.id}
@@ -258,9 +296,28 @@ export default function RequestDetailPage() {
           )}
 
           {isMyRequest && (request.status === "draft" || request.status === "pending_manager") && (
-            <Button variant="destructive" onClick={() => handleAction(cancelMutation, id, "Request cancelled")}>
-              Cancel Request
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">Cancel Request</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Cancel this request?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This removes the request from the approval process. The action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep Request</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => handleAction(cancelMutation, id, "Request cancelled")}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Cancel Request
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
 
           {isManager && request.status === "pending_manager" && (
@@ -276,7 +333,13 @@ export default function RequestDetailPage() {
                   </DialogHeader>
                   <Textarea value={denyReason} onChange={e => setDenyReason(e.target.value)} placeholder="Reason for denial..." />
                   <DialogFooter>
-                    <Button variant="destructive" onClick={() => handleAction(managerDenyMutation, { id, reason: denyReason }, "Request denied")}>Confirm Denial</Button>
+                    <Button
+                      variant="destructive"
+                      disabled={!denyReason.trim() || managerDenyMutation.isPending}
+                      onClick={() => handleAction(managerDenyMutation, { id, reason: denyReason.trim() }, "Request denied")}
+                    >
+                      Confirm Denial
+                    </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -299,7 +362,13 @@ export default function RequestDetailPage() {
                   </DialogHeader>
                   <Textarea value={denyReason} onChange={e => setDenyReason(e.target.value)} placeholder="Reason for denial..." />
                   <DialogFooter>
-                    <Button variant="destructive" onClick={() => handleAction(boDenyMutation, { id, reason: denyReason }, "Request denied")}>Confirm Denial</Button>
+                    <Button
+                      variant="destructive"
+                      disabled={!denyReason.trim() || boDenyMutation.isPending}
+                      onClick={() => handleAction(boDenyMutation, { id, reason: denyReason.trim() }, "Request denied")}
+                    >
+                      Confirm Denial
+                    </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -361,7 +430,7 @@ export default function RequestDetailPage() {
                 type="file"
                 className="hidden"
                 onChange={handleFileSelect}
-                accept="image/*,application/pdf"
+                accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
               />
               {pendingReceiptFile ? (
                 <div className="flex items-center gap-2">
@@ -406,7 +475,12 @@ export default function RequestDetailPage() {
                 </DialogHeader>
                 <Input type="date" value={paycheckDate} onChange={e => setPaycheckDate(e.target.value)} />
                 <DialogFooter>
-                  <Button onClick={() => handleAction(markReimbursedMutation, { id, paycheckDate }, "Marked as reimbursed")}>Confirm Reimbursement</Button>
+                  <Button
+                    disabled={!paycheckDate || markReimbursedMutation.isPending}
+                    onClick={() => handleAction(markReimbursedMutation, { id, paycheckDate }, "Marked as reimbursed")}
+                  >
+                    Confirm Reimbursement
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>

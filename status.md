@@ -1,6 +1,6 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-06-27 by Replit Agent
+Last updated: 2026-07-11 by Codex
 
 ## Current State
 
@@ -21,6 +21,69 @@ Annual CE benefit is $2,000 per employee, prorated in the hire year, with advanc
 - API spec/codegen: `lib/api-spec/openapi.yaml` drives Orval output for `lib/api-zod` and `lib/api-client-react`
 - Database: `lib/db` - Drizzle schema and seed scripts
 - Auth: Clerk with Microsoft SSO; frontend uses `VITE_CLERK_PUBLISHABLE_KEY`, backend uses `CLERK_SECRET_KEY`
+
+---
+
+## Recent Changes (2026-07-11)
+
+### Phase 0 - Correctness & Security
+
+- New Clerk identities are now admitted only when their email matches
+  AUTHORIZED_EMAILS or AUTHORIZED_EMAIL_DOMAINS. Existing provisioned users
+  are unchanged. When no domain setting is supplied, the default is
+  osstherapy.com.
+- Receipt upload URLs are bound to a specific approved request owned by the
+  caller. Uploads are limited to PDF, JPG, PNG, or WebP files no larger than
+  10 MB.
+- Uploaded objects are re-checked for stored size, file extension, and actual
+  PDF/JPEG/PNG/WebP signature before a receipt record is accepted. Invalid
+  objects are deleted.
+- Stored receipts are served only when a receipt record exists and are forced
+  to download with an attachment disposition, nosniff protection, and private
+  no-store caching.
+- Receipt creation and the request transition to receipt_submitted now occur
+  in one database transaction.
+- Cancellation now requires confirmation. Denial reasons and reimbursement
+  paycheck dates are validated before confirmation.
+- Employee dashboard recent requests and accounting reimbursement history now
+  sort newest-first.
+- Managers can see their own drafts while still seeing only submitted requests
+  from other staff in their clinic.
+- Managers can approve or deny their own submitted requests, matching the
+  current OSS workflow.
+- Shared TypeScript declarations were rebuilt; frontend and API server
+  typechecks pass locally.
+- Root install/typecheck scripts are now cross-platform and work in Windows
+  PowerShell as well as Replit.
+
+### Phase 1 - Role-Based Workspaces
+
+- Sidebar navigation now uses role-specific work areas for employees, managers,
+  Business Office, accounting, and admins.
+- The Requests page is now a server-backed work queue with role-specific quick
+  views, URL-persisted status/scope/search/clinic/year filters, sorting,
+  pagination, result counts, and clearer empty/loading states.
+- The request list API now returns items plus pagination metadata and accepts
+  validated status, employee, clinic, search, year, scope, sort, order, page,
+  and page-size query parameters.
+- The People/Team directory now uses URL-persisted search and admin role/clinic
+  filters. The manager table column-alignment bug is fixed.
+- Dashboard action cards now deep-link into the appropriate filtered queue.
+- Status language consistently uses CE Approval, and status badges now use
+  distinct semantic colors.
+- Added Playwright coverage for queue URL state, manager personal drafts, and
+  receipt upload authorization/file-type enforcement.
+
+### Deployment Notes
+
+- Set AUTHORIZED_EMAIL_DOMAINS to a comma-separated list of approved workforce
+  domains and/or AUTHORIZED_EMAILS to approved individual addresses. The
+  default domain is osstherapy.com.
+- Run pnpm --filter @workspace/api-spec run codegen in Replit before deployment
+  to regenerate all OpenAPI outputs. Codex applied matching generated
+  declarations locally because Orval's current js-yaml dependency does not
+  execute under the local Windows Node runtime.
+- No database migration is required for these phases.
 
 ---
 
