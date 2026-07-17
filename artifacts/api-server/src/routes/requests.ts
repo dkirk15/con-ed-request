@@ -9,7 +9,7 @@ import {
   receipts,
   reimbursements,
 } from "@workspace/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { asc, desc, eq, and, gte, ilike, inArray, or, sql, lt } from "drizzle-orm";
 import {
   CreateRequestBody,
   UpdateRequestBody,
@@ -34,8 +34,15 @@ import {
 } from "@workspace/api-zod";
 import { requireAuth, requireRole } from "../lib/auth";
 import { getUserBalance } from "../lib/balance";
+import { ObjectNotFoundError, ObjectStorageService } from "../lib/objectStorage";
+import {
+  detectReceiptType,
+  MAX_RECEIPT_SIZE_BYTES,
+  receiptNameMatchesType,
+} from "../lib/receiptFiles";
 
 const router: IRouter = Router();
+const objectStorageService = new ObjectStorageService();
 const SUBMITTED_STATUSES = [
   "pending_manager",
   "pending_bo",
@@ -188,15 +195,32 @@ async function formatRequest(req_row: typeof conEdRequests.$inferSelect) {
 router.get("/requests", requireAuth, async (req: Request, res: Response) => {
   try {
     const parsed = ListRequestsQueryParams.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid request filters" });
+      return;
+    }
+
     const user = req.dbUser!;
     const conditions = [];
+    const {
+      status,
+      employeeId,
+      clinicId,
+      search,
+      year,
+      scope = "all",
+      sort = "updatedAt",
+      order = "desc",
+      page = 1,
+      pageSize = 25,
+    } = parsed.data;
 
-    if (parsed.success && parsed.data.status) {
+    if (status) {
       conditions.push(
         eq(
           conEdRequests.status,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          parsed.data.status as any,
+          status as any,
         ),
       );
     }
@@ -205,36 +229,109 @@ router.get("/requests", requireAuth, async (req: Request, res: Response) => {
     if (user.role === "employee") {
       conditions.push(eq(conEdRequests.employeeId, user.id));
     } else if (user.role === "manager") {
-      // Show requests from employees in their clinic
+      // Managers see all of their own requests plus submitted clinic requests.
       const clinicEmployees = await db
         .select({ id: users.id })
         .from(users)
         .where(eq(users.clinicId, user.clinicId ?? -1));
       const ids = clinicEmployees.map((e) => e.id);
-      if (ids.length === 0) {
-        res.json([]);
-        return;
-      }
-      conditions.push(inArray(conEdRequests.employeeId, ids));
-      conditions.push(inArray(conEdRequests.status, SUBMITTED_STATUSES));
+      const clinicSubmitted = ids.length
+        ? and(
+            inArray(conEdRequests.employeeId, ids),
+            inArray(conEdRequests.status, SUBMITTED_STATUSES),
+          )
+        : undefined;
+      conditions.push(
+        clinicSubmitted
+          ? or(eq(conEdRequests.employeeId, user.id), clinicSubmitted)!
+          : eq(conEdRequests.employeeId, user.id),
+      );
     }
     // business_office, accounting, admin see all
 
-    if (parsed.success && parsed.data.employeeId != null) {
-      conditions.push(eq(conEdRequests.employeeId, Number(parsed.data.employeeId)));
+    if (scope === "mine") {
+      conditions.push(eq(conEdRequests.employeeId, user.id));
+    } else if (employeeId != null) {
+      conditions.push(eq(conEdRequests.employeeId, Number(employeeId)));
     }
 
-    const rows =
-      conditions.length > 0
-        ? await db
-            .select()
-            .from(conEdRequests)
-            .where(and(...conditions))
-            .orderBy(conEdRequests.createdAt)
-        : await db.select().from(conEdRequests).orderBy(conEdRequests.createdAt);
+    if (clinicId != null) {
+      const clinicUsers = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.clinicId, Number(clinicId)));
+      const clinicUserIds = clinicUsers.map((clinicUser) => clinicUser.id);
+      conditions.push(
+        clinicUserIds.length
+          ? inArray(conEdRequests.employeeId, clinicUserIds)
+          : sql`false`,
+      );
+    }
+
+    if (year != null) {
+      const start = new Date(Date.UTC(year, 0, 1));
+      const end = new Date(Date.UTC(year + 1, 0, 1));
+      conditions.push(gte(conEdRequests.createdAt, start));
+      conditions.push(lt(conEdRequests.createdAt, end));
+    }
+
+    if (search?.trim()) {
+      const query = `%${search.trim()}%`;
+      const matchingUsers = await db
+        .select({ id: users.id })
+        .from(users)
+        .leftJoin(clinics, eq(users.clinicId, clinics.id))
+        .where(
+          or(
+            ilike(users.name, query),
+            ilike(users.email, query),
+            ilike(clinics.name, query),
+          ),
+        );
+      const matchingUserIds = matchingUsers.map((matchingUser) => matchingUser.id);
+      conditions.push(
+        or(
+          ilike(conEdRequests.courseNames, query),
+          ilike(conEdRequests.location, query),
+          ...(matchingUserIds.length
+            ? [inArray(conEdRequests.employeeId, matchingUserIds)]
+            : []),
+        )!,
+      );
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const sortColumns = {
+      createdAt: conEdRequests.createdAt,
+      updatedAt: conEdRequests.updatedAt,
+      courseNames: conEdRequests.courseNames,
+      totalRequested: conEdRequests.totalRequested,
+      status: conEdRequests.status,
+    } as const;
+    const sortColumn = sortColumns[sort];
+    const orderBy = order === "asc" ? asc(sortColumn) : desc(sortColumn);
+    const offset = (page - 1) * pageSize;
+
+    const [{ total }] = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(conEdRequests)
+      .where(whereClause);
+    const rows = await db
+      .select()
+      .from(conEdRequests)
+      .where(whereClause)
+      .orderBy(orderBy)
+      .limit(pageSize)
+      .offset(offset);
 
     const formatted = await Promise.all(rows.map(formatRequest));
-    res.json(formatted);
+    res.json({
+      items: formatted,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    });
   } catch (err) {
     req.log.error({ err }, "listRequests error");
     res.status(500).json({ error: "Internal server error" });
@@ -637,7 +734,7 @@ router.post(
       const requestId = parseInt(req.params.requestId as string);
       const user = req.dbUser!;
       const parsed = ManagerDenyRequestBody.safeParse(req.body);
-      if (!parsed.success) {
+      if (!parsed.success || !parsed.data.reason.trim()) {
         res.status(400).json({ error: "Denial reason required" });
         return;
       }
@@ -659,7 +756,7 @@ router.post(
           status: "manager_denied",
           managerId: user.id,
           managerDeniedAt: new Date(),
-          managerDenialReason: parsed.data.reason,
+          managerDenialReason: parsed.data.reason.trim(),
           updatedAt: new Date(),
         })
         .where(eq(conEdRequests.id, requestId))
@@ -741,7 +838,7 @@ router.post(
     try {
       const requestId = parseInt(req.params.requestId as string);
       const parsed = BoDenyRequestBody.safeParse(req.body);
-      if (!parsed.success) {
+      if (!parsed.success || !parsed.data.reason.trim()) {
         res.status(400).json({ error: "Denial reason required" });
         return;
       }
@@ -752,7 +849,7 @@ router.post(
           status: "bo_denied",
           boApproverId: req.dbUser!.id,
           boDeniedAt: new Date(),
-          boDenialReason: parsed.data.reason,
+          boDenialReason: parsed.data.reason.trim(),
           updatedAt: new Date(),
         })
         .where(and(eq(conEdRequests.id, requestId), eq(conEdRequests.status, "pending_bo")))
@@ -952,20 +1049,57 @@ router.post(
         return;
       }
 
-      const [receipt] = await db
-        .insert(receipts)
-        .values({
-          requestId,
-          fileUrl: parsed.data.fileUrl,
-          fileName: parsed.data.fileName ?? null,
-        })
-        .returning();
+      const expectedPathPrefix = `/objects/uploads/requests/${requestId}/`;
+      if (!parsed.data.fileUrl.startsWith(expectedPathPrefix)) {
+        res.status(400).json({ error: "Receipt upload is not valid for this request" });
+        return;
+      }
 
-      // Move status to receipt_submitted
-      await db
-        .update(conEdRequests)
-        .set({ status: "receipt_submitted", updatedAt: new Date() })
-        .where(eq(conEdRequests.id, requestId));
+      let uploadedObject;
+      try {
+        uploadedObject = await objectStorageService.getObjectEntityFile(parsed.data.fileUrl);
+      } catch (error) {
+        if (error instanceof ObjectNotFoundError) {
+          res.status(400).json({ error: "Uploaded receipt file was not found" });
+          return;
+        }
+        throw error;
+      }
+      const [metadata] = await uploadedObject.getMetadata();
+      const storedSize = Number(metadata.size ?? 0);
+      const [header] = await uploadedObject.download({ start: 0, end: 15 });
+      const detectedType = detectReceiptType(header);
+
+      if (
+        storedSize < 1 ||
+        storedSize > MAX_RECEIPT_SIZE_BYTES ||
+        !detectedType ||
+        !receiptNameMatchesType(parsed.data.fileName, detectedType)
+      ) {
+        await uploadedObject.delete({ ignoreNotFound: true }).catch(() => undefined);
+        res.status(400).json({
+          error: "Receipt must be a valid PDF, JPG, PNG, or WebP file no larger than 10 MB",
+        });
+        return;
+      }
+
+      const receipt = await db.transaction(async (tx) => {
+        const [createdReceipt] = await tx
+          .insert(receipts)
+          .values({
+            requestId,
+            fileUrl: parsed.data.fileUrl,
+            fileName: parsed.data.fileName ?? null,
+          })
+          .returning();
+
+        await tx
+          .update(conEdRequests)
+          .set({ status: "receipt_submitted", updatedAt: new Date() })
+          .where(eq(conEdRequests.id, requestId));
+
+        return createdReceipt;
+      });
 
       res.status(201).json({
         id: receipt.id,

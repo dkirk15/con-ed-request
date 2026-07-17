@@ -97,7 +97,13 @@ export default function AccountPage() {
               ) : (
                 <div className="flex items-center gap-2 mt-1">
                   <div className="text-lg font-medium">{user.name}</div>
-                  <Button variant="ghost" size="sm" onClick={startEditing} className="h-8 w-8 p-0">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={startEditing}
+                    className="h-8 w-8 p-0"
+                    aria-label="Edit name"
+                  >
                     <Pencil className="h-4 w-4 text-slate-400" />
                   </Button>
                 </div>

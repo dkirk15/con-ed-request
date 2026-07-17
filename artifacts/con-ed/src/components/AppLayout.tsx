@@ -1,7 +1,20 @@
-import { Link, useLocation } from "wouter";
+import { type ReactNode } from "react";
+import { Link, useLocation, useSearch } from "wouter";
 import { useGetMe } from "@workspace/api-client-react";
 import { useClerk } from "@clerk/react";
-import { Button } from "@/components/ui/button";
+import {
+  Building2,
+  ClipboardCheck,
+  FilePlus2,
+  Files,
+  History,
+  Home,
+  LogOut,
+  ReceiptText,
+  UserCircle,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,87 +25,182 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Home, FileText, Users, Building2, UserCircle, LogOut } from "lucide-react";
 import logo from "@assets/oss-logo-white.png";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+type Role = "employee" | "manager" | "business_office" | "accounting" | "admin";
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  path: string;
+  query?: Record<string, string>;
+  exactQuery?: boolean;
+}
+
+const NAV_ITEMS: Record<Role, NavItem[]> = {
+  employee: [
+    { label: "Overview", href: "/dashboard", icon: Home, path: "/dashboard" },
+    { label: "My Requests", href: "/requests", icon: Files, path: "/requests", exactQuery: true },
+    { label: "New Request", href: "/requests/new", icon: FilePlus2, path: "/requests/new" },
+  ],
+  manager: [
+    { label: "Overview", href: "/dashboard", icon: Home, path: "/dashboard" },
+    {
+      label: "Approvals",
+      href: "/requests?status=pending_manager&scope=approvals",
+      icon: ClipboardCheck,
+      path: "/requests",
+      query: { status: "pending_manager", scope: "approvals" },
+    },
+    {
+      label: "My Requests",
+      href: "/requests?scope=mine",
+      icon: Files,
+      path: "/requests",
+      query: { scope: "mine" },
+    },
+    { label: "Team", href: "/users", icon: Users, path: "/users" },
+  ],
+  business_office: [
+    { label: "Overview", href: "/dashboard", icon: Home, path: "/dashboard" },
+    {
+      label: "CE Approvals",
+      href: "/requests?status=pending_bo",
+      icon: ClipboardCheck,
+      path: "/requests",
+      query: { status: "pending_bo" },
+    },
+    { label: "All Requests", href: "/requests", icon: Files, path: "/requests", exactQuery: true },
+  ],
+  accounting: [
+    { label: "Overview", href: "/dashboard", icon: Home, path: "/dashboard" },
+    {
+      label: "Reimbursements",
+      href: "/requests?status=receipt_submitted",
+      icon: ReceiptText,
+      path: "/requests",
+      query: { status: "receipt_submitted" },
+    },
+    {
+      label: "History",
+      href: "/requests?status=reimbursed",
+      icon: History,
+      path: "/requests",
+      query: { status: "reimbursed" },
+    },
+  ],
+  admin: [
+    { label: "Operations", href: "/dashboard", icon: Home, path: "/dashboard" },
+    { label: "All Requests", href: "/requests", icon: Files, path: "/requests", exactQuery: true },
+    { label: "People", href: "/users", icon: Users, path: "/users" },
+    { label: "Clinics", href: "/clinics", icon: Building2, path: "/clinics" },
+  ],
+};
+
+function isNavItemActive(
+  item: NavItem,
+  location: string,
+  searchParams: URLSearchParams,
+): boolean {
+  const pathMatches =
+    item.path === "/requests"
+      ? location === item.path || /^\/requests\/\d+$/.test(location)
+      : item.path === "/users"
+        ? location === item.path || location.startsWith("/users/")
+      : location === item.path || location.startsWith(`${item.path}/`);
+  if (!pathMatches) return false;
+  if (item.query) {
+    return Object.entries(item.query).every(([key, value]) => searchParams.get(key) === value);
+  }
+  if (item.exactQuery) {
+    return !searchParams.has("status") && !searchParams.has("scope");
+  }
+  return true;
+}
+
+export default function AppLayout({ children }: { children: ReactNode }) {
   const { data: user } = useGetMe();
   const { signOut } = useClerk();
   const [location] = useLocation();
+  const search = useSearch();
 
   if (!user) return <>{children}</>;
 
+  const role = user.role as Role;
+  const searchParams = new URLSearchParams(search);
   const initials = user.name
-    ? user.name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase()
+    ? user.name
+        .split(" ")
+        .map((name) => name[0])
+        .join("")
+        .substring(0, 2)
+        .toUpperCase()
     : "?";
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full bg-slate-50 overflow-hidden">
-        <Sidebar className="border-r border-sidebar-border shadow-sm">
-          <SidebarHeader className="p-4 bg-sidebar">
-            <div className="flex items-center gap-3">
-              <img src={logo} alt="OSS Logo" className="h-8 object-contain" />
-              <div className="flex flex-col">
-                <span className="font-serif font-bold text-sidebar-foreground text-sm leading-tight">Olympic Sports</span>
-                <span className="font-serif font-bold text-sidebar-foreground text-sm leading-tight">& Spine</span>
+      <a
+        href="#main-content"
+        className="fixed left-3 top-3 z-[100] -translate-y-20 rounded bg-white px-3 py-2 text-sm font-medium text-slate-950 shadow focus:translate-y-0"
+      >
+        Skip to Main Content
+      </a>
+      <div className="flex h-screen w-full overflow-hidden bg-slate-50">
+        <Sidebar className="border-r border-sidebar-border">
+          <SidebarHeader className="border-b border-sidebar-border bg-sidebar px-4 py-5">
+            <Link href="/dashboard" className="flex items-center gap-3">
+              <img
+                src={logo}
+                alt="Olympic Sports & Spine"
+                width={96}
+                height={32}
+                className="h-8 w-auto object-contain"
+              />
+              <div className="border-l border-white/20 pl-3">
+                <div className="font-serif text-sm font-bold leading-tight text-sidebar-foreground">
+                  CE Portal
+                </div>
+                <div className="mt-0.5 text-[11px] text-sidebar-foreground/60">
+                  Funding & Reimbursement
+                </div>
               </div>
-            </div>
+            </Link>
           </SidebarHeader>
-          
-          <SidebarContent className="p-2 gap-2">
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location === "/dashboard"}>
-                  <Link href="/dashboard" className="flex items-center gap-3 w-full">
-                    <Home className="h-4 w-4" />
-                    <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location.startsWith("/requests")}>
-                  <Link href="/requests" className="flex items-center gap-3 w-full">
-                    <FileText className="h-4 w-4" />
-                    <span>Requests</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              
-              {(user.role === "admin" || user.role === "manager") && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location.startsWith("/users")}>
-                    <Link href="/users" className="flex items-center gap-3 w-full">
-                      <Users className="h-4 w-4" />
-                      <span>Users</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
 
-              {user.role === "admin" && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location.startsWith("/clinics")}>
-                    <Link href="/clinics" className="flex items-center gap-3 w-full">
-                      <Building2 className="h-4 w-4" />
-                      <span>Clinics</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
+          <SidebarContent className="bg-sidebar p-2">
+            <div className="px-2 pb-2 pt-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+              Workspace
+            </div>
+            <SidebarMenu>
+              {NAV_ITEMS[role].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isNavItemActive(item, location, searchParams)}
+                    >
+                      <Link href={item.href} className="flex w-full items-center gap-3">
+                        <Icon aria-hidden="true" className="h-4 w-4" />
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarContent>
 
-          <SidebarFooter className="p-4 border-t border-sidebar-border">
+          <SidebarFooter className="border-t border-sidebar-border bg-sidebar p-3">
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={location === "/account"}>
-                  <Link href="/account" className="flex items-center gap-3 w-full">
-                    <UserCircle className="h-4 w-4" />
+                  <Link href="/account" className="flex w-full items-center gap-3">
+                    <UserCircle aria-hidden="true" className="h-4 w-4" />
                     <span>My Account</span>
                   </Link>
                 </SidebarMenuButton>
@@ -100,36 +208,36 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => signOut()}
-                  className="flex items-center gap-3 w-full text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                  className="flex w-full items-center gap-3 text-sidebar-foreground/70 hover:bg-red-950/20 hover:text-red-300"
                 >
-                  <LogOut className="h-4 w-4" />
+                  <LogOut aria-hidden="true" className="h-4 w-4" />
                   <span>Sign Out</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
 
-            <div className="mt-4 flex items-center gap-3 px-2 py-1">
-              <Avatar className="h-8 w-8 rounded bg-primary text-primary-foreground border border-primary/20">
+            <div className="mt-3 flex min-w-0 items-center gap-3 border-t border-sidebar-border px-2 pt-3">
+              <Avatar className="h-8 w-8 shrink-0 rounded bg-primary text-primary-foreground">
                 <AvatarFallback>{initials}</AvatarFallback>
               </Avatar>
-              <div className="flex flex-col truncate">
-                <span className="text-sm font-medium text-sidebar-foreground truncate">{user.name}</span>
-                <span className="text-xs text-sidebar-foreground/70 truncate capitalize">{user.role.replace("_", " ")}</span>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium text-sidebar-foreground">{user.name}</div>
+                <div className="truncate text-xs capitalize text-sidebar-foreground/60">
+                  {user.role.replace("_", " ")}
+                </div>
               </div>
             </div>
           </SidebarFooter>
         </Sidebar>
 
-        <main className="flex-1 flex flex-col h-screen overflow-hidden">
-          <header className="h-14 border-b bg-white flex items-center px-4 md:hidden">
-            <SidebarTrigger />
-            <span className="ml-4 font-serif font-bold text-primary">OSS Con-Ed</span>
+        <main id="main-content" className="flex h-screen flex-1 flex-col overflow-hidden" tabIndex={-1}>
+          <header className="flex h-14 items-center border-b bg-white px-4 md:hidden">
+            <SidebarTrigger aria-label="Open navigation" />
+            <span className="ml-4 font-serif font-bold text-secondary">OSS CE Portal</span>
           </header>
           <ImpersonationBanner />
-          <div className="flex-1 overflow-auto p-4 md:p-8">
-            <div className="max-w-6xl mx-auto">
-              {children}
-            </div>
+          <div className="flex-1 overflow-auto p-5 md:p-8">
+            <div className="mx-auto max-w-7xl">{children}</div>
           </div>
         </main>
       </div>

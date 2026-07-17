@@ -15,12 +15,26 @@ export default function DashboardPage() {
     return <DashboardSkeleton />;
   }
 
+  const title = user.role === "admin" ? "Operations" : "Overview";
+  const descriptions: Record<string, string> = {
+    employee: "Your CE funding, requests, and next steps.",
+    manager: "Review clinic requests and track your own CE funding.",
+    business_office: "Make CE funding decisions and monitor approved requests.",
+    accounting: "Process reimbursements that have complete receipts.",
+    admin: "Monitor access, assignments, and the CE request workflow.",
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-serif font-bold text-slate-900 tracking-tight">Dashboard</h1>
-          <p className="text-slate-500 mt-1">Welcome back, {user.name}</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+            Continuing Education
+          </p>
+          <h1 className="mt-1 text-3xl font-serif font-bold text-slate-950">{title}</h1>
+          <p className="mt-1 text-slate-500">
+            {descriptions[user.role]} Welcome back, {user.name}.
+          </p>
         </div>
         
         {user.role === "employee" || user.role === "manager" ? (
@@ -162,17 +176,19 @@ function ManagerDashboard() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="shadow-sm border-slate-200 bg-amber-50/50 border-amber-100">
-          <CardContent className="p-6">
-            <div className="flex flex-col">
-              <span className="text-amber-800 text-sm font-medium mb-1 flex items-center gap-1">
-                <Clock className="h-4 w-4" /> Action Required
-              </span>
-              <span className="text-3xl font-bold text-amber-900">{requestCounts.pendingMyApproval}</span>
-              <span className="text-amber-700/80 text-xs mt-1">Requests pending your approval</span>
-            </div>
-          </CardContent>
-        </Card>
+        <Link href="/requests?status=pending_manager&scope=approvals" className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Card className="h-full border-amber-200 bg-amber-50/70 shadow-sm transition-colors hover:border-amber-300 hover:bg-amber-50">
+            <CardContent className="p-6">
+              <div className="flex flex-col">
+                <span className="text-amber-800 text-sm font-medium mb-1 flex items-center gap-1">
+                  <Clock className="h-4 w-4" /> Action Required
+                </span>
+                <span className="text-3xl font-bold text-amber-900">{requestCounts.pendingMyApproval}</span>
+                <span className="text-amber-700/80 text-xs mt-1">Requests pending your approval</span>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
         
         <Card className="shadow-sm border-slate-200">
           <CardContent className="p-6">
@@ -212,7 +228,7 @@ function ManagerDashboard() {
               <CardTitle className="text-lg font-serif">Needs Your Approval</CardTitle>
               <CardDescription>Pending requests from your team</CardDescription>
             </div>
-            <Link href="/requests?status=pending_manager">
+            <Link href="/requests?status=pending_manager&scope=approvals">
               <Button variant="outline" size="sm">View All</Button>
             </Link>
           </CardHeader>
@@ -285,17 +301,19 @@ function BODashboard() {
           </CardContent>
         </Card>
         
-        <Card className="shadow-sm border-slate-200 bg-amber-50/50 border-amber-100">
-          <CardContent className="p-6">
-            <div className="flex flex-col">
-              <span className="text-amber-800 text-sm font-medium mb-1 flex items-center gap-1">
-                <Clock className="h-4 w-4" /> Pending CE Approvals
-              </span>
-              <span className="text-3xl font-bold text-amber-900">{formatCurrency(totalPendingAmount || 0)}</span>
-              <span className="text-amber-700/80 text-xs mt-1">Across {pendingApproval.length} requests</span>
-            </div>
-          </CardContent>
-        </Card>
+        <Link href="/requests?status=pending_bo" className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Card className="h-full border-amber-200 bg-amber-50/70 shadow-sm transition-colors hover:border-amber-300 hover:bg-amber-50">
+            <CardContent className="p-6">
+              <div className="flex flex-col">
+                <span className="text-amber-800 text-sm font-medium mb-1 flex items-center gap-1">
+                  <Clock className="h-4 w-4" /> Pending CE Approvals
+                </span>
+                <span className="text-3xl font-bold text-amber-900">{formatCurrency(totalPendingAmount || 0)}</span>
+                <span className="text-amber-700/80 text-xs mt-1">Across {pendingApproval.length} requests</span>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <Card className="shadow-sm border-slate-200">
@@ -350,17 +368,19 @@ function AccountingDashboard() {
 
   return (
     <div className="space-y-6">
-      <Card className="shadow-sm border-slate-200 bg-amber-50/50 border-amber-100">
-        <CardContent className="p-6">
-          <div className="flex flex-col">
-            <span className="text-amber-800 text-sm font-medium mb-1 flex items-center gap-1">
-              <Clock className="h-4 w-4" /> Pending Reimbursement Processing
-            </span>
-            <span className="text-3xl font-bold text-amber-900">{formatCurrency(totalPendingAmount)}</span>
-            <span className="text-amber-700/80 text-xs mt-1">Across {pendingReimbursement.length} approved requests with receipts</span>
-          </div>
-        </CardContent>
-      </Card>
+      <Link href="/requests?status=receipt_submitted" className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <Card className="border-amber-200 bg-amber-50/70 shadow-sm transition-colors hover:border-amber-300 hover:bg-amber-50">
+          <CardContent className="p-6">
+            <div className="flex flex-col">
+              <span className="text-amber-800 text-sm font-medium mb-1 flex items-center gap-1">
+                <Clock className="h-4 w-4" /> Pending Reimbursement Processing
+              </span>
+              <span className="text-3xl font-bold text-amber-900">{formatCurrency(totalPendingAmount)}</span>
+              <span className="text-amber-700/80 text-xs mt-1">Across {pendingReimbursement.length} approved requests with receipts</span>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
 
       <Card className="shadow-sm border-slate-200">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -416,14 +436,16 @@ function AdminDashboard() {
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {Object.entries(usersByRole).map(([role, count]) => (
-          <Card key={role} className="shadow-sm border-slate-200">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-slate-900">{count}</div>
-              <div className="text-xs text-slate-500">
-                <span className="capitalize">{role.replace("_", " ")}</span>{role === "employee" || role === "manager" ? "s" : ""}
-              </div>
-            </CardContent>
-          </Card>
+          <Link key={role} href={`/users?role=${role}`} className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <Card className="h-full border-slate-200 shadow-sm transition-colors hover:border-primary/40 hover:bg-slate-50">
+              <CardContent className="p-4 text-center">
+                <div className="text-2xl font-bold text-slate-900">{count}</div>
+                <div className="text-xs text-slate-500">
+                  <span className="capitalize">{role.replace("_", " ")}</span>{role === "employee" || role === "manager" ? "s" : ""}
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 

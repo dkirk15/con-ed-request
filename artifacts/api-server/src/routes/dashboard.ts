@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import { conEdRequests, users } from "@workspace/db/schema";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, desc, inArray, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../lib/auth";
 import { getUserBalance } from "../lib/balance";
 
@@ -35,7 +35,7 @@ router.get("/dashboard/employee", requireAuth, async (req: Request, res: Respons
       .select()
       .from(conEdRequests)
       .where(eq(conEdRequests.employeeId, user.id))
-      .orderBy(conEdRequests.updatedAt)
+      .orderBy(desc(conEdRequests.updatedAt))
       .limit(5);
 
     const { formatRequestSimple } = await import("./requestHelpers");
@@ -195,7 +195,7 @@ router.get(
         .select()
         .from(conEdRequests)
         .where(eq(conEdRequests.status, "reimbursed"))
-        .orderBy(conEdRequests.updatedAt)
+        .orderBy(desc(conEdRequests.updatedAt))
         .limit(10);
 
       const totalPendingAmount = pendingRows.reduce(

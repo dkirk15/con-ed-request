@@ -14,7 +14,7 @@ test("employee can sign in programmatically and reach the dashboard", async ({
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/dashboard/);
   await expect(
-    page.getByRole("heading", { name: "Dashboard" }),
+    page.getByRole("heading", { name: "Overview" }),
   ).toBeVisible();
   await expect(page.getByText(`Welcome back, ${user.name}`)).toBeVisible();
 

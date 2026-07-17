@@ -33,6 +33,19 @@ Production scope for this scan is the `artifacts/con-ed` frontend, the `artifact
 
 ## Threat Categories
 
+## Mitigations Implemented 2026-07-11
+
+- Admission control now requires new Clerk identities to match the configured
+  authorized email or domain allowlist before provisioning.
+- Receipt upload URLs are issued only for an approved request owned by the
+  caller, and the generated object path is bound to that request ID.
+- Receipt uploads enforce a 10 MB maximum and permit only PDF, JPG, PNG, and
+  WebP content types. Stored size and file signatures are verified again after
+  upload, and invalid objects are deleted before a receipt can be recorded.
+- Private receipt responses require a matching receipt record and use forced
+  download, nosniff, and private no-store headers to prevent active content
+  from executing in a privileged user's browser.
+
 ### Spoofing
 
 The application trusts Clerk for identity, then auto-provisions an app user on first authenticated API access. The required guarantee is: only identities that are explicitly authorized to join the workforce portal may be provisioned as application users. A valid Clerk session alone is not sufficient admission control for an internal business app.
