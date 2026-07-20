@@ -70,8 +70,8 @@ const QUEUES: Record<Role, QueueLink[]> = {
   manager: [
     {
       label: "Needs My Approval",
-      href: "/requests?status=pending_manager&scope=approvals",
-      matches: { status: "pending_manager", scope: "approvals" },
+      href: "/approvals",
+      matches: { workspace: "approvals" },
     },
     {
       label: "My Requests",
@@ -83,8 +83,8 @@ const QUEUES: Record<Role, QueueLink[]> = {
   business_office: [
     {
       label: "Needs CE Approval",
-      href: "/requests?status=pending_bo",
-      matches: { status: "pending_bo" },
+      href: "/approvals",
+      matches: { workspace: "approvals" },
     },
     {
       label: "Awaiting Receipts",
@@ -164,6 +164,7 @@ function pageCopy(role: Role, status: string | null, scope: string | null) {
 }
 
 function isQueueActive(queue: QueueLink, params: URLSearchParams): boolean {
+  if (queue.matches.workspace) return false;
   const tracked = ["status", "scope"];
   return tracked.every((key) => {
     const expected = queue.matches[key] ?? null;
@@ -186,6 +187,20 @@ function requestHref(
   return request.status === "draft" && request.employeeId === currentUserId
     ? `/requests/${request.id}/edit`
     : `/requests/${request.id}`;
+}
+
+function requestActionHref(
+  request: { id: number; status: string; employeeId: number },
+  role: Role,
+  currentUserId?: number,
+) {
+  if (role === "manager" && request.status === "pending_manager") {
+    return `/approvals?selected=${request.id}`;
+  }
+  if (role === "business_office" && request.status === "pending_bo") {
+    return `/approvals?selected=${request.id}`;
+  }
+  return requestHref(request, currentUserId);
 }
 
 export default function RequestsPage() {
@@ -477,7 +492,7 @@ export default function RequestsPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" asChild>
-                      <Link href={requestHref(request, user?.id)} className="whitespace-nowrap">
+                      <Link href={requestActionHref(request, role, user?.id)} className="whitespace-nowrap">
                         {requestActionLabel(
                           role,
                           request.status,

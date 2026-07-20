@@ -15,6 +15,7 @@ import { Link } from "wouter";
 import { formatCurrency, formatDate } from "@/lib/constants";
 import { StatusBadge } from "@/components/StatusBadge";
 import { RepaymentGuaranteeDialog } from "@/components/RepaymentGuaranteeDialog";
+import { RequestTimeline } from "@/components/RequestTimeline";
 import { useToast } from "@/hooks/use-toast";
 import { customFetch } from "@workspace/api-client-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -273,7 +274,7 @@ export default function RequestDetailPage() {
               Request #{request.id}
               <StatusBadge status={request.status} />
             </h1>
-            <p className="text-slate-500 mt-1">Submitted on {formatDate(request.createdAt)}</p>
+            <p className="text-slate-500 mt-1">Created on {formatDate(request.createdAt)}</p>
           </div>
         </div>
         
@@ -377,9 +378,30 @@ export default function RequestDetailPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-              <Button onClick={() => handleAction(managerApproveMutation, id, "Request approved by manager")} className="bg-green-600 hover:bg-green-700 text-white">
-                <Check className="mr-2 h-4 w-4" /> Approve
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button className="bg-green-600 hover:bg-green-700 text-white">
+                    <Check className="mr-2 h-4 w-4" /> Approve
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Approve request #{request.id}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {request.employeeName}&apos;s {formatCurrency(request.totalRequested)} request will move to the Business Office queue. Your name and approval time will be recorded.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Go Back</AlertDialogCancel>
+                    <AlertDialogAction
+                      disabled={managerApproveMutation.isPending}
+                      onClick={() => handleAction(managerApproveMutation, id, "Request approved by manager")}
+                    >
+                      Confirm Approval
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </>
           )}
 
@@ -679,68 +701,10 @@ export default function RequestDetailPage() {
         <div className="space-y-6">
           <Card className="shadow-sm border-slate-200">
             <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-              <CardTitle className="font-serif">Status Timeline</CardTitle>
+              <CardTitle className="font-serif">Request Timeline</CardTitle>
             </CardHeader>
-            <CardContent className="p-6 space-y-6">
-              
-              <div className="relative pl-6 border-l-2 border-slate-200 space-y-6">
-                
-                <div className="relative">
-                  <div className="absolute -left-[31px] bg-slate-200 p-1 rounded-full"><Check className="h-3 w-3 text-white" /></div>
-                  <h4 className="text-sm font-semibold text-slate-900">Submitted</h4>
-                  <p className="text-xs text-slate-500 mt-1">{formatDate(request.createdAt)} by {request.employeeName}</p>
-                </div>
-
-                {request.managerApprovedAt && (
-                  <div className="relative">
-                    <div className="absolute -left-[31px] bg-green-500 p-1 rounded-full"><Check className="h-3 w-3 text-white" /></div>
-                    <h4 className="text-sm font-semibold text-slate-900">Manager Approved</h4>
-                    <p className="text-xs text-slate-500 mt-1">{formatDate(request.managerApprovedAt)} by {request.managerName}</p>
-                  </div>
-                )}
-                {request.managerDeniedAt && (
-                  <div className="relative">
-                    <div className="absolute -left-[31px] bg-red-500 p-1 rounded-full"><X className="h-3 w-3 text-white" /></div>
-                    <h4 className="text-sm font-semibold text-slate-900">Manager Denied</h4>
-                    <p className="text-xs text-slate-500 mt-1">{formatDate(request.managerDeniedAt)} by {request.managerName}</p>
-                    <p className="text-xs mt-2 bg-red-50 text-red-800 p-2 rounded border border-red-100">{request.managerDenialReason}</p>
-                  </div>
-                )}
-
-                {request.boApprovedAt && (
-                  <div className="relative">
-                    <div className="absolute -left-[31px] bg-green-500 p-1 rounded-full"><Check className="h-3 w-3 text-white" /></div>
-                    <h4 className="text-sm font-semibold text-slate-900">Business Office Approved</h4>
-                    <p className="text-xs text-slate-500 mt-1">{formatDate(request.boApprovedAt)} by {request.boApproverName}</p>
-                  </div>
-                )}
-                {request.boDeniedAt && (
-                  <div className="relative">
-                    <div className="absolute -left-[31px] bg-red-500 p-1 rounded-full"><X className="h-3 w-3 text-white" /></div>
-                    <h4 className="text-sm font-semibold text-slate-900">Business Office Denied</h4>
-                    <p className="text-xs text-slate-500 mt-1">{formatDate(request.boDeniedAt)} by {request.boApproverName}</p>
-                    <p className="text-xs mt-2 bg-red-50 text-red-800 p-2 rounded border border-red-100">{request.boDenialReason}</p>
-                  </div>
-                )}
-                
-                {request.receipts && request.receipts.length > 0 && (
-                  <div className="relative">
-                    <div className="absolute -left-[31px] bg-blue-500 p-1 rounded-full"><FileText className="h-3 w-3 text-white" /></div>
-                    <h4 className="text-sm font-semibold text-slate-900">Receipts Submitted</h4>
-                    <p className="text-xs text-slate-500 mt-1">{formatDate(request.receipts[0].uploadedAt)}</p>
-                  </div>
-                )}
-
-                {request.reimbursement && (
-                  <div className="relative">
-                    <div className="absolute -left-[31px] bg-green-500 p-1 rounded-full"><CreditCard className="h-3 w-3 text-white" /></div>
-                    <h4 className="text-sm font-semibold text-slate-900">Reimbursed</h4>
-                    <p className="text-xs text-slate-500 mt-1">Processed {formatDate(request.reimbursement.markedAt)}</p>
-                    <p className="text-xs font-medium text-slate-700 mt-1">Paycheck Date: {formatDate(request.reimbursement.paycheckDate)}</p>
-                  </div>
-                )}
-
-              </div>
+            <CardContent className="p-6">
+              <RequestTimeline request={request} />
             </CardContent>
           </Card>
           
