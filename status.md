@@ -1,6 +1,6 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-06-27 by Replit Agent
+Last updated: 2026-07-20 by Replit Agent
 
 ## Current State
 
@@ -21,6 +21,71 @@ Annual CE benefit is $2,000 per employee, prorated in the hire year, with advanc
 - API spec/codegen: `lib/api-spec/openapi.yaml` drives Orval output for `lib/api-zod` and `lib/api-client-react`
 - Database: `lib/db` - Drizzle schema and seed scripts
 - Auth: Clerk with Microsoft SSO; frontend uses `VITE_CLERK_PUBLISHABLE_KEY`, backend uses `CLERK_SECRET_KEY`
+- Validation: `codegen-drift` validation step guards against API contract drift
+
+---
+
+## Recent Changes (2026-07-20)
+
+### Dashboard UX Improvements
+
+1. **Manager dashboard now shows manager's own CE requests** — the manager dashboard
+   endpoint (`GET /api/dashboard/manager`) now returns a `myRecentRequests` array
+   (up to 5 of the manager's own reimbursement requests, most-recent-first).
+   The frontend renders these in a new "Your Recent Requests" card, keeping manager
+   requests separate from the "Pending Your Approval" team queue.
+
+2. **Recent requests ordered most-recent-first** — all dashboard `recentRequests`
+   and `myRecentRequests` queries now sort by `conEdRequests.id DESC` instead of
+   `ASC`, so the newest submissions appear at the top of the list.
+
+3. **Reimbursed badge changed to brand blue** — the `StatusBadge` component now
+   styles `reimbursed` with `bg-[#002855]/10` (OSS sidebar blue) instead of the
+   previous green, aligning the reimbursed state with the corporate color palette.
+
+### Security Fixes (Receipt Upload & Serving)
+
+- **Upload URL authorization gate restored** — `POST /api/storage/uploads/request-url`
+  now returns 403 if the referenced request is not in `awaiting_receipt` status,
+  preventing low-privilege users from using the upload endpoint as arbitrary storage.
+
+- **Receipt input constraints reinstated** — the OpenAPI `ReceiptInput` schema
+  enforces a strict MIME type allowlist (`image/jpeg`, `image/png`, `application/pdf`)
+  and a 20 MB maximum file size (encoded as `20_000_000` in the generated zod schema).
+
+- **Safe-serving headers added** — `GET /api/storage/objects/*` now sets
+  `Content-Disposition: attachment` and `X-Content-Type-Options: nosniff`, mitigating
+  active-content risks when reviewers open uploaded receipt files.
+
+- **Receipt link changed from target="_blank" to download** — the Request Detail
+  page now uses a `<a download>` attribute instead of `target="_blank"`, prompting
+  the browser to save the file rather than navigating away.
+
+### Login Page Background Image
+
+Replaced the generic stock medical image on the Sign-In and Sign-Up pages with a
+PT-focused generated image: a physical therapist in navy scrubs guiding a patient's
+leg stretch on a treatment table, with anatomical charts in the background. The image
+is stored at `attached_assets/pt-login-bg.png`, imported as a Vite module (same
+pattern as `oss-logo-white.png`), and rendered at 30% opacity behind the right
+panel text. Fixes the previous root-relative `/pt-login-bg.png` path issue that
+broke under Replit's artifact path-based routing.
+
+### Orval Codegen & API Contract Maintenance
+
+- **Fixed orval for Node 24 compatibility** — tightened `pnpm-workspace.yaml` js-yaml
+  override to `^4.1.0` (js-yaml@5 dropped the ESM default export). Upgraded orval
+  from `8.9.1` to `8.22.0` (exact pin). Added `version: 3` to `orval.config.ts` zod
+  output override so orval generates `zod.string().url()` (Zod v3 syntax) rather
+  than `zod.url()` (v4-only).
+
+- **Registered `codegen-drift` validation step** — a named validation step that runs
+  `pnpm --filter @workspace/api-spec run codegen && git diff --exit-code lib/api-client-react/src/generated/ lib/api-zod/src/generated/`. Fails if generated files differ from what's committed, catching OpenAPI spec edits that weren't followed by codegen.
+
+### Tests
+
+Suite: **23 tests, all passing** (including repayment guarantee, receipt upload,
+  draft edit, admin user management, multi-role dashboard coverage).
 
 ---
 
@@ -60,7 +125,7 @@ All 10 flagged vulnerabilities resolved; `pnpm audit` now exits clean.
 | High | js-cookie | override `>=3.0.7` | GHSA-qjx8-664m-686j |
 | High | uuid | override `>=11.1.1` | GHSA-w5hq-g745-h8pq |
 | Medium | markdown-it | override `>=14.2.0` | GHSA-6v5v-wf23-fmfq |
-| Medium | js-yaml | override `>=4.2.0` | GHSA-h67p-54hq-rp68 |
+| Medium | js-yaml | override `>=4.2.0` (later tightened to `^4.1.0`) | GHSA-h67p-54hq-rp68 |
 | Medium | qs | override `>=6.15.2` | GHSA-q8mj-m7cp-5q26 |
 | Low | @babel/core | override `>=7.29.6` | GHSA-4x5r-pxfx-6jf8 |
 | Low | esbuild | `0.27.3` → `0.28.1` (direct + override) | GHSA-g7r4-m6w7-qqqr |
@@ -299,8 +364,8 @@ These changes were implemented and pushed via `codex/finish-ce-request-workflow`
 | `DELETE /api/users/:id` | Delete user, admin only, blocks self-delete |
 | `GET /api/clinics` | List clinics |
 | `GET /api/dashboard/:role` | Role dashboards |
-| `POST /api/storage/uploads/request-url` | Presigned upload URL |
-| `GET /api/storage/objects/*` | Serve private receipts |
+| `POST /api/storage/uploads/request-url` | Presigned upload URL (auth-gated to `awaiting_receipt`) |
+| `GET /api/storage/objects/*` | Serve private receipts (attachment + nosniff headers) |
 | `GET /api/healthz` | Health check |
 
 ## Frontend Pages
@@ -367,6 +432,7 @@ Not OSS clinics for this app: Renton, Enumclaw, Issaquah, Lacey, Monroe, Mukilte
 
 - PTO/request-for-leave workflow is out of scope.
 - Email notifications are not implemented.
+- Admission control (Task #10) — pending (currently all valid Clerk sessions are auto-provisioned as `role=employee`).
 
 ## Key Files
 
