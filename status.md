@@ -1,6 +1,6 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-20 by Replit Agent
+Last updated: 2026-07-20 by Codex
 
 ## Current State
 
@@ -16,7 +16,7 @@ GitHub `main` is the current integrated source of truth and is fully up to date.
   approval workspace, BO funding comparison UI, audit timeline, and all
   associated API and generated-client changes.
 - Dependabot alert #1 is marked **fixed** as of 2026-07-20.
-- GitHub `main` currently points to commit `4c8303e`.
+- GitHub `main` currently points to the merge of all local E2E fixes.
 - **All 31 Playwright E2E tests pass** in Replit as of 2026-07-20.
 
 ## Project Overview
