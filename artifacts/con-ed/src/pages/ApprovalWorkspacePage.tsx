@@ -243,7 +243,20 @@ export default function ApprovalWorkspacePage() {
 
   const openNextAfter = async (completedId: number, message: string) => {
     const nextRequest = requests.find((item) => item.id !== completedId);
-    await queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
+    queryClient.setQueriesData<{ items: ConEdRequest[]; total: number }>(
+      { queryKey: ["/api/requests"], exact: false },
+      (old) => {
+        if (!old) return old;
+        const filtered = old.items.filter((item) => item.id !== completedId);
+        const removed = filtered.length < old.items.length;
+        return {
+          ...old,
+          items: filtered,
+          total: removed ? Math.max(0, old.total - 1) : old.total,
+        };
+      },
+    );
+    queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
     toast({ title: message, description: nextRequest ? "The next request is ready for review." : "The approval queue is clear." });
     setParams({ selected: nextRequest ? String(nextRequest.id) : null });
   };
