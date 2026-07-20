@@ -76,8 +76,11 @@ export function isAuthorizedEmail(email: string): boolean {
   const exactEmails = new Set(splitSetting(process.env.AUTHORIZED_EMAILS));
   const configuredDomains = splitSetting(process.env.AUTHORIZED_EMAIL_DOMAINS)
     .map((domain) => domain.replace(/^@/, ""));
+  const hasAnyConfig = exactEmails.size > 0 || configuredDomains.length > 0;
   const allowedDomains = new Set(
-    configuredDomains.length > 0 ? configuredDomains : DEFAULT_AUTHORIZED_DOMAINS,
+    configuredDomains.length > 0 ? configuredDomains
+      : hasAnyConfig ? []
+        : DEFAULT_AUTHORIZED_DOMAINS,
   );
   const domain = normalized.split("@")[1];
 
