@@ -176,7 +176,7 @@ function ManagerDashboard() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <Link href="/requests?status=pending_manager&scope=approvals" className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <Link href="/approvals" className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <Card className="h-full border-amber-200 bg-amber-50/70 shadow-sm transition-colors hover:border-amber-300 hover:bg-amber-50">
             <CardContent className="p-6">
               <div className="flex flex-col">
@@ -228,7 +228,7 @@ function ManagerDashboard() {
               <CardTitle className="text-lg font-serif">Needs Your Approval</CardTitle>
               <CardDescription>Pending requests from your team</CardDescription>
             </div>
-            <Link href="/requests?status=pending_manager&scope=approvals">
+            <Link href="/approvals">
               <Button variant="outline" size="sm">View All</Button>
             </Link>
           </CardHeader>
@@ -248,7 +248,7 @@ function ManagerDashboard() {
                       <div className="text-xs text-slate-400 mt-1">{formatCurrency(req.totalRequested)} requested</div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Link href={`/requests/${req.id}`}>
+                      <Link href={`/approvals?selected=${req.id}`}>
                         <Button size="sm">Review</Button>
                       </Link>
                     </div>
@@ -342,7 +342,7 @@ function BODashboard() {
           </CardContent>
         </Card>
         
-        <Link href="/requests?status=pending_bo" className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <Link href="/approvals" className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <Card className="h-full border-amber-200 bg-amber-50/70 shadow-sm transition-colors hover:border-amber-300 hover:bg-amber-50">
             <CardContent className="p-6">
               <div className="flex flex-col">
@@ -363,7 +363,7 @@ function BODashboard() {
             <CardTitle className="text-lg font-serif">Awaiting Business Office Approval</CardTitle>
             <CardDescription>Requests approved by managers, waiting for final CE sign-off</CardDescription>
           </div>
-          <Link href="/requests?status=pending_bo">
+          <Link href="/approvals">
             <Button variant="outline" size="sm">View All</Button>
           </Link>
         </CardHeader>
@@ -386,7 +386,7 @@ function BODashboard() {
                       <div className="font-medium text-slate-900">{formatCurrency(req.totalRequested)}</div>
                       <div className="text-xs text-slate-500">Requested</div>
                     </div>
-                    <Link href={`/requests/${req.id}`}>
+                    <Link href={`/approvals?selected=${req.id}`}>
                       <Button size="sm">Review</Button>
                     </Link>
                   </div>

@@ -48,6 +48,7 @@ test.describe("Manager review", () => {
     await page.goto(`/requests/${requestId}`);
 
     await page.getByRole("button", { name: "Approve" }).click();
+    await page.getByRole("button", { name: "Confirm Approval" }).click();
     await expect(page.getByText("Pending CE Approval")).toBeVisible();
 
     const row = await getRequest(requestId);
@@ -126,6 +127,7 @@ test.describe("Manager review", () => {
     expect(row?.manager_id).toBe(senior.dbId);
 
     await page.getByRole("button", { name: "Approve" }).click();
+    await page.getByRole("button", { name: "Confirm Approval" }).click();
     await expect(page.getByText("Pending CE Approval")).toBeVisible();
 
     const approvedRow = await getRequest(id);

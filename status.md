@@ -14,7 +14,9 @@ before further development or deployment, then run the authenticated E2E suite.
 - PR #4 (`Patch brace-expansion Dependabot vulnerability`) merged the isolated
   dependency hotfix into `main`.
 - Dependabot alert #1 is marked **fixed** as of 2026-07-20.
-- GitHub `main` currently points to merge commit `99765b6`.
+- GitHub `main` currently points to merge commit `e8a1fb9`.
+- Phase 3 approval-workspace work is in progress on
+  `codex/phase-3-approval-workspace` and has not yet been pushed.
 
 ## Project Overview
 
@@ -31,6 +33,63 @@ Annual CE benefit is $2,000 per employee, prorated in the hire year, with advanc
 - Database: `lib/db` - Drizzle schema and seed scripts
 - Auth: Clerk with Microsoft SSO; frontend uses `VITE_CLERK_PUBLISHABLE_KEY`, backend uses `CLERK_SECRET_KEY`
 - Validation: `codegen-drift` validation step guards against API contract drift
+
+---
+
+## Recent Changes (2026-07-20 via Codex - Approval Workspace)
+
+### Manager and Business Office Review
+
+- Added a dedicated desktop approval workspace at `/approvals`. Managers and the
+  Business Office now review an oldest-first queue beside the selected request,
+  without returning to the request list after each decision.
+- Approval links in role navigation, dashboards, queue tabs, and request-list
+  actions now open the workspace. The selected request and queue filters remain in
+  the URL, preserving review context across refreshes and direct links.
+- Queue summary shows the number waiting and age of the oldest request. Business
+  Office reviewers can filter by clinic; both roles can search the queue.
+- The review pane brings employee, clinic, course, requested costs, current CE
+  balance, other pending requests, carry-forward debt, projected balance, and any
+  future CE advance together on one screen.
+- Manager self-approvals are clearly identified and explain the current OSS policy.
+  Requests that require a repayment guarantee cannot be approved until the signed
+  agreement is present.
+- Manager approval now requires explicit confirmation on both the new workspace and
+  the existing request-detail page. Denials continue to require a reason.
+- **Approve and open next** records the decision and advances directly to the next
+  item. When no requests remain, the workspace shows a clear completed state.
+
+### Business Office Funding Decisions
+
+- Requested and approved amounts now appear side by side with an immediately
+  calculated approved total.
+- **Use requested amounts** restores all six requested cost categories in one step.
+- Changed funding categories are highlighted, summarized before approval, and include
+  the Other Costs category.
+- The approval confirmation states the exact final amount before it is recorded and
+  the request becomes eligible for receipt submission.
+
+### Audit Timeline
+
+- Added one reusable request timeline for the workspace and request-detail page.
+- The timeline uses only timestamps the application actually records: request
+  creation, repayment-guarantee signature, manager decision, Business Office
+  decision, receipt submission, and reimbursement.
+- Approver names, timestamps, denial reasons, receipt names, and paycheck details are
+  displayed when available. The previous misleading use of `createdAt` as a
+  submission timestamp was removed.
+
+### Phase 3 Validation
+
+- Full workspace TypeScript check passes.
+- Frontend Vite production build passes. Existing source-map and large-chunk warnings
+  remain unchanged in nature; the build completes successfully.
+- Playwright discovers 31 tests in 13 files. Three new approval-workspace scenarios
+  cover sequential manager review and denial, manager self-approval, and Business
+  Office funding adjustments.
+- The authenticated 31-test suite still needs to run in Replit, where Clerk,
+  PostgreSQL, and object-storage secrets are available.
+- This phase does not require a database schema change or migration.
 
 ---
 
@@ -78,8 +137,7 @@ Annual CE benefit is $2,000 per employee, prorated in the hire year, with advanc
 - Full workspace TypeScript check passes.
 - API and frontend production builds pass.
 - Playwright discovers 28 tests in 12 files, including save/edit/submit, delete-draft,
-  and unsaved-change scenarios. The full suite still needs to be run in Replit because
-  Clerk, PostgreSQL, and object-storage secrets are not available locally.
+  and unsaved-change scenarios. Replit subsequently ran all 28 tests successfully.
 
 ---
 
@@ -141,8 +199,9 @@ broke under Replit's artifact path-based routing.
 
 ### Tests
 
-Before the draft-workflow batch, Replit reported **26 tests passing**. The current
-suite contains 28 tests and requires a fresh Replit run.
+Before the draft-workflow batch, Replit reported **26 tests passing**. Replit later
+reported all 28 Phase 2 tests passing. Phase 3 expands the suite to 31 tests and
+requires a fresh Replit run.
 
 ---
 
