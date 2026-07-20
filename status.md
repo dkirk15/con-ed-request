@@ -62,6 +62,9 @@ Annual CE benefit is $2,000 per employee, prorated in the hire year, with advanc
 
 ### Validation
 
+- Resolved Dependabot alert GHSA-3jxr-9vmj-r5cp / CVE-2026-13149 by forcing
+  `brace-expansion@5.0.7`; `pnpm audit --audit-level high` reports no known
+  vulnerabilities.
 - API client and Zod validators regenerated from OpenAPI; code generation passes.
 - Full workspace TypeScript check passes.
 - API and frontend production builds pass.
