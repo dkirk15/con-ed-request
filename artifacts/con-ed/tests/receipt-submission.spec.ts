@@ -107,6 +107,9 @@ test("receipt upload URLs reject unsafe files and requests owned by someone else
 
   await signInAs(employee);
   await page.goto(`/requests/${requestId}`);
+  await page.waitForFunction(() =>
+    Boolean((window as any).Clerk?.session),
+  );
 
   const statuses = await page.evaluate(
     async ({ ownId, otherId }) => {

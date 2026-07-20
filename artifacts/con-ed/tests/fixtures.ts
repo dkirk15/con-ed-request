@@ -66,7 +66,7 @@ export const test = base.extend<Fixtures>({
       const firstName = input.firstName ?? "E2E";
       const lastName = input.lastName ?? id;
       const name = `${firstName} ${lastName}`;
-      const email = `e2e.${id}+clerk_test@example.com`;
+      const email = `e2e.${id}+clerk_test@osstherapy.com`;
 
       const clerkId = await createClerkUser({ firstName, lastName, email });
       createdClerkIds.push(clerkId);
@@ -112,7 +112,7 @@ export const test = base.extend<Fixtures>({
       const firstName = input?.firstName ?? "E2E";
       const lastName = input?.lastName ?? id;
       const name = `${firstName} ${lastName}`;
-      const email = `e2e.${id}+clerk_test@example.com`;
+      const email = `e2e.${id}+clerk_test@osstherapy.com`;
 
       const clerkId = await createClerkUser({ firstName, lastName, email });
       createdClerkIds.push(clerkId);

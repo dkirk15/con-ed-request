@@ -245,20 +245,37 @@ export const DeleteClinicResponse = zod.void()
 /**
  * @summary List con-ed requests (scoped by role)
  */
+export const listRequestsQuerySearchMax = 120;
+
+export const listRequestsQueryYearMin = 2000;
+export const listRequestsQueryYearMax = 2100;
+
+export const listRequestsQueryScopeDefault = `all`;
+export const listRequestsQuerySortDefault = `updatedAt`;
+export const listRequestsQueryOrderDefault = `desc`;
+export const listRequestsQueryPageDefault = 1;
+
+export const listRequestsQueryPageSizeDefault = 25;
+export const listRequestsQueryPageSizeMin = 10;
+export const listRequestsQueryPageSizeMax = 100;
+
+
+
 export const ListRequestsQueryParams = zod.object({
   "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']).optional(),
   "employeeId": zod.coerce.number().nullish(),
   "clinicId": zod.coerce.number().nullish(),
-  "search": zod.coerce.string().max(120).optional(),
-  "year": zod.coerce.number().min(2000).max(2100).nullish(),
-  "scope": zod.enum(['all', 'mine', 'approvals']).default('all').optional(),
-  "sort": zod.enum(['createdAt', 'updatedAt', 'courseNames', 'totalRequested', 'status']).default('updatedAt').optional(),
-  "order": zod.enum(['asc', 'desc']).default('desc').optional(),
-  "page": zod.coerce.number().min(1).default(1).optional(),
-  "pageSize": zod.coerce.number().min(10).max(100).default(25).optional()
+  "search": zod.coerce.string().max(listRequestsQuerySearchMax).optional(),
+  "year": zod.coerce.number().min(listRequestsQueryYearMin).max(listRequestsQueryYearMax).nullish(),
+  "scope": zod.enum(['all', 'mine', 'approvals']).default(listRequestsQueryScopeDefault),
+  "sort": zod.enum(['createdAt', 'updatedAt', 'courseNames', 'totalRequested', 'status']).default(listRequestsQuerySortDefault),
+  "order": zod.enum(['asc', 'desc']).default(listRequestsQueryOrderDefault),
+  "page": zod.coerce.number().min(1).default(listRequestsQueryPageDefault),
+  "pageSize": zod.coerce.number().min(listRequestsQueryPageSizeMin).max(listRequestsQueryPageSizeMax).default(listRequestsQueryPageSizeDefault)
 })
 
-export const ListRequestsResponseItem = zod.object({
+export const ListRequestsResponse = zod.object({
+  "items": zod.array(zod.object({
   "id": zod.number(),
   "employeeId": zod.number(),
   "employeeName": zod.string().nullish(),
@@ -324,9 +341,7 @@ export const ListRequestsResponseItem = zod.object({
 }).nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
-})
-export const ListRequestsResponse = zod.object({
-  "items": zod.array(ListRequestsResponseItem),
+})),
   "total": zod.number(),
   "page": zod.number(),
   "pageSize": zod.number(),
@@ -1787,12 +1802,14 @@ export const GetUserBalanceResponse = zod.object({
 
 
 
+
 export const RequestUploadUrlBody = zod.object({
   "requestId": zod.number().min(1),
   "name": zod.string().min(1),
   "size": zod.number().min(1),
   "contentType": zod.string().min(1)
 })
+
 
 
 

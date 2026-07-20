@@ -9,7 +9,6 @@
     "typecheck": "corepack pnpm run typecheck:libs && corepack pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
   "private": true,
-  "packageManager": "pnpm@11.8.0",
   "devDependencies": {
     "prettier": "^3.8.3",
     "typescript": "~5.9.3"

@@ -23,7 +23,9 @@ test.describe("Role-based dashboards and navigation", () => {
     await expect(page.getByRole("link", { name: "Team" })).toHaveCount(0);
 
     await page.goto("/requests");
-    await expect(page.getByRole("button", { name: "New Request" })).toBeVisible();
+    await expect(
+      page.locator("#main-content").getByRole("link", { name: "New Request" }),
+    ).toBeVisible();
   });
 
   test("manager: approval dashboard, Users nav, can create requests", async ({
@@ -43,7 +45,7 @@ test.describe("Role-based dashboards and navigation", () => {
     await expect(page.getByRole("link", { name: "Approvals" })).toBeVisible();
 
     await page.goto("/requests");
-    await expect(page.getByRole("button", { name: "New Request" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "New Request" })).toBeVisible();
   });
 
   test("business_office: BO approval dashboard, no Users nav, no New Request", async ({
@@ -61,11 +63,11 @@ test.describe("Role-based dashboards and navigation", () => {
     ).toBeVisible();
     await expect(page.getByText("Total Funding Approved YTD")).toBeVisible();
     await expect(page.getByRole("link", { name: "Team" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "CE Approvals" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "CE Approvals", exact: true })).toBeVisible();
 
     await page.goto("/requests");
     await expect(
-      page.getByRole("button", { name: "New Request" }),
+      page.getByRole("link", { name: "New Request" }),
     ).toHaveCount(0);
   });
 
@@ -88,7 +90,7 @@ test.describe("Role-based dashboards and navigation", () => {
 
     await page.goto("/requests");
     await expect(
-      page.getByRole("button", { name: "New Request" }),
+      page.getByRole("link", { name: "New Request" }),
     ).toHaveCount(0);
   });
 
@@ -106,7 +108,7 @@ test.describe("Role-based dashboards and navigation", () => {
 
     await page.goto("/requests");
     await expect(
-      page.getByRole("button", { name: "New Request" }),
+      page.getByRole("link", { name: "New Request" }),
     ).toHaveCount(0);
   });
 });

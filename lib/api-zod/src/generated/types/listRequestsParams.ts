@@ -5,19 +5,41 @@
  * OSS Continuing Education Portal API
  * OpenAPI spec version: 0.1.0
  */
+import type { ListRequestsOrder } from './listRequestsOrder';
+import type { ListRequestsScope } from './listRequestsScope';
+import type { ListRequestsSort } from './listRequestsSort';
+import type { ListRequestsStatus } from './listRequestsStatus';
 
 export type ListRequestsParams = {
-  status?: 'draft' | 'pending_manager' | 'manager_approved' | 'manager_denied' | 'pending_bo' | 'bo_approved' | 'bo_denied' | 'awaiting_receipt' | 'receipt_submitted' | 'reimbursed' | 'cancelled';
+status?: ListRequestsStatus;
 /**
  * @nullable
  */
-  employeeId?: number | null;
-  clinicId?: number | null;
-  search?: string;
-  year?: number | null;
-  scope?: 'all' | 'mine' | 'approvals';
-  sort?: 'createdAt' | 'updatedAt' | 'courseNames' | 'totalRequested' | 'status';
-  order?: 'asc' | 'desc';
-  page?: number;
-  pageSize?: number;
+employeeId?: number | null;
+/**
+ * @nullable
+ */
+clinicId?: number | null;
+/**
+ * @maxLength 120
+ */
+search?: string;
+/**
+ * @minimum 2000
+ * @maximum 2100
+ * @nullable
+ */
+year?: number | null;
+scope?: ListRequestsScope;
+sort?: ListRequestsSort;
+order?: ListRequestsOrder;
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 10
+ * @maximum 100
+ */
+pageSize?: number;
 };

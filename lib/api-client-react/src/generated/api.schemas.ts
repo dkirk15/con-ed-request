@@ -463,18 +463,81 @@ export const ListUsersRole = {
 } as const;
 
 export type ListRequestsParams = {
-  status?: ConEdRequestStatus;
+status?: ListRequestsStatus;
 /**
  * @nullable
  */
-  employeeId?: number | null;
-  clinicId?: number | null;
-  search?: string;
-  year?: number | null;
-  scope?: 'all' | 'mine' | 'approvals';
-  sort?: 'createdAt' | 'updatedAt' | 'courseNames' | 'totalRequested' | 'status';
-  order?: 'asc' | 'desc';
-  page?: number;
-  pageSize?: number;
+employeeId?: number | null;
+/**
+ * @nullable
+ */
+clinicId?: number | null;
+/**
+ * @maxLength 120
+ */
+search?: string;
+/**
+ * @minimum 2000
+ * @maximum 2100
+ * @nullable
+ */
+year?: number | null;
+scope?: ListRequestsScope;
+sort?: ListRequestsSort;
+order?: ListRequestsOrder;
+/**
+ * @minimum 1
+ */
+page?: number;
+/**
+ * @minimum 10
+ * @maximum 100
+ */
+pageSize?: number;
 };
+
+export type ListRequestsStatus = typeof ListRequestsStatus[keyof typeof ListRequestsStatus];
+
+
+export const ListRequestsStatus = {
+  draft: 'draft',
+  pending_manager: 'pending_manager',
+  manager_approved: 'manager_approved',
+  manager_denied: 'manager_denied',
+  pending_bo: 'pending_bo',
+  bo_approved: 'bo_approved',
+  bo_denied: 'bo_denied',
+  awaiting_receipt: 'awaiting_receipt',
+  receipt_submitted: 'receipt_submitted',
+  reimbursed: 'reimbursed',
+  cancelled: 'cancelled',
+} as const;
+
+export type ListRequestsScope = typeof ListRequestsScope[keyof typeof ListRequestsScope];
+
+
+export const ListRequestsScope = {
+  all: 'all',
+  mine: 'mine',
+  approvals: 'approvals',
+} as const;
+
+export type ListRequestsSort = typeof ListRequestsSort[keyof typeof ListRequestsSort];
+
+
+export const ListRequestsSort = {
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  courseNames: 'courseNames',
+  totalRequested: 'totalRequested',
+  status: 'status',
+} as const;
+
+export type ListRequestsOrder = typeof ListRequestsOrder[keyof typeof ListRequestsOrder];
+
+
+export const ListRequestsOrder = {
+  asc: 'asc',
+  desc: 'desc',
+} as const;
 
