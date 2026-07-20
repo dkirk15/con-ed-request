@@ -1,6 +1,6 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-20 by Replit Agent
+Last updated: 2026-07-20 by Codex
 
 ## Current State
 
@@ -22,6 +22,52 @@ Annual CE benefit is $2,000 per employee, prorated in the hire year, with advanc
 - Database: `lib/db` - Drizzle schema and seed scripts
 - Auth: Clerk with Microsoft SSO; frontend uses `VITE_CLERK_PUBLISHABLE_KEY`, backend uses `CLERK_SECRET_KEY`
 - Validation: `codegen-drift` validation step guards against API contract drift
+
+---
+
+## Recent Changes (2026-07-20 via Codex - Draft Workflow UX)
+
+### Draft Lifecycle
+
+- New requests can now be saved without entering the approval workflow. The course
+  or event name is the only field required to save a draft.
+- Saved drafts reopen at `/requests/:id/edit` and use the same form as new requests.
+- Employees and managers can edit, resume, submit, or permanently delete their own
+  drafts. Submitted requests remain read-only.
+- Draft rows link directly to **Continue editing** for their owner. Admins viewing
+  another user's draft continue to the read-only request detail instead.
+- Unsaved-change protection covers page close/reload, in-app links, and the form's
+  back/cancel actions.
+- Added `DELETE /api/requests/:requestId`, restricted to the draft owner while the
+  request is still in `draft` status. Associated draft guarantee records are removed
+  in the same transaction.
+
+### Request Form Redesign
+
+- Reorganized the desktop form into clear course-detail and estimated-cost sections.
+- Added a sticky funding-impact summary showing the request total, current balance,
+  used and pending funding, projected remaining funds, and future CE debt.
+- Over-budget requests surface the repayment policy and signing controls in context.
+- **Submit for approval** is the primary action; **Save draft** is secondary.
+- The approval-before-purchase warning remains visible at the top of the workflow.
+- Cost inputs now have direct accessible labels and open blank instead of displaying
+  six zero values.
+
+### Receipt Baseline Corrections
+
+- Receipt uploads are standardized to PDF, JPG, or PNG files up to 10 MB.
+- WebP was removed from the frontend and both server-side validation layers.
+- Receipt downloads again force `application/octet-stream` in addition to attachment,
+  `nosniff`, and private/no-store headers.
+
+### Validation
+
+- API client and Zod validators regenerated from OpenAPI; code generation passes.
+- Full workspace TypeScript check passes.
+- API and frontend production builds pass.
+- Playwright discovers 28 tests in 12 files, including save/edit/submit, delete-draft,
+  and unsaved-change scenarios. The full suite still needs to be run in Replit because
+  Clerk, PostgreSQL, and object-storage secrets are not available locally.
 
 ---
 
@@ -49,9 +95,8 @@ Annual CE benefit is $2,000 per employee, prorated in the hire year, with advanc
   now returns 403 if the referenced request is not in `awaiting_receipt` status,
   preventing low-privilege users from using the upload endpoint as arbitrary storage.
 
-- **Receipt input constraints reinstated** — the OpenAPI `ReceiptInput` schema
-  enforces a strict MIME type allowlist (`image/jpeg`, `image/png`, `application/pdf`)
-  and a 20 MB maximum file size (encoded as `20_000_000` in the generated zod schema).
+- **Receipt input constraints reinstated** — upload URL validation and post-upload
+  signature checks enforce PDF, JPG, or PNG files with a 10 MB maximum size.
 
 - **Safe-serving headers added** — `GET /api/storage/objects/*` now sets
   `Content-Disposition: attachment` and `X-Content-Type-Options: nosniff`, mitigating
@@ -84,8 +129,8 @@ broke under Replit's artifact path-based routing.
 
 ### Tests
 
-Suite: **23 tests, all passing** (including repayment guarantee, receipt upload,
-  draft edit, admin user management, multi-role dashboard coverage).
+Before the draft-workflow batch, Replit reported **26 tests passing**. The current
+suite contains 28 tests and requires a fresh Replit run.
 
 ---
 
@@ -451,7 +496,8 @@ Not OSS clinics for this app: Renton, Enumclaw, Issaquah, Lacey, Monroe, Mukilte
 
 - PTO/request-for-leave workflow is out of scope.
 - Email notifications are not implemented.
-- Admission control (Task #10) — pending (currently all valid Clerk sessions are auto-provisioned as `role=employee`).
+- Structured provider, course URL, start/end dates, and delivery-method fields are
+  held for the next form-data batch.
 
 ## Key Files
 

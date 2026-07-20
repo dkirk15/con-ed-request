@@ -351,6 +351,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConEdRequest"
+    delete:
+      operationId: deleteRequest
+      tags: [requests]
+      summary: Permanently delete a draft request
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Draft deleted
+        "400":
+          description: Request is no longer a draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
 
   /requests/{requestId}/submit:
     post:

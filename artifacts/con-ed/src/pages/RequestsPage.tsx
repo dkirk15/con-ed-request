@@ -171,11 +171,21 @@ function isQueueActive(queue: QueueLink, params: URLSearchParams): boolean {
   });
 }
 
-function requestActionLabel(role: Role, status: string) {
+function requestActionLabel(role: Role, status: string, canEditDraft: boolean) {
+  if (canEditDraft) return "Continue editing";
   if (role === "manager" && status === "pending_manager") return "Review";
   if ((role === "business_office" || role === "admin") && status === "pending_bo") return "Review";
   if ((role === "accounting" || role === "admin") && status === "receipt_submitted") return "Process";
   return "View";
+}
+
+function requestHref(
+  request: { id: number; status: string; employeeId: number },
+  currentUserId?: number,
+) {
+  return request.status === "draft" && request.employeeId === currentUserId
+    ? `/requests/${request.id}/edit`
+    : `/requests/${request.id}`;
 }
 
 export default function RequestsPage() {
@@ -382,7 +392,7 @@ export default function RequestsPage() {
               <TableHead>Approved</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Updated</TableHead>
-              <TableHead className="w-24 text-right">Action</TableHead>
+              <TableHead className="w-36 text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -442,7 +452,7 @@ export default function RequestsPage() {
                 <TableRow key={request.id} className="hover:bg-slate-50/70">
                   <TableCell className="max-w-80">
                     <Link
-                      href={`/requests/${request.id}`}
+                      href={requestHref(request, user?.id)}
                       className="font-medium text-slate-950 hover:text-primary hover:underline"
                     >
                       {request.courseNames}
@@ -467,10 +477,11 @@ export default function RequestsPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/requests/${request.id}`}>
+                      <Link href={requestHref(request, user?.id)} className="whitespace-nowrap">
                         {requestActionLabel(
                           role,
                           request.status,
+                          request.status === "draft" && request.employeeId === user?.id,
                         )}
                       </Link>
                     </Button>
