@@ -992,7 +992,7 @@ export const SubmitReceiptParams = zod.object({
 })
 
 export const SubmitReceiptBody = zod.object({
-  "fileUrl": zod.string(),
+  "fileUrl": zod.string().min(1).regex(/^\/objects\//, { message: "Invalid file URL" }),
   "fileName": zod.string().nullish()
 })
 
@@ -1574,10 +1574,20 @@ export const GetUserBalanceResponse = zod.object({
 
 
 
+const RECEIPT_ALLOWED_CONTENT_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/heic",
+  "image/webp",
+  "application/pdf",
+] as const;
+
+const RECEIPT_MAX_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
+
 export const RequestUploadUrlBody = zod.object({
   "name": zod.string().min(1),
-  "size": zod.number().min(1),
-  "contentType": zod.string().min(1)
+  "size": zod.number().min(1).max(RECEIPT_MAX_SIZE_BYTES, { message: "File must be 20 MB or smaller" }),
+  "contentType": zod.enum(RECEIPT_ALLOWED_CONTENT_TYPES)
 })
 
 

@@ -8,7 +8,8 @@ import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage"
 import { requireAuth } from "../lib/auth";
 import { db } from "@workspace/db";
 import { receipts, conEdRequests, users } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import path from "path";
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -26,6 +27,25 @@ router.post("/storage/uploads/request-url", requireAuth, async (req: Request, re
   }
 
   try {
+    const user = req.dbUser!;
+
+    // Authorization gate: only users with an awaiting_receipt request may upload
+    const eligible = await db
+      .select({ id: conEdRequests.id })
+      .from(conEdRequests)
+      .where(
+        and(
+          eq(conEdRequests.employeeId, user.id),
+          eq(conEdRequests.status, "awaiting_receipt"),
+        ),
+      )
+      .limit(1);
+
+    if (eligible.length === 0) {
+      res.status(403).json({ error: "No approved request awaiting a receipt upload" });
+      return;
+    }
+
     const { name, size, contentType } = parsed.data;
     const uploadURL = await objectStorageService.getObjectEntityUploadURL();
     const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
@@ -150,6 +170,12 @@ router.get("/storage/objects/*path", requireAuth, async (req: Request, res: Resp
 
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
+
+    // Safe-serving defaults: force download, block MIME sniffing
+    const baseName = path.basename(objectPath) || "receipt";
+    res.setHeader("Content-Disposition", `attachment; filename="${baseName}"`);
+    res.setHeader("X-Content-Type-Options", "nosniff");
+
     if (response.body) {
       const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
       nodeStream.pipe(res);

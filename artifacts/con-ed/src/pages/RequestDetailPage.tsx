@@ -557,7 +557,7 @@ export default function RequestDetailPage() {
                          </div>
                        </div>
                        <Button variant="outline" size="sm" asChild>
-                         <a href={`/api/storage${receipt.fileUrl}`} target="_blank" rel="noreferrer">View</a>
+                         <a href={`/api/storage${receipt.fileUrl}`} download={receipt.fileName || `receipt-${i + 1}`}>Download</a>
                        </Button>
                      </div>
                    ))}

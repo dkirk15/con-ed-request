@@ -152,7 +152,7 @@ function ManagerDashboard() {
 
   if (isLoading || !data) return <DashboardSkeleton />;
 
-  const { myBalance, pendingClinicRequests, myRecentRequests, requestCounts, clinicEmployeeCount } = data;
+  const { myBalance, pendingClinicRequests, myRecentRequests = [], requestCounts, clinicEmployeeCount } = data;
   const availableAllocation = myBalance.availableAllocation ?? myBalance.annualAllocation;
   const percentUsed =
     availableAllocation > 0
