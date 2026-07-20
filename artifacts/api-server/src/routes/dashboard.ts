@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import { conEdRequests, users } from "@workspace/db/schema";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, sql, desc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../lib/auth";
 import { getUserBalance } from "../lib/balance";
 
@@ -26,243 +26,268 @@ router.get("/dashboard/employee", requireAuth, async (req: Request, res: Respons
         counts.approved++;
       } else if (r.status === "reimbursed") {
         counts.reimbursed++;
-      } else if (r.status === "cancelled") {
+      } else if (r.status === "cancelled" || r.status === "manager_denied" || r.status === "bo_denied") {
         counts.cancelled++;
       }
     }
 
-    const recentRequests = await db
+    const recentRows = await db
       .select()
       .from(conEdRequests)
       .where(eq(conEdRequests.employeeId, user.id))
-      .orderBy(desc(conEdRequests.id))
+      .orderBy(desc(conEdRequests.updatedAt))
       .limit(5);
 
-    const managers = await db
-      .select({
-        id: users.id,
-        name: users.name,
-      })
-      .from(users)
-      .where(
-        and(
-          eq(users.role, "manager"),
-          eq(users.clinicId, user.clinicId),
-        ),
+    const { formatRequestSimple } = await import("./requestHelpers");
+    const recentRequests = await Promise.all(recentRows.map(formatRequestSimple));
+
+    res.json({ balance, requestCounts: counts, recentRequests });
+  } catch (err) {
+    req.log.error({ err }, "employeeDashboard error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/dashboard/manager — manager or admin only
+router.get(
+  "/dashboard/manager",
+  requireRole("manager", "admin"),
+  async (req: Request, res: Response) => {
+    try {
+      const user = req.dbUser!;
+      const balance = await getUserBalance(user.id, user.hireDate);
+
+      let clinicEmployeeIds: number[] = [];
+      if (user.clinicId) {
+        const employees = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.clinicId, user.clinicId));
+        clinicEmployeeIds = employees.map((e) => e.id);
+      }
+
+      const clinicEmployeeCount = clinicEmployeeIds.length;
+
+      let pendingRows: (typeof conEdRequests.$inferSelect)[] = [];
+      let approvedCount = 0;
+      let totalClinicSpend = 0;
+
+      if (clinicEmployeeIds.length > 0) {
+        pendingRows = await db
+          .select()
+          .from(conEdRequests)
+          .where(
+            and(
+              inArray(conEdRequests.employeeId, clinicEmployeeIds),
+              eq(conEdRequests.status, "pending_manager"),
+            ),
+          )
+          .orderBy(desc(conEdRequests.createdAt));
+
+        const yearStart = new Date(`${new Date().getFullYear()}-01-01`);
+        const approvedRows = await db
+          .select({
+            status: conEdRequests.status,
+            totalApproved: conEdRequests.totalApproved,
+          })
+          .from(conEdRequests)
+          .where(
+            and(
+              inArray(conEdRequests.employeeId, clinicEmployeeIds),
+              sql`${conEdRequests.createdAt} >= ${yearStart}`,
+            ),
+          );
+
+        approvedCount = approvedRows.filter((r) =>
+          ["awaiting_receipt", "receipt_submitted", "reimbursed"].includes(r.status),
+        ).length;
+
+        totalClinicSpend = approvedRows
+          .filter((r) => ["awaiting_receipt", "receipt_submitted", "reimbursed"].includes(r.status))
+          .reduce((sum, r) => sum + parseFloat(r.totalApproved ?? "0"), 0);
+      }
+
+      const myRecentRows = await db
+        .select()
+        .from(conEdRequests)
+        .where(eq(conEdRequests.employeeId, user.id))
+        .orderBy(desc(conEdRequests.updatedAt))
+        .limit(5);
+
+      const { formatRequestSimple } = await import("./requestHelpers");
+      const pendingClinicRequests = await Promise.all(pendingRows.map(formatRequestSimple));
+      const myRecentRequests = await Promise.all(myRecentRows.map(formatRequestSimple));
+
+      res.json({
+        myBalance: balance,
+        pendingClinicRequests,
+        myRecentRequests,
+        clinicEmployeeCount,
+        requestCounts: {
+          pendingMyApproval: pendingRows.length,
+          approvedThisYear: approvedCount,
+          totalClinicSpend: Math.round(totalClinicSpend * 100) / 100,
+        },
+      });
+    } catch (err) {
+      req.log.error({ err }, "managerDashboard error");
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+// GET /api/dashboard/business-office — BO or admin only
+router.get(
+  "/dashboard/business-office",
+  requireRole("business_office", "admin"),
+  async (req: Request, res: Response) => {
+    try {
+      const pendingRows = await db
+        .select()
+        .from(conEdRequests)
+        .where(eq(conEdRequests.status, "pending_bo"))
+        .orderBy(desc(conEdRequests.updatedAt));
+
+      const awaitingRows = await db
+        .select()
+        .from(conEdRequests)
+        .where(eq(conEdRequests.status, "awaiting_receipt"))
+        .orderBy(desc(conEdRequests.updatedAt));
+
+      // YTD = all requests that have passed BO approval (awaiting_receipt + receipt_submitted + reimbursed)
+      const approvedYtdRows = await db
+        .select({ totalApproved: conEdRequests.totalApproved })
+        .from(conEdRequests)
+        .where(
+          inArray(conEdRequests.status, ["awaiting_receipt", "receipt_submitted", "reimbursed"])
+        );
+
+      const totalFundingApproved = approvedYtdRows.reduce(
+        (sum, r) => sum + parseFloat(r.totalApproved ?? "0"),
+        0,
+      );
+      const totalPendingAmount = pendingRows.reduce(
+        (sum, r) => sum + parseFloat(r.totalRequested),
+        0,
       );
 
-    res.json({
-      counts,
-      recentRequests,
-      balance,
-      managers,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
-    });
-  } catch (error) {
-    req.log.error({ err: error }, "Error generating employee dashboard");
-    res.status(500).json({ error: "Failed to generate dashboard" });
-  }
-});
+      const { formatRequestSimple } = await import("./requestHelpers");
+      const pendingApproval = await Promise.all(pendingRows.map(formatRequestSimple));
+      const approvedAwaitingReceipt = await Promise.all(awaitingRows.map(formatRequestSimple));
 
-// GET /api/dashboard/manager
-router.get("/dashboard/manager", requireAuth, requireRole("manager"), async (req: Request, res: Response) => {
-  try {
-    const user = req.dbUser!;
-    const clinicId = user.clinicId;
-    if (!clinicId) {
-      res.status(400).json({ error: "Manager is not assigned to a clinic" });
-      return;
+      res.json({
+        pendingApproval,
+        approvedAwaitingReceipt,
+        totalFundingApproved: Math.round(totalFundingApproved * 100) / 100,
+        totalPendingAmount: Math.round(totalPendingAmount * 100) / 100,
+      });
+    } catch (err) {
+      req.log.error({ err }, "boDashboard error");
+      res.status(500).json({ error: "Internal server error" });
     }
+  },
+);
 
-    const clinicEmployees = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(
-        and(
-          eq(users.clinicId, clinicId),
-          eq(users.role, "employee"),
-        ),
+// GET /api/dashboard/accounting — accounting or admin only
+router.get(
+  "/dashboard/accounting",
+  requireRole("accounting", "admin"),
+  async (req: Request, res: Response) => {
+    try {
+      const pendingRows = await db
+        .select()
+        .from(conEdRequests)
+        .where(eq(conEdRequests.status, "receipt_submitted"))
+        .orderBy(desc(conEdRequests.updatedAt));
+
+      const recentlyReimbursedRows = await db
+        .select()
+        .from(conEdRequests)
+        .where(eq(conEdRequests.status, "reimbursed"))
+        .orderBy(desc(conEdRequests.updatedAt))
+        .limit(10);
+
+      const totalPendingAmount = pendingRows.reduce(
+        (sum, r) => sum + parseFloat(r.totalApproved ?? r.totalRequested),
+        0,
       );
 
-    const employeeIds = clinicEmployees.map((u) => u.id);
-    const allEmployeeRequests = await db
-      .select()
-      .from(conEdRequests)
-      .where(inArray(conEdRequests.employeeId, employeeIds));
+      const { formatRequestSimple } = await import("./requestHelpers");
+      const pendingReimbursement = await Promise.all(pendingRows.map(formatRequestSimple));
+      const recentlyReimbursed = await Promise.all(recentlyReimbursedRows.map(formatRequestSimple));
 
-    const counts = {
-      pendingApproval: 0,
-      approved: 0,
-      denied: 0,
-      reimbursed: 0,
-    };
-    for (const r of allEmployeeRequests) {
-      if (r.status === "pending_manager") counts.pendingApproval++;
-      else if (["pending_bo", "awaiting_receipt", "receipt_submitted"].includes(r.status)) counts.approved++;
-      else if (["manager_denied", "bo_denied"].includes(r.status)) counts.denied++;
-      else if (r.status === "reimbursed") counts.reimbursed++;
+      res.json({
+        pendingReimbursement,
+        recentlyReimbursed,
+        totalPendingAmount: Math.round(totalPendingAmount * 100) / 100,
+      });
+    } catch (err) {
+      req.log.error({ err }, "accountingDashboard error");
+      res.status(500).json({ error: "Internal server error" });
     }
+  },
+);
 
-    const pendingApprovalRequests = allEmployeeRequests
-      .filter((r) => r.status === "pending_manager")
-      .sort((a, b) => b.id - a.id)
-      .slice(0, 5);
+// GET /api/dashboard/admin — admin only
+router.get(
+  "/dashboard/admin",
+  requireRole("admin"),
+  async (req: Request, res: Response) => {
+    try {
+      const allUsers = await db
+        .select({
+          role: users.role,
+          createdAt: users.createdAt,
+          id: users.id,
+          clerkId: users.clerkId,
+          name: users.name,
+          email: users.email,
+          clinicId: users.clinicId,
+          managerId: users.managerId,
+          hireDate: users.hireDate,
+        })
+        .from(users);
 
-    const recentRequests = allEmployeeRequests
-      .sort((a, b) => b.id - a.id)
-      .slice(0, 5);
+      const totalUsers = allUsers.length;
+      const byRole = {
+        employee: 0,
+        manager: 0,
+        business_office: 0,
+        accounting: 0,
+        admin: 0,
+      };
+      for (const u of allUsers) {
+        byRole[u.role as keyof typeof byRole]++;
+      }
 
-    // Manager's own recent requests
-    const myRecentRequests = await db
-      .select()
-      .from(conEdRequests)
-      .where(eq(conEdRequests.employeeId, user.id))
-      .orderBy(desc(conEdRequests.id))
-      .limit(5);
+      const recentUsers = [...allUsers]
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, 5)
+        .map((u) => ({
+          id: u.id,
+          clerkId: u.clerkId,
+          name: u.name,
+          email: u.email,
+          role: u.role,
+          clinicId: u.clinicId ?? null,
+          clinicName: null,
+          managerId: u.managerId ?? null,
+          managerName: null,
+          hireDate: u.hireDate ?? null,
+          createdAt: u.createdAt.toISOString(),
+        }));
 
-    const employeesWithNames = await db
-      .select({ id: users.id, name: users.name })
-      .from(users)
-      .where(inArray(users.id, employeeIds));
-
-    const employeeMap = new Map(employeesWithNames.map((u) => [u.id, u.name]));
-
-    res.json({
-      counts,
-      pendingApprovalRequests,
-      recentRequests,
-      myRecentRequests,
-      employees: employeeMap,
-    });
-  } catch (error) {
-    req.log.error({ err: error }, "Error generating manager dashboard");
-    res.status(500).json({ error: "Failed to generate dashboard" });
-  }
-});
-
-// GET /api/dashboard/business-office
-router.get("/dashboard/business-office", requireAuth, requireRole("business_office"), async (req: Request, res: Response) => {
-  try {
-    const pendingApproval = await db
-      .select()
-      .from(conEdRequests)
-      .where(eq(conEdRequests.status, "pending_bo"))
-      .orderBy(desc(conEdRequests.id))
-      .limit(10);
-
-    const ytdStart = new Date(new Date().getFullYear(), 0, 1);
-    const ytdRequests = await db
-      .select({
-        totalRequested: sql<number>`COALESCE(SUM(${conEdRequests.approvedTotal}), 0)`,
-      })
-      .from(conEdRequests)
-      .where(
-        and(
-          inArray(conEdRequests.status, ["awaiting_receipt", "receipt_submitted", "reimbursed"]),
-          sql`${conEdRequests.createdAt} >= ${ytdStart}`,
-        ),
-      );
-
-    const totalFunding = Number(ytdRequests[0]?.totalRequested ?? 0);
-
-    const counts = {
-      pending: pendingApproval.length,
-      totalFundingYtd: totalFunding,
-    };
-
-    const allUsers = await db.select().from(users);
-    const userMap = new Map(allUsers.map((u) => [u.id, u]));
-
-    res.json({
-      counts,
-      pendingApprovalRequests: pendingApproval,
-      employees: userMap,
-    });
-  } catch (error) {
-    req.log.error({ err: error }, "Error generating business-office dashboard");
-    res.status(500).json({ error: "Failed to generate dashboard" });
-  }
-});
-
-// GET /api/dashboard/accounting
-router.get("/dashboard/accounting", requireAuth, requireRole("accounting"), async (req: Request, res: Response) => {
-  try {
-    const reimbursed = await db
-      .select()
-      .from(conEdRequests)
-      .where(eq(conEdRequests.status, "reimbursed"))
-      .orderBy(desc(conEdRequests.id))
-      .limit(10);
-
-    const pendingReimbursement = await db
-      .select()
-      .from(conEdRequests)
-      .where(eq(conEdRequests.status, "receipt_submitted"))
-      .orderBy(desc(conEdRequests.id))
-      .limit(10);
-
-    const allUsers = await db.select().from(users);
-    const userMap = new Map(allUsers.map((u) => [u.id, u]));
-
-    res.json({
-      counts: {
-        reimbursed: reimbursed.length,
-        pendingReimbursement: pendingReimbursement.length,
-      },
-      reimbursed,
-      pendingReimbursement,
-      employees: userMap,
-    });
-  } catch (error) {
-    req.log.error({ err: error }, "Error generating accounting dashboard");
-    res.status(500).json({ error: "Failed to generate dashboard" });
-  }
-});
-
-// GET /api/dashboard/admin
-router.get("/dashboard/admin", requireAuth, requireRole("admin"), async (req: Request, res: Response) => {
-  try {
-    const userCounts = await db
-      .select({
-        role: users.role,
-        count: sql<number>`count(*)`,
-      })
-      .from(users)
-      .groupBy(users.role);
-
-    const counts = {
-      employees: 0,
-      managers: 0,
-      businessOffice: 0,
-      accounting: 0,
-      admin: 0,
-    };
-    for (const row of userCounts) {
-      if (row.role === "employee") counts.employees = Number(row.count);
-      if (row.role === "manager") counts.managers = Number(row.count);
-      if (row.role === "business_office") counts.businessOffice = Number(row.count);
-      if (row.role === "accounting") counts.accounting = Number(row.count);
-      if (row.role === "admin") counts.admin = Number(row.count);
+      res.json({
+        totalUsers,
+        usersByRole: byRole,
+        recentUsers,
+        pendingRoleAssignment: [],
+      });
+    } catch (err) {
+      req.log.error({ err }, "adminDashboard error");
+      res.status(500).json({ error: "Internal server error" });
     }
-
-    const allUsers = await db.select().from(users);
-    const userMap = new Map(allUsers.map((u) => [u.id, u]));
-
-    const requests = await db
-      .select()
-      .from(conEdRequests)
-      .orderBy(desc(conEdRequests.id))
-      .limit(10);
-
-    res.json({
-      counts,
-      recentRequests: requests,
-      employees: userMap,
-    });
-  } catch (error) {
-    req.log.error({ err: error }, "Error generating admin dashboard");
-    res.status(500).json({ error: "Failed to generate dashboard" });
-  }
-});
+  },
+);
 
 export default router;
