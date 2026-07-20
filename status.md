@@ -4,8 +4,17 @@ Last updated: 2026-07-20 by Codex
 
 ## Current State
 
-All development is on the `main` branch in Replit. The GitHub repo at
-`https://github.com/dkirk15/con-ed-request` is kept as a backup.
+GitHub `main` is the current integrated source of truth. Replit should pull `main`
+before further development or deployment, then run the authenticated E2E suite.
+
+### GitHub Integration
+
+- PR #3 (`Improve draft request workflow`) merged the Phase 2 draft lifecycle,
+  request-form redesign, receipt corrections, generated API updates, and tests.
+- PR #4 (`Patch brace-expansion Dependabot vulnerability`) merged the isolated
+  dependency hotfix into `main`.
+- Dependabot alert #1 is marked **fixed** as of 2026-07-20.
+- GitHub `main` currently points to merge commit `99765b6`.
 
 ## Project Overview
 
