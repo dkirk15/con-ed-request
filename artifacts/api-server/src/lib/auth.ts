@@ -6,6 +6,15 @@ import { eq } from "drizzle-orm";
 import { createClerkClient } from "@clerk/clerk-sdk-node";
 const clerkSdk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
+const DEFAULT_AUTHORIZED_DOMAINS = ["osstherapy.com"];
+
+class AdmissionDeniedError extends Error {
+  constructor() {
+    super("This account is not authorized to use the CE portal.");
+    this.name = "AdmissionDeniedError";
+  }
+}
+
 export type Role =
   | "employee"
   | "manager"
@@ -30,11 +39,17 @@ async function resolveOrProvisionUser(clerkId: string): Promise<typeof users.$in
 
   if (existing) return existing;
 
-  // Auto-provision: fetch name/email from Clerk and create a record with role=employee
+  // New users must pass the workforce allowlist before they are provisioned.
   try {
     const clerkUser = await clerkSdk.users.getUser(clerkId);
-    const email =
-      clerkUser.emailAddresses?.[0]?.emailAddress ?? `${clerkId}@unknown.invalid`;
+    const email = clerkUser.emailAddresses?.find(
+      (candidate) => candidate.id === clerkUser.primaryEmailAddressId,
+    )?.emailAddress ?? clerkUser.emailAddresses?.[0]?.emailAddress;
+
+    if (!email || !isAuthorizedEmail(email)) {
+      throw new AdmissionDeniedError();
+    }
+
     const name =
       [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || email;
 
@@ -43,9 +58,30 @@ async function resolveOrProvisionUser(clerkId: string): Promise<typeof users.$in
       .values({ clerkId, name, email, role: "employee" })
       .returning();
     return created;
-  } catch {
+  } catch (error) {
+    if (error instanceof AdmissionDeniedError) throw error;
     return null;
   }
+}
+
+function splitSetting(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export function isAuthorizedEmail(email: string): boolean {
+  const normalized = email.trim().toLowerCase();
+  const exactEmails = new Set(splitSetting(process.env.AUTHORIZED_EMAILS));
+  const configuredDomains = splitSetting(process.env.AUTHORIZED_EMAIL_DOMAINS)
+    .map((domain) => domain.replace(/^@/, ""));
+  const allowedDomains = new Set(
+    configuredDomains.length > 0 ? configuredDomains : DEFAULT_AUTHORIZED_DOMAINS,
+  );
+  const domain = normalized.split("@")[1];
+
+  return exactEmails.has(normalized) || Boolean(domain && allowedDomains.has(domain));
 }
 
 export async function requireAuth(
@@ -59,7 +95,18 @@ export async function requireAuth(
     return;
   }
 
-  const user = await resolveOrProvisionUser(clerkId);
+  let user: typeof users.$inferSelect | null;
+  try {
+    user = await resolveOrProvisionUser(clerkId);
+  } catch (error) {
+    if (error instanceof AdmissionDeniedError) {
+      res.status(403).json({
+        error: "This account is not authorized for the CE portal. Contact an administrator.",
+      });
+      return;
+    }
+    throw error;
+  }
   if (!user) {
     res.status(403).json({ error: "Unable to provision user. Contact your administrator." });
     return;

@@ -89,6 +89,25 @@ Suite: **23 tests, all passing** (including repayment guarantee, receipt upload,
 
 ---
 
+## Recent Changes (2026-07-11 via PR #2 - Codex)
+
+### CE Request Queues & Receipt Submission
+
+- **Request queues** — new `requestListResponse` schema with queue metadata; the
+  Requests page now renders requests grouped by queue (Pending, Active, History).
+- **Receipt submission flow** — `receipt-submission.spec.ts` E2E coverage for the
+  full upload workflow; `receiptFiles.ts` module with MIME sniffing and extension
+  validation for uploaded receipts.
+- **Role-based queue views** — employees see their own requests in structured queues;
+  managers see team requests; BO sees approval queue.
+- **Object storage improvements** — `getObjectEntityUploadURL` now accepts `requestId`
+  to scope uploads per-request; upload path normalization handles `/requests/{id}`
+  segments.
+- **Request status filtering** — `listRequestsParams` gains `status` and `queue` query
+  params for frontend filtering.
+
+---
+
 ## Recent Changes (2026-06-27)
 
 ### Security Scan & Threat Model

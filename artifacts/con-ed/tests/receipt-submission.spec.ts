@@ -66,3 +66,97 @@ test("employee uploads a receipt -> receipt_submitted", async ({
   );
   expect(receiptRows.length).toBe(1);
 });
+
+test("receipt upload URLs reject unsafe files and requests owned by someone else", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-receipt-security`);
+  const manager = await provisionUser({ role: "manager", clinicId });
+  const employee = await provisionUser({
+    role: "employee",
+    clinicId,
+    managerId: manager.dbId,
+  });
+  const otherEmployee = await provisionUser({
+    role: "employee",
+    clinicId,
+    managerId: manager.dbId,
+  });
+  const requestId = await insertRequest({
+    employeeId: employee.dbId,
+    managerId: manager.dbId,
+    status: "awaiting_receipt",
+    courseNames: "E2E Safe Receipt Course",
+    tuition: 100,
+    totalRequested: 100,
+    approvedTuition: 100,
+    totalApproved: 100,
+  });
+  const otherRequestId = await insertRequest({
+    employeeId: otherEmployee.dbId,
+    managerId: manager.dbId,
+    status: "awaiting_receipt",
+    courseNames: "E2E Other Receipt Course",
+    tuition: 100,
+    totalRequested: 100,
+    approvedTuition: 100,
+    totalApproved: 100,
+  });
+
+  await signInAs(employee);
+  await page.goto(`/requests/${requestId}`);
+
+  const statuses = await page.evaluate(
+    async ({ ownId, otherId }) => {
+      const token = await (window as any).Clerk?.session?.getToken();
+      const requestUpload = (body: object) =>
+        fetch("/api/storage/uploads/request-url", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(body),
+        });
+
+      const unsafe = await requestUpload({
+        requestId: ownId,
+        name: "receipt.svg",
+        size: 100,
+        contentType: "image/svg+xml",
+      });
+      const wrongOwner = await requestUpload({
+        requestId: otherId,
+        name: "receipt.png",
+        size: 100,
+        contentType: "image/png",
+      });
+      const signed = await requestUpload({
+        requestId: ownId,
+        name: "spoofed.png",
+        size: 12,
+        contentType: "image/png",
+      });
+      const { uploadURL, objectPath } = await signed.json();
+      await fetch(uploadURL, {
+        method: "PUT",
+        headers: { "Content-Type": "image/png" },
+        body: "not an image",
+      });
+      const spoofedContent = await fetch(`/api/requests/${ownId}/receipts`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ fileUrl: objectPath, fileName: "spoofed.png" }),
+      });
+      return [unsafe.status, wrongOwner.status, spoofedContent.status];
+    },
+    { ownId: requestId, otherId: otherRequestId },
+  );
+
+  expect(statuses).toEqual([400, 403, 400]);
+});

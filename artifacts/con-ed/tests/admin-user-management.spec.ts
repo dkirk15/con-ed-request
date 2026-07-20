@@ -44,7 +44,7 @@ test("auto-provisioned user promoted to admin edits a user via UI", async ({
   // Admin can now load the Users directory and see the target user.
   await page.goto("/users");
   await expect(
-    page.getByRole("heading", { name: "Users", exact: true }),
+    page.getByRole("heading", { name: "People", exact: true }),
   ).toBeVisible();
   await expect(page.getByText(target.email)).toBeVisible();
 
@@ -140,7 +140,7 @@ test("admin sees newly created user in Users directory", async ({
   // After a page navigation the admin directory should show the new user.
   await page.goto("/users");
   await expect(
-    page.getByRole("heading", { name: "Users", exact: true }),
+    page.getByRole("heading", { name: "People", exact: true }),
   ).toBeVisible();
   await expect(page.getByText(newEmail)).toBeVisible();
 

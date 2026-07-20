@@ -43,6 +43,7 @@ import type {
   ReimbursementInput,
   RepaymentGuarantee,
   RepaymentGuaranteeInput,
+  RequestListResponse,
   SubmitRequestInput,
   UploadUrlRequest,
   UploadUrlResponse,
@@ -773,9 +774,9 @@ export const getListRequestsUrl = (params?: ListRequestsParams,) => {
 /**
  * @summary List con-ed requests (scoped by role)
  */
-export const listRequests = async (params?: ListRequestsParams, options?: RequestInit): Promise<ConEdRequest[]> => {
+export const listRequests = async (params?: ListRequestsParams, options?: RequestInit): Promise<RequestListResponse> => {
 
-  return customFetch<ConEdRequest[]>(getListRequestsUrl(params),
+  return customFetch<RequestListResponse>(getListRequestsUrl(params),
   {
     ...options,
     method: 'GET'

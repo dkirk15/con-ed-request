@@ -234,19 +234,64 @@ paths:
           in: query
           schema:
             type: string
+            enum: [draft, pending_manager, manager_approved, manager_denied, pending_bo, bo_approved, bo_denied, awaiting_receipt, receipt_submitted, reimbursed, cancelled]
         - name: employeeId
           in: query
           schema:
             type: ["integer", "null"]
+        - name: clinicId
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 120
+        - name: year
+          in: query
+          schema:
+            type: ["integer", "null"]
+            minimum: 2000
+            maximum: 2100
+        - name: scope
+          in: query
+          schema:
+            type: string
+            enum: [all, mine, approvals]
+            default: all
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [createdAt, updatedAt, courseNames, totalRequested, status]
+            default: updatedAt
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 10
+            maximum: 100
+            default: 25
       responses:
         "200":
           description: List of requests
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ConEdRequest"
+                $ref: "#/components/schemas/RequestListResponse"
     post:
       operationId: createRequest
       tags: [requests]
@@ -1006,6 +1051,23 @@ components:
           type: string
           format: date-time
 
+    RequestListResponse:
+      type: object
+      required: [items, total, page, pageSize, totalPages]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConEdRequest"
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+
     ConEdRequestInput:
       type: object
       required: [courseNames, totalRequested]
@@ -1342,8 +1404,11 @@ components:
 
     UploadUrlRequest:
       type: object
-      required: [name, size, contentType]
+      required: [requestId, name, size, contentType]
       properties:
+        requestId:
+          type: integer
+          minimum: 1
         name:
           type: string
           minLength: 1

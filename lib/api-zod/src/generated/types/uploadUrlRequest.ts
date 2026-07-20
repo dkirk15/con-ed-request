@@ -7,6 +7,8 @@
  */
 
 export interface UploadUrlRequest {
+  /** @minimum 1 */
+  requestId: number;
   /** @minLength 1 */
   name: string;
   /** @minimum 1 */

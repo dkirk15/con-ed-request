@@ -269,6 +269,14 @@ export interface ConEdRequest {
   updatedAt: string;
 }
 
+export interface RequestListResponse {
+  items: ConEdRequest[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 export interface ConEdRequestInput {
   courseNames: string;
   /** @nullable */
@@ -419,6 +427,8 @@ export interface AdminDashboard {
 }
 
 export interface UploadUrlRequest {
+  /** @minimum 1 */
+  requestId: number;
   /** @minLength 1 */
   name: string;
   /** @minimum 1 */
@@ -453,10 +463,18 @@ export const ListUsersRole = {
 } as const;
 
 export type ListRequestsParams = {
-status?: string;
+  status?: ConEdRequestStatus;
 /**
  * @nullable
  */
-employeeId?: number | null;
+  employeeId?: number | null;
+  clinicId?: number | null;
+  search?: string;
+  year?: number | null;
+  scope?: 'all' | 'mine' | 'approvals';
+  sort?: 'createdAt' | 'updatedAt' | 'courseNames' | 'totalRequested' | 'status';
+  order?: 'asc' | 'desc';
+  page?: number;
+  pageSize?: number;
 };
 

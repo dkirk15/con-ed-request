@@ -7,9 +7,17 @@
  */
 
 export type ListRequestsParams = {
-status?: string;
+  status?: 'draft' | 'pending_manager' | 'manager_approved' | 'manager_denied' | 'pending_bo' | 'bo_approved' | 'bo_denied' | 'awaiting_receipt' | 'receipt_submitted' | 'reimbursed' | 'cancelled';
 /**
  * @nullable
  */
-employeeId?: number | null;
+  employeeId?: number | null;
+  clinicId?: number | null;
+  search?: string;
+  year?: number | null;
+  scope?: 'all' | 'mine' | 'approvals';
+  sort?: 'createdAt' | 'updatedAt' | 'courseNames' | 'totalRequested' | 'status';
+  order?: 'asc' | 'desc';
+  page?: number;
+  pageSize?: number;
 };

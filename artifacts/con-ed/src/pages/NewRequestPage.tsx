@@ -175,11 +175,11 @@ export default function NewRequestPage() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-12">
       <div className="flex items-center gap-4">
-        <Link href="/requests">
-          <Button variant="outline" size="icon" className="h-8 w-8">
+        <Button variant="outline" size="icon" className="h-8 w-8" asChild>
+          <Link href="/requests" aria-label="Back to requests">
             <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
+          </Link>
+        </Button>
         <div>
           <h1 className="text-3xl font-serif font-bold text-slate-900 tracking-tight">
             New Request

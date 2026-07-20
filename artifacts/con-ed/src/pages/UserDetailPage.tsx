@@ -165,11 +165,11 @@ export default function UserDetailPage() {
   return (
     <div className="space-y-6 max-w-2xl mx-auto pb-12">
       <div className="flex items-center gap-4">
-        <Link href="/users">
-          <Button variant="outline" size="icon" className="h-8 w-8">
+        <Button variant="outline" size="icon" className="h-8 w-8" asChild>
+          <Link href="/users" aria-label="Back to people">
             <ArrowLeft className="h-4 w-4" />
-          </Button>
-        </Link>
+          </Link>
+        </Button>
         <div>
           <h1 className="text-3xl font-serif font-bold text-slate-900 tracking-tight">Edit User</h1>
           <p className="text-slate-500 mt-1">{user.name} ({user.email})</p>
