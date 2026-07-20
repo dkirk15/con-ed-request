@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import { conEdRequests, users } from "@workspace/db/schema";
-import { eq, and, inArray, sql } from "drizzle-orm";
+import { eq, and, inArray, sql, desc } from "drizzle-orm";
 import { requireAuth, requireRole } from "../lib/auth";
 import { getUserBalance } from "../lib/balance";
 
@@ -35,7 +35,7 @@ router.get("/dashboard/employee", requireAuth, async (req: Request, res: Respons
       .select()
       .from(conEdRequests)
       .where(eq(conEdRequests.employeeId, user.id))
-      .orderBy(conEdRequests.updatedAt)
+      .orderBy(desc(conEdRequests.updatedAt))
       .limit(5);
 
     const { formatRequestSimple } = await import("./requestHelpers");
@@ -82,7 +82,7 @@ router.get(
               eq(conEdRequests.status, "pending_manager"),
             ),
           )
-          .orderBy(conEdRequests.createdAt);
+          .orderBy(desc(conEdRequests.createdAt));
 
         const yearStart = new Date(`${new Date().getFullYear()}-01-01`);
         const approvedRows = await db
@@ -107,12 +107,21 @@ router.get(
           .reduce((sum, r) => sum + parseFloat(r.totalApproved ?? "0"), 0);
       }
 
+      const myRecentRows = await db
+        .select()
+        .from(conEdRequests)
+        .where(eq(conEdRequests.employeeId, user.id))
+        .orderBy(desc(conEdRequests.updatedAt))
+        .limit(5);
+
       const { formatRequestSimple } = await import("./requestHelpers");
       const pendingClinicRequests = await Promise.all(pendingRows.map(formatRequestSimple));
+      const myRecentRequests = await Promise.all(myRecentRows.map(formatRequestSimple));
 
       res.json({
         myBalance: balance,
         pendingClinicRequests,
+        myRecentRequests,
         clinicEmployeeCount,
         requestCounts: {
           pendingMyApproval: pendingRows.length,
@@ -137,13 +146,13 @@ router.get(
         .select()
         .from(conEdRequests)
         .where(eq(conEdRequests.status, "pending_bo"))
-        .orderBy(conEdRequests.updatedAt);
+        .orderBy(desc(conEdRequests.updatedAt));
 
       const awaitingRows = await db
         .select()
         .from(conEdRequests)
         .where(eq(conEdRequests.status, "awaiting_receipt"))
-        .orderBy(conEdRequests.updatedAt);
+        .orderBy(desc(conEdRequests.updatedAt));
 
       // YTD = all requests that have passed BO approval (awaiting_receipt + receipt_submitted + reimbursed)
       const approvedYtdRows = await db
@@ -189,13 +198,13 @@ router.get(
         .select()
         .from(conEdRequests)
         .where(eq(conEdRequests.status, "receipt_submitted"))
-        .orderBy(conEdRequests.updatedAt);
+        .orderBy(desc(conEdRequests.updatedAt));
 
       const recentlyReimbursedRows = await db
         .select()
         .from(conEdRequests)
         .where(eq(conEdRequests.status, "reimbursed"))
-        .orderBy(conEdRequests.updatedAt)
+        .orderBy(desc(conEdRequests.updatedAt))
         .limit(10);
 
       const totalPendingAmount = pendingRows.reduce(

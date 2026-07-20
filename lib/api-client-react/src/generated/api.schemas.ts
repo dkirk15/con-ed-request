@@ -385,6 +385,7 @@ export type ManagerDashboardRequestCounts = {
 export interface ManagerDashboard {
   myBalance: BalanceInfo;
   pendingClinicRequests: ConEdRequest[];
+  myRecentRequests: ConEdRequest[];
   clinicEmployeeCount: number;
   requestCounts: ManagerDashboardRequestCounts;
 }

@@ -1248,11 +1248,15 @@ components:
 
     ManagerDashboard:
       type: object
-      required: [myBalance, pendingClinicRequests, clinicEmployeeCount, requestCounts]
+      required: [myBalance, pendingClinicRequests, myRecentRequests, clinicEmployeeCount, requestCounts]
       properties:
         myBalance:
           $ref: "#/components/schemas/BalanceInfo"
         pendingClinicRequests:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConEdRequest"
+        myRecentRequests:
           type: array
           items:
             $ref: "#/components/schemas/ConEdRequest"

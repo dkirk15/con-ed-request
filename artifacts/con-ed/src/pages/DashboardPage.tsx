@@ -152,7 +152,7 @@ function ManagerDashboard() {
 
   if (isLoading || !data) return <DashboardSkeleton />;
 
-  const { myBalance, pendingClinicRequests, requestCounts, clinicEmployeeCount } = data;
+  const { myBalance, pendingClinicRequests, myRecentRequests, requestCounts, clinicEmployeeCount } = data;
   const availableAllocation = myBalance.availableAllocation ?? myBalance.annualAllocation;
   const percentUsed =
     availableAllocation > 0
@@ -262,6 +262,47 @@ function ManagerDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="shadow-sm border-slate-200">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div>
+            <CardTitle className="text-lg font-serif">My Recent Requests</CardTitle>
+            <CardDescription>Your most recently updated CE funding requests</CardDescription>
+          </div>
+          <Link href="/requests">
+            <Button variant="outline" size="sm">View All</Button>
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {myRecentRequests.length === 0 ? (
+            <div className="text-center py-8 text-slate-500">
+              <FileText className="h-10 w-10 mx-auto text-slate-300 mb-3" />
+              <p>You haven't submitted any requests yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {myRecentRequests.map(req => (
+                <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors">
+                  <div className="mb-2 sm:mb-0">
+                    <h4 className="font-medium text-slate-900 line-clamp-1">{req.courseNames}</h4>
+                    <div className="text-sm text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                      <span>{req.courseDates || "TBD"}</span>
+                      <span>•</span>
+                      <span>{formatCurrency(req.totalRequested)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <StatusBadge status={req.status} />
+                    <Link href={`/requests/${req.id}`}>
+                      <Button variant="ghost" size="sm">View</Button>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
