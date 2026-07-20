@@ -41,15 +41,14 @@ test("over-budget request requires and records a repayment guarantee", async ({
   await signInAs(employee);
   await page.goto("/requests/new");
 
-  await page.getByLabel("Course Name(s)").fill("E2E Over-Budget Course");
-  // Cost inputs wrap the <input> in a div for the "$" prefix; target by step.
-  await page.locator('input[step="0.01"]').first().fill("500");
+  await page.getByLabel("Course or event name *").fill("E2E Over-Budget Course");
+  await page.getByLabel("Tuition / registration ($)").fill("500");
 
-  await expect(page.getByText(/Over budget/)).toBeVisible();
+  await expect(page.getByText(/future CE debt/)).toBeVisible();
 
   // Submit must stay disabled until both the acknowledgment box is ticked and a
   // name is typed — the acknowledgment is a hard requirement for over-budget.
-  const submitButton = page.getByRole("button", { name: "Submit Request" });
+  const submitButton = page.getByRole("button", { name: "Submit for approval" });
 
   await page
     .getByPlaceholder("Type your full name to sign")

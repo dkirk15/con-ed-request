@@ -55,7 +55,7 @@ test.describe("Approval workspace", () => {
     await page.getByLabel("Reason for denial").fill("Course is not aligned with the current clinic plan.");
     await page.getByRole("button", { name: "Confirm denial" }).click();
 
-    await expect(page.getByText("Queue is clear")).toBeVisible();
+    await expect(page.getByText("Queue is clear", { exact: true })).toBeVisible();
     const denied = await getRequest(secondRequestId);
     expect(denied?.status).toBe("manager_denied");
     expect(denied?.manager_denial_reason).toBe("Course is not aligned with the current clinic plan.");
@@ -86,7 +86,7 @@ test.describe("Approval workspace", () => {
     await page.getByRole("button", { name: "Approve and open next" }).click();
     await page.getByRole("button", { name: "Confirm approval" }).click();
 
-    await expect(page.getByText("Queue is clear")).toBeVisible();
+    await expect(page.getByText("Queue is clear", { exact: true })).toBeVisible();
     expect((await getRequest(requestId))?.status).toBe("pending_bo");
   });
 
@@ -109,7 +109,7 @@ test.describe("Approval workspace", () => {
     });
 
     await signInAs(businessOffice);
-    await page.goto(`/approvals?selected=${requestId}`);
+    await page.goto(`/approvals?selected=${requestId}&clinicId=${clinicId}`);
 
     await expect(page.getByRole("heading", { name: "CE Approvals" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "E2E Workspace Funding Comparison" })).toBeVisible();
@@ -123,7 +123,7 @@ test.describe("Approval workspace", () => {
     await expect(page.getByText(/\$700\.00 will be approved/)).toBeVisible();
     await page.getByRole("button", { name: "Confirm approval" }).click();
 
-    await expect(page.getByText("Queue is clear")).toBeVisible();
+    await expect(page.getByText("Queue is clear", { exact: true })).toBeVisible();
     const approved = await getRequest(requestId);
     expect(approved?.status).toBe("awaiting_receipt");
     expect(Number(approved?.approved_tuition)).toBe(500);

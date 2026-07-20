@@ -41,12 +41,12 @@ test("prior-year overspend shows as carry-forward debt", async ({
   // a single duplicated currency string can't mask a wrong number.
   await expect(
     page
-      .getByText("Available budget:")
-      .locator("xpath=following-sibling::span[1]"),
+      .getByText("Available now")
+      .locator("xpath=following-sibling::dd[1]"),
   ).toHaveText("$1,000.00");
   await expect(
     page
-      .getByText("Carry-forward debt:")
-      .locator("xpath=following-sibling::span[1]"),
+      .getByText("Existing future debt")
+      .locator("xpath=following-sibling::dd[1]"),
   ).toHaveText("$1,000.00");
 });

@@ -14,10 +14,11 @@ test("accounting marks a request reimbursed -> reimbursed", async ({
   const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-acct`);
   const accounting = await provisionUser({ role: "accounting" });
   const employee = await provisionUser({ role: "employee", clinicId });
+  const courseName = `E2E Reimbursement Course ${Date.now()}`;
   const requestId = await insertRequest({
     employeeId: employee.dbId,
     status: "receipt_submitted",
-    courseNames: "E2E Reimbursement Course",
+    courseNames: courseName,
     tuition: 300,
     totalRequested: 300,
     approvedTuition: 300,
@@ -31,7 +32,7 @@ test("accounting marks a request reimbursed -> reimbursed", async ({
   await page.goto("/dashboard");
   await expect(page.getByText("Ready for Reimbursement")).toBeVisible();
   // The accounting queue card lists the course name of the seeded request.
-  await expect(page.getByText("E2E Reimbursement Course")).toBeVisible();
+  await expect(page.getByText(courseName)).toBeVisible();
 
   await page.goto(`/requests/${requestId}`);
 

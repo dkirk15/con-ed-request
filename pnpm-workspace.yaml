@@ -165,3 +165,4 @@ overrides:
   js-yaml: "^4.1.0"
   qs: ">=6.15.2"
   "@babel/core": ">=7.29.6"
+  brace-expansion: "5.0.7"

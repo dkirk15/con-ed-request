@@ -610,6 +610,40 @@ router.patch("/requests/:requestId", requireAuth, async (req: Request, res: Resp
   }
 });
 
+// DELETE /api/requests/:requestId
+router.delete("/requests/:requestId", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const requestId = parseInt(req.params.requestId as string);
+    const [existing] = await db
+      .select({ id: conEdRequests.id, employeeId: conEdRequests.employeeId, status: conEdRequests.status })
+      .from(conEdRequests)
+      .where(eq(conEdRequests.id, requestId))
+      .limit(1);
+
+    if (!existing || existing.employeeId !== req.dbUser!.id) {
+      res.status(404).json({ error: "Request not found" });
+      return;
+    }
+
+    if (existing.status !== "draft") {
+      res.status(400).json({ error: "Only draft requests can be deleted" });
+      return;
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(repaymentGuarantees)
+        .where(eq(repaymentGuarantees.requestId, requestId));
+      await tx.delete(conEdRequests).where(eq(conEdRequests.id, requestId));
+    });
+
+    res.status(204).send();
+  } catch (err) {
+    req.log.error({ err }, "deleteRequest error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // POST /api/requests/:requestId/cancel
 router.post("/requests/:requestId/cancel", requireAuth, async (req: Request, res: Response) => {
   try {
@@ -1078,7 +1112,7 @@ router.post(
       ) {
         await uploadedObject.delete({ ignoreNotFound: true }).catch(() => undefined);
         res.status(400).json({
-          error: "Receipt must be a valid PDF, JPG, PNG, or WebP file no larger than 10 MB",
+          error: "Receipt must be a valid PDF, JPG, or PNG file no larger than 10 MB",
         });
         return;
       }

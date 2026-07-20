@@ -1060,6 +1060,77 @@ export const useUpdateRequest = <TError = ErrorType<unknown>,
       return useMutation(getUpdateRequestMutationOptions(options));
     }
 
+export const getDeleteRequestUrl = (requestId: number,) => {
+
+
+
+
+  return `/api/requests/${requestId}`
+}
+
+/**
+ * @summary Permanently delete a draft request
+ */
+export const deleteRequest = async (requestId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteRequestUrl(requestId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteRequestMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRequest>>, TError,{requestId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteRequest>>, TError,{requestId: number}, TContext> => {
+
+const mutationKey = ['deleteRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteRequest>>, {requestId: number}> = (props) => {
+          const {requestId} = props ?? {};
+
+          return  deleteRequest(requestId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteRequestMutationResult = NonNullable<Awaited<ReturnType<typeof deleteRequest>>>
+
+    export type DeleteRequestMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Permanently delete a draft request
+ */
+export const useDeleteRequest = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRequest>>, TError,{requestId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteRequest>>,
+        TError,
+        {requestId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteRequestMutationOptions(options));
+    }
+
 export const getSubmitRequestUrl = (requestId: number,) => {
 
 

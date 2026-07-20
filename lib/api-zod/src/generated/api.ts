@@ -602,6 +602,16 @@ export const UpdateRequestResponse = zod.object({
 
 
 /**
+ * @summary Permanently delete a draft request
+ */
+export const DeleteRequestParams = zod.object({
+  "requestId": zod.coerce.number()
+})
+
+export const DeleteRequestResponse = zod.void()
+
+
+/**
  * @summary Submit a draft request for manager review
  */
 export const SubmitRequestParams = zod.object({

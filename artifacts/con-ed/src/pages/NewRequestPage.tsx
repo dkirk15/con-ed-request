@@ -1,9 +1,17 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useLocation } from "wouter";
-import { useCreateRequest, customFetch } from "@workspace/api-client-react";
+import { Link, useLocation, useParams } from "wouter";
+import {
+  getGetRequestQueryKey,
+  useCreateRequest,
+  useDeleteRequest,
+  useGetRequest,
+  useSubmitRequest,
+  useUpdateRequest,
+  customFetch,
+} from "@workspace/api-client-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,29 +24,54 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Calculator, AlertTriangle, PenTool } from "lucide-react";
-import { Link } from "wouter";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  BookOpen,
+  CheckCircle2,
+  Clock3,
+  DollarSign,
+  FilePenLine,
+  PenTool,
+  Save,
+  Send,
+  Trash2,
+} from "lucide-react";
 import { formatCurrency } from "@/lib/constants";
 
 const formSchema = z.object({
-  courseNames: z.string().min(1, "Course name is required"),
+  courseNames: z.string().trim().min(1, "Enter the course or event name"),
   courseDates: z.string().optional(),
-  ceuCount: z.coerce.number().optional(),
+  ceuCount: z.coerce.number().min(0, "CEUs cannot be negative").optional(),
   location: z.string().optional(),
-  tuition: z.coerce.number().min(0).optional(),
-  lodging: z.coerce.number().min(0).optional(),
-  airfare: z.coerce.number().min(0).optional(),
-  rentalCar: z.coerce.number().min(0).optional(),
-  parking: z.coerce.number().min(0).optional(),
-  otherCosts: z.coerce.number().min(0).optional(),
+  tuition: z.coerce.number().min(0, "Cost cannot be negative").optional(),
+  lodging: z.coerce.number().min(0, "Cost cannot be negative").optional(),
+  airfare: z.coerce.number().min(0, "Cost cannot be negative").optional(),
+  rentalCar: z.coerce.number().min(0, "Cost cannot be negative").optional(),
+  parking: z.coerce.number().min(0, "Cost cannot be negative").optional(),
+  otherCosts: z.coerce.number().min(0, "Cost cannot be negative").optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
+type Action = "save" | "submit" | null;
 
 interface BalanceData {
   annualAllocation: number;
@@ -50,423 +83,556 @@ interface BalanceData {
   year: number;
 }
 
+const DEFAULT_VALUES: FormValues = {
+  courseNames: "",
+  courseDates: "",
+  ceuCount: undefined,
+  location: "",
+  tuition: undefined,
+  lodging: undefined,
+  airfare: undefined,
+  rentalCar: undefined,
+  parking: undefined,
+  otherCosts: undefined,
+};
+
+const COST_FIELDS = [
+  ["tuition", "Tuition / registration"],
+  ["lodging", "Lodging"],
+  ["airfare", "Airfare"],
+  ["rentalCar", "Rental car"],
+  ["parking", "Parking / tolls"],
+  ["otherCosts", "Other costs"],
+] as const;
+
+function requestToFormValues(request: {
+  courseNames: string;
+  courseDates?: string | null;
+  ceuCount?: number | null;
+  location?: string | null;
+  tuition?: number | null;
+  lodging?: number | null;
+  airfare?: number | null;
+  rentalCar?: number | null;
+  parking?: number | null;
+  otherCosts?: number | null;
+}): FormValues {
+  return {
+    courseNames: request.courseNames,
+    courseDates: request.courseDates ?? "",
+    ceuCount: request.ceuCount || undefined,
+    location: request.location ?? "",
+    tuition: request.tuition || undefined,
+    lodging: request.lodging || undefined,
+    airfare: request.airfare || undefined,
+    rentalCar: request.rentalCar || undefined,
+    parking: request.parking || undefined,
+    otherCosts: request.otherCosts || undefined,
+  };
+}
+
+function useUnsavedChanges(enabled: boolean) {
+  useEffect(() => {
+    if (!enabled) return;
+
+    const message = "You have unsaved changes. Leave this request without saving?";
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = message;
+    };
+    const handleLinkClick = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) {
+        return;
+      }
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const anchor = target.closest("a[href]");
+      if (!anchor || anchor.hasAttribute("download") || anchor.getAttribute("target") === "_blank") return;
+      if (!window.confirm(message)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("click", handleLinkClick, true);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("click", handleLinkClick, true);
+    };
+  }, [enabled]);
+}
+
+function RequestFormSkeleton() {
+  return (
+    <div className="mx-auto max-w-6xl space-y-6 pb-12">
+      <Skeleton className="h-16 w-96 max-w-full" />
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-6">
+          <Skeleton className="h-72 w-full" />
+          <Skeleton className="h-80 w-full" />
+        </div>
+        <Skeleton className="h-[430px] w-full" />
+      </div>
+    </div>
+  );
+}
+
 export default function NewRequestPage() {
+  const params = useParams<{ id?: string }>();
+  const parsedRequestId = Number(params.id);
+  const requestId = Number.isInteger(parsedRequestId) && parsedRequestId > 0 ? parsedRequestId : null;
+  const isEditing = requestId !== null;
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const createRequest = useCreateRequest();
-
+  const updateRequest = useUpdateRequest();
+  const submitRequest = useSubmitRequest();
+  const deleteRequest = useDeleteRequest();
+  const [activeDraftId, setActiveDraftId] = useState<number | null>(requestId);
+  const [activeAction, setActiveAction] = useState<Action>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const hydratedRequestId = useRef<number | null>(null);
+  const [today] = useState(() => new Date().toISOString().split("T")[0]);
   const [guaranteeName, setGuaranteeName] = useState("");
-  const [guaranteeDate, setGuaranteeDate] = useState(
-    new Date().toISOString().split("T")[0],
-  );
+  const [guaranteeDate, setGuaranteeDate] = useState(today);
   const [guaranteeAcknowledged, setGuaranteeAcknowledged] = useState(false);
 
-  const { data: balanceData } = useQuery<BalanceData>({
-    queryKey: ["/api/dashboard/employee/balance"],
-    queryFn: () =>
-      customFetch<{ balance: BalanceData }>("/api/dashboard/employee").then(
-        (d) => d.balance,
-      ),
-  });
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      courseNames: "",
-      courseDates: "",
-      ceuCount: undefined,
-      location: "",
-      tuition: 0,
-      lodging: 0,
-      airfare: 0,
-      rentalCar: 0,
-      parking: 0,
-      otherCosts: 0,
+  const requestQuery = useGetRequest(requestId ?? 0, {
+    query: {
+      enabled: isEditing,
+      queryKey: getGetRequestQueryKey(requestId ?? 0),
     },
   });
 
-  const values = form.watch();
+  const balanceQuery = useQuery<BalanceData>({
+    queryKey: ["/api/dashboard/employee/balance"],
+    queryFn: () =>
+      customFetch<{ balance: BalanceData }>("/api/dashboard/employee").then(
+        (data) => data.balance,
+      ),
+  });
+  const balanceData = balanceQuery.data;
 
-  const calculateTotal = () => {
-    return (
-      (Number(values.tuition) || 0) +
-      (Number(values.lodging) || 0) +
-      (Number(values.airfare) || 0) +
-      (Number(values.rentalCar) || 0) +
-      (Number(values.parking) || 0) +
-      (Number(values.otherCosts) || 0)
-    );
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: DEFAULT_VALUES,
+  });
+
+  useEffect(() => {
+    const request = requestQuery.data;
+    if (!request || hydratedRequestId.current === request.id) return;
+    form.reset(requestToFormValues(request));
+    setActiveDraftId(request.id);
+    hydratedRequestId.current = request.id;
+  }, [form, requestQuery.data]);
+
+  const values = form.watch();
+  const totalRequested = useMemo(
+    () =>
+      COST_FIELDS.reduce(
+        (total, [name]) => total + (Number(values[name]) || 0),
+        0,
+      ),
+    [values],
+  );
+  const remainingBudget = balanceData?.remainingAmount ?? null;
+  const projectedRemaining = remainingBudget === null ? null : remainingBudget - totalRequested;
+  const futureDebt = Math.max(0, -(projectedRemaining ?? 0));
+  const isOverBudget = projectedRemaining !== null && projectedRemaining < 0;
+  const availableAllocation = balanceData?.availableAllocation ?? balanceData?.annualAllocation ?? 0;
+  const fundingUsedAfterRequest = (balanceData?.usedAmount ?? 0) + (balanceData?.pendingAmount ?? 0) + totalRequested;
+  const fundingPercent = availableAllocation > 0
+    ? Math.min(100, Math.round((fundingUsedAfterRequest / availableAllocation) * 100))
+    : totalRequested > 0 ? 100 : 0;
+  const guaranteeChanged = guaranteeName.trim() !== "" || guaranteeAcknowledged || guaranteeDate !== today;
+  const hasUnsavedChanges = form.formState.isDirty || guaranteeChanged;
+  const isBusy = createRequest.isPending || updateRequest.isPending || submitRequest.isPending || deleteRequest.isPending;
+
+  useUnsavedChanges(hasUnsavedChanges);
+
+  const requestPayload = (data: FormValues) => ({
+    ...data,
+    courseNames: data.courseNames.trim(),
+    courseDates: data.courseDates?.trim() || null,
+    location: data.location?.trim() || null,
+    totalRequested,
+  });
+
+  const persistDraft = async (data: FormValues) => {
+    const payload = requestPayload(data);
+    if (activeDraftId) {
+      return updateRequest.mutateAsync({ requestId: activeDraftId, data: payload });
+    }
+    const created = await createRequest.mutateAsync({ data: payload });
+    setActiveDraftId(created.id);
+    return created;
   };
 
-  const totalRequested = calculateTotal();
-  const remainingBudget = balanceData?.remainingAmount ?? null;
-  const isOverBudget =
-    remainingBudget !== null && totalRequested > remainingBudget;
+  const invalidateRequestData = (id?: number) => {
+    queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/dashboard/employee/balance"] });
+    if (id) queryClient.invalidateQueries({ queryKey: getGetRequestQueryKey(id) });
+  };
 
-  const onSubmit = async (data: FormValues) => {
-    if (
-      isOverBudget &&
-      (!guaranteeName.trim() || !guaranteeDate.trim() || !guaranteeAcknowledged)
-    ) {
+  const saveDraft = async (data: FormValues) => {
+    setActiveAction("save");
+    try {
+      const saved = await persistDraft(data);
+      form.reset(requestToFormValues(saved));
+      setLastSavedAt(new Date());
+      invalidateRequestData(saved.id);
       toast({
-        title: "Repayment guarantee required",
-        description:
-          "This request exceeds your available budget. Please read the repayment policy, check the acknowledgment box, and enter your full name and today's date to sign.",
+        title: "Draft saved",
+        description: "You can return to My Requests and continue this request later.",
+      });
+      if (!isEditing) {
+        setLocation(`/requests/${saved.id}/edit`, { replace: true });
+      }
+    } catch (error: unknown) {
+      toast({
+        title: "Draft was not saved",
+        description: error instanceof Error ? error.message : "Check your connection and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setActiveAction(null);
+    }
+  };
+
+  const submitForApproval = async (data: FormValues) => {
+    if (isOverBudget && (!guaranteeName.trim() || !guaranteeDate || !guaranteeAcknowledged)) {
+      toast({
+        title: "Complete the repayment guarantee",
+        description: "A signed repayment guarantee is required because this request exceeds your available CE balance.",
         variant: "destructive",
       });
       return;
     }
 
-    createRequest.mutate(
-      { data: { ...data, totalRequested } },
-      {
-        onSuccess: async (response) => {
-          // Immediately submit the draft — passes guarantee data for over-budget requests
-          try {
-            await customFetch(`/api/requests/${response.id}/submit`, {
-              method: "POST",
-              body: JSON.stringify(
-                isOverBudget
-                  ? {
-                      guaranteeSignedName: guaranteeName.trim(),
-                      guaranteeSignedDate: guaranteeDate,
-                      guaranteeAcknowledged: true,
-                    }
-                  : {},
-              ),
-            });
-          } catch (err: unknown) {
-            const msg =
-              err instanceof Error ? err.message : "Failed to submit request";
-            toast({
-              title: "Submission failed",
-              description: msg,
-              variant: "destructive",
-            });
-            setLocation(`/requests/${response.id}`);
-            return;
-          }
-
-          queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
-          queryClient.invalidateQueries({
-            queryKey: ["/api/dashboard/employee/balance"],
-          });
-          toast({
-            title: "Request submitted",
-            description:
-              "Your continuing education request has been submitted for manager review.",
-          });
-          setLocation(`/requests/${response.id}`);
-        },
-        onError: (error: unknown) => {
-          const msg =
-            error instanceof Error ? error.message : "Failed to submit request";
-          toast({
-            title: "Submission failed",
-            description: msg,
-            variant: "destructive",
-          });
-        },
-      },
-    );
+    setActiveAction("submit");
+    let savedId = activeDraftId;
+    try {
+      const saved = await persistDraft(data);
+      savedId = saved.id;
+      await submitRequest.mutateAsync({
+        requestId: saved.id,
+        data: isOverBudget
+          ? {
+              guaranteeSignedName: guaranteeName.trim(),
+              guaranteeSignedDate: guaranteeDate,
+              guaranteeAcknowledged: true,
+            }
+          : {},
+      });
+      invalidateRequestData(saved.id);
+      toast({
+        title: "Request submitted",
+        description: "Your request is now waiting for manager approval. Do not purchase until final approval.",
+      });
+      setLocation(`/requests/${saved.id}`);
+    } catch (error: unknown) {
+      toast({
+        title: "Request was saved but not submitted",
+        description: error instanceof Error ? error.message : "Open the draft and try submitting again.",
+        variant: "destructive",
+      });
+      if (!isEditing && savedId) {
+        setLocation(`/requests/${savedId}/edit`, { replace: true });
+      }
+    } finally {
+      setActiveAction(null);
+    }
   };
 
+  const leaveForm = () => {
+    if (hasUnsavedChanges && !window.confirm("You have unsaved changes. Leave this request without saving?")) {
+      return;
+    }
+    setLocation("/requests");
+  };
+
+  const removeDraft = async () => {
+    if (!activeDraftId) return;
+    try {
+      await deleteRequest.mutateAsync({ requestId: activeDraftId });
+      invalidateRequestData();
+      toast({ title: "Draft deleted", description: "The draft has been permanently removed." });
+      setLocation("/requests?status=draft");
+    } catch (error: unknown) {
+      toast({
+        title: "Draft was not deleted",
+        description: error instanceof Error ? error.message : "Try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (isEditing && requestQuery.isLoading) return <RequestFormSkeleton />;
+
+  if (isEditing && (requestQuery.isError || !requestQuery.data)) {
+    return (
+      <Card className="mx-auto max-w-xl border-slate-200">
+        <CardHeader>
+          <CardTitle>Draft could not be opened</CardTitle>
+          <CardDescription>
+            {requestQuery.error instanceof Error ? requestQuery.error.message : "The request may no longer exist."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent><Button asChild><Link href="/requests">Return to requests</Link></Button></CardContent>
+      </Card>
+    );
+  }
+
+  if (requestQuery.data && requestQuery.data.status !== "draft") {
+    return (
+      <Card className="mx-auto max-w-xl border-slate-200">
+        <CardHeader>
+          <CardTitle>This request has already been submitted</CardTitle>
+          <CardDescription>Submitted requests cannot be edited. Open the request to review its current status.</CardDescription>
+        </CardHeader>
+        <CardContent><Button asChild><Link href={`/requests/${requestQuery.data.id}`}>View request</Link></Button></CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-12">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-          <Link href="/requests" aria-label="Back to requests">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
+    <div className="mx-auto max-w-6xl space-y-6 pb-12">
+      <header className="flex items-start gap-4">
+        <Button variant="outline" size="icon" className="mt-1 h-9 w-9 shrink-0" onClick={leaveForm} aria-label="Back to requests">
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         </Button>
-        <div>
-          <h1 className="text-3xl font-serif font-bold text-slate-900 tracking-tight">
-            New Request
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Request planning</p>
+            <span className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-600">
+              {activeDraftId ? `Draft #${activeDraftId}` : "Not saved"}
+            </span>
+          </div>
+          <h1 className="mt-1 text-3xl font-serif font-bold text-slate-950">
+            {isEditing ? "Continue your CE request" : "New CE request"}
           </h1>
-          <p className="text-slate-500 mt-1">
-            Submit a new continuing education funding request
-          </p>
+          <p className="mt-1 text-slate-500">Plan the course and estimated costs before sending it for approval.</p>
         </div>
-      </div>
+      </header>
 
-      {balanceData && (
-        <div className="flex items-center gap-6 bg-slate-50 rounded-lg border border-slate-200 px-5 py-3 text-sm">
-          <span className="text-slate-500">Available budget:</span>
-          <span className="font-semibold">
-            {formatCurrency(balanceData.availableAllocation ?? balanceData.annualAllocation)}
-          </span>
-          {balanceData.carryoverDebt ? (
-            <>
-              <span className="text-slate-500">Carry-forward debt:</span>
-              <span className="font-semibold text-amber-700">
-                {formatCurrency(balanceData.carryoverDebt)}
-              </span>
-            </>
-          ) : null}
-          <span className="text-slate-500">Used / Pending:</span>
-          <span className="font-semibold">
-            {formatCurrency(balanceData.usedAmount)} /{" "}
-            {formatCurrency(balanceData.pendingAmount)}
-          </span>
-          <span className="text-slate-500">Remaining:</span>
-          <span
-            className={`font-semibold ${balanceData.remainingAmount < 0 ? "text-red-600" : "text-green-700"}`}
-          >
-            {formatCurrency(balanceData.remainingAmount)}
-          </span>
-        </div>
-      )}
-
-      <Alert className="border-amber-200 bg-amber-50 text-amber-900">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>Wait for approval before purchasing</AlertTitle>
+      <Alert className="border-amber-300 bg-amber-50 text-amber-950">
+        <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+        <AlertTitle>Get approval before making a purchase</AlertTitle>
         <AlertDescription>
-          Submit this request and wait for both manager and Business Office approval
-          before registering, paying for the course, or booking travel. Receipt upload
-          becomes available after final approval.
+          Wait for both manager and Business Office approval before registering, paying, or booking travel. Receipt upload becomes available after final approval.
         </AlertDescription>
       </Alert>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <Card className="shadow-sm border-slate-200">
-            <CardHeader>
-              <CardTitle className="font-serif">Course Details</CardTitle>
-              <CardDescription>
-                Information about the continuing education course or event
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="courseNames"
-                render={({ field }) => (
-                  <FormItem className="md:col-span-2">
-                    <FormLabel>Course Name(s)</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="E.g. Advanced Orthopedic Manual Therapy"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="courseDates"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Course Dates</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="E.g. Oct 12–14, 2025"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="E.g. Seattle, WA or Online"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="ceuCount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Expected CEUs</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.5"
-                        placeholder="0"
-                        {...field}
-                        value={field.value || ""}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Number of continuing education units
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-          </Card>
+        <form onSubmit={(event) => event.preventDefault()} className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-6">
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader className="border-b border-slate-100">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-md bg-primary/10 p-2 text-primary"><BookOpen className="h-5 w-5" aria-hidden="true" /></div>
+                  <div>
+                    <CardTitle className="font-serif">Course details</CardTitle>
+                    <CardDescription>Tell reviewers what you plan to attend.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="grid gap-6 pt-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="courseNames"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Course or event name <span className="text-destructive">*</span></FormLabel>
+                      <FormControl><Input placeholder="Advanced Orthopedic Manual Therapy" autoComplete="off" autoFocus {...field} /></FormControl>
+                      <FormDescription>This is the only field required to save a draft.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="courseDates"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Course dates</FormLabel>
+                      <FormControl><Input placeholder="October 12-14, 2026" autoComplete="off" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location or delivery method</FormLabel>
+                      <FormControl><Input placeholder="Seattle, WA or online" autoComplete="off" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="ceuCount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Expected CEUs</FormLabel>
+                      <FormControl><Input type="number" min="0" step="0.5" placeholder="0" autoComplete="off" {...field} value={field.value ?? ""} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
 
-          <Card className="shadow-sm border-slate-200">
-            <CardHeader>
-              <CardTitle className="font-serif">Estimated Costs</CardTitle>
-              <CardDescription>
-                Breakdown of requested funding amounts
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                {(
-                  [
-                    ["tuition", "Tuition / Registration"],
-                    ["lodging", "Lodging"],
-                    ["airfare", "Airfare"],
-                    ["rentalCar", "Rental Car"],
-                    ["parking", "Parking / Tolls"],
-                    ["otherCosts", "Other Costs"],
-                  ] as const
-                ).map(([name, label]) => (
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader className="border-b border-slate-100">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-md bg-primary/10 p-2 text-primary"><DollarSign className="h-5 w-5" aria-hidden="true" /></div>
+                  <div>
+                    <CardTitle className="font-serif">Estimated costs</CardTitle>
+                    <CardDescription>Enter the amount you expect OSS to fund in each category.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="grid gap-6 pt-6 sm:grid-cols-2">
+                {COST_FIELDS.map(([name, label]) => (
                   <FormField
                     key={name}
                     control={form.control}
                     name={name}
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{label}</FormLabel>
+                        <FormLabel>{label} ($)</FormLabel>
                         <FormControl>
-                          <div className="relative">
-                            <span className="absolute left-3 top-2.5 text-slate-500">
-                              $
-                            </span>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              className="pl-7"
-                              {...field}
-                              value={field.value || ""}
-                            />
-                          </div>
+                          <Input type="number" min="0" step="0.01" inputMode="decimal" autoComplete="off" {...field} value={field.value ?? ""} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 ))}
-              </div>
+              </CardContent>
+            </Card>
 
-              <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex items-center justify-between">
-                <div className="flex items-center text-slate-700 font-medium">
-                  <Calculator className="h-5 w-5 mr-2 text-slate-400" />
-                  Total Requested Funding
-                </div>
-                <div
-                  className={`text-2xl font-bold ${isOverBudget ? "text-red-600" : "text-slate-900"}`}
-                >
-                  {formatCurrency(totalRequested)}
-                </div>
-              </div>
+            {isOverBudget && (
+              <Card className="border-amber-300 bg-amber-50/60 shadow-sm">
+                <CardHeader>
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-md bg-amber-100 p-2 text-amber-800"><PenTool className="h-5 w-5" aria-hidden="true" /></div>
+                    <div>
+                      <CardTitle className="font-serif text-amber-950">OSS repayment guarantee</CardTitle>
+                      <CardDescription className="mt-2 leading-relaxed text-amber-900">
+                        Olympic Sports &amp; Spine (OSS) has advanced to me continuing education funding upon my request. To reimburse OSS for this advance, I agree to designate continuing education benefits that will be accrued through my future work hours in the amount necessary to satisfy this debt. In the event that my employment with OSS is terminated, either voluntarily or involuntarily, I agree to repay OSS for any advanced continuing education balance that remains unsatisfied after all future benefit accruals are applied.
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-start gap-3">
+                    <Checkbox id="guarantee-acknowledgment" checked={guaranteeAcknowledged} onCheckedChange={(checked) => setGuaranteeAcknowledged(checked === true)} className="mt-0.5" />
+                    <label htmlFor="guarantee-acknowledgment" className="cursor-pointer text-sm leading-6 text-amber-950">
+                      I agree to conduct business electronically and understand that typing my name below acts as my legally binding signature to the full terms of this OSS Repayment Policy.
+                    </label>
+                  </div>
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label htmlFor="guarantee-name" className="text-sm font-medium text-amber-950">Full legal name <span className="text-destructive">*</span></label>
+                      <Input id="guarantee-name" value={guaranteeName} onChange={(event) => setGuaranteeName(event.target.value)} placeholder="Type your full name to sign" autoComplete="name" className="border-amber-300 bg-white" />
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="guarantee-date" className="text-sm font-medium text-amber-950">Date <span className="text-destructive">*</span></label>
+                      <Input id="guarantee-date" type="date" value={guaranteeDate} onChange={(event) => setGuaranteeDate(event.target.value)} autoComplete="off" className="border-amber-300 bg-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
-              {isOverBudget && (
-                <Alert variant="destructive" className="mt-4">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>Over budget by {formatCurrency(totalRequested - (remainingBudget ?? 0))}</AlertTitle>
-                  <AlertDescription>
-                    This request exceeds your remaining annual budget of{" "}
-                    {formatCurrency(remainingBudget ?? 0)}. Per OSS policy, you
-                    must review and sign the OSS Repayment Policy below before
-                    submitting.
-                  </AlertDescription>
-                </Alert>
-              )}
-            </CardContent>
-          </Card>
-
-          {isOverBudget && (
-            <Card className="shadow-sm border-orange-200 bg-orange-50">
-              <CardHeader>
-                <CardTitle className="font-serif flex items-center gap-2 text-orange-900">
-                  <PenTool className="h-5 w-5" />
-                  OSS Repayment Policy
+          <aside className="space-y-4 xl:sticky xl:top-6">
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 font-serif text-lg">
+                  <FilePenLine className="h-5 w-5 text-primary" aria-hidden="true" />
+                  Funding impact
                 </CardTitle>
-                <CardDescription className="text-orange-800 leading-relaxed">
-                  Olympic Sports &amp; Spine (OSS) has advanced to me continuing
-                  education funding upon my request. To reimburse OSS for this
-                  advance, I agree to designate continuing education benefits
-                  that will be accrued through my future work hours in the amount
-                  necessary to satisfy this debt. In the event that my
-                  employment with OSS is terminated, either voluntarily or
-                  involuntarily, I agree to repay OSS for any advanced continuing
-                  education balance that remains unsatisfied after all future
-                  benefit accruals are applied.
-                </CardDescription>
+                <CardDescription>Estimated against your current CE balance.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <Checkbox
-                    checked={guaranteeAcknowledged}
-                    onCheckedChange={(checked) =>
-                      setGuaranteeAcknowledged(checked === true)
-                    }
-                    className="mt-0.5 border-orange-400 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600"
-                  />
-                  <span className="text-sm text-orange-900">
-                    I agree to conduct business electronically and understand
-                    that typing my name below acts as my legally binding
-                    signature to the full terms of this OSS Repayment Policy.
-                  </span>
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-orange-900">
-                      Full Legal Name <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      placeholder="Type your full name to sign"
-                      value={guaranteeName}
-                      onChange={(e) => setGuaranteeName(e.target.value)}
-                      className="border-orange-300 bg-white"
-                    />
+              <CardContent className="space-y-5">
+                <div>
+                  <div className="flex items-end justify-between gap-3">
+                    <span className="text-sm text-slate-500">Request total</span>
+                    <span className="text-2xl font-bold tabular-nums text-slate-950">{formatCurrency(totalRequested)}</span>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-orange-900">
-                      Date <span className="text-red-500">*</span>
-                    </label>
-                    <Input
-                      type="date"
-                      value={guaranteeDate}
-                      onChange={(e) => setGuaranteeDate(e.target.value)}
-                      className="border-orange-300 bg-white"
-                    />
+                  <Progress value={fundingPercent} className={`mt-3 ${isOverBudget ? "[&>div]:bg-amber-600" : ""}`} aria-label={`${fundingPercent}% of available funding committed after this request`} />
+                </div>
+                <Separator />
+                <dl className="space-y-3 text-sm">
+                  <div className="flex justify-between gap-3"><dt className="text-slate-500">Available now</dt><dd className="font-medium tabular-nums">{remainingBudget === null ? balanceQuery.isError ? "Unavailable" : "Loading" : formatCurrency(remainingBudget)}</dd></div>
+                  <div className="flex justify-between gap-3"><dt className="text-slate-500">Used</dt><dd className="font-medium tabular-nums">{formatCurrency(balanceData?.usedAmount ?? 0)}</dd></div>
+                  <div className="flex justify-between gap-3"><dt className="text-slate-500">Pending</dt><dd className="font-medium tabular-nums">{formatCurrency(balanceData?.pendingAmount ?? 0)}</dd></div>
+                  {Boolean(balanceData?.carryoverDebt) && (
+                    <div className="flex justify-between gap-3"><dt className="text-slate-500">Existing future debt</dt><dd className="font-medium tabular-nums text-amber-800">{formatCurrency(balanceData?.carryoverDebt ?? 0)}</dd></div>
+                  )}
+                </dl>
+                {balanceQuery.isError && (
+                  <p className="text-xs leading-5 text-destructive">Your balance could not be loaded. Save this draft and try submitting again.</p>
+                )}
+                <div className={`rounded-md border p-3 ${isOverBudget ? "border-amber-300 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
+                  <div className="flex items-start gap-2">
+                    {isOverBudget ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" aria-hidden="true" /> : <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden="true" />}
+                    <div>
+                      <p className={`text-sm font-semibold ${isOverBudget ? "text-amber-950" : "text-emerald-950"}`}>
+                        {isOverBudget ? `${formatCurrency(futureDebt)} future CE debt` : `${formatCurrency(Math.max(0, projectedRemaining ?? 0))} projected remaining`}
+                      </p>
+                      <p className={`mt-1 text-xs leading-5 ${isOverBudget ? "text-amber-800" : "text-emerald-800"}`}>
+                        {isOverBudget ? "A repayment guarantee is required before submission." : "This request is within your currently available balance."}
+                      </p>
+                    </div>
                   </div>
+                </div>
+                <Separator />
+                <div className="space-y-2">
+                  <Button type="button" className="w-full" disabled={isBusy || !balanceData || (isOverBudget && (!guaranteeName.trim() || !guaranteeDate || !guaranteeAcknowledged))} onClick={form.handleSubmit(submitForApproval)}>
+                    <Send className="h-4 w-4" aria-hidden="true" />
+                    {activeAction === "submit" ? "Submitting" : "Submit for approval"}
+                  </Button>
+                  <Button type="button" variant="outline" className="w-full" disabled={isBusy} onClick={form.handleSubmit(saveDraft)}>
+                    <Save className="h-4 w-4" aria-hidden="true" />
+                    {activeAction === "save" ? "Saving" : "Save draft"}
+                  </Button>
+                  <Button type="button" variant="ghost" className="w-full text-slate-600" disabled={isBusy} onClick={leaveForm}>Cancel</Button>
+                </div>
+                <div className="flex items-start gap-2 text-xs leading-5 text-slate-500">
+                  <Clock3 className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span>{lastSavedAt ? `Saved at ${lastSavedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : activeDraftId ? "Changes are not saved automatically." : "Save a draft to continue later."}</span>
                 </div>
               </CardContent>
             </Card>
-          )}
 
-          <div className="flex justify-end gap-4">
-            <Link href="/requests">
-              <Button type="button" variant="outline">
-                Cancel
-              </Button>
-            </Link>
-            <Button
-              type="submit"
-              disabled={
-                createRequest.isPending ||
-                (isOverBudget &&
-                  (!guaranteeName.trim() ||
-                    !guaranteeDate.trim() ||
-                    !guaranteeAcknowledged))
-              }
-              className="min-w-[150px]"
-            >
-              {createRequest.isPending ? "Submitting…" : "Submit Request"}
-            </Button>
-          </div>
+            {activeDraftId && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" variant="ghost" className="w-full text-destructive hover:bg-destructive/5 hover:text-destructive" disabled={isBusy}>
+                    <Trash2 className="h-4 w-4" aria-hidden="true" /> Delete draft
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this draft?</AlertDialogTitle>
+                    <AlertDialogDescription>This permanently removes the request. This action cannot be undone.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep draft</AlertDialogCancel>
+                    <AlertDialogAction onClick={removeDraft} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete draft</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </aside>
         </form>
       </Form>
     </div>
