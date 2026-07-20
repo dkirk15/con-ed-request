@@ -1,5 +1,6 @@
 import { SignIn } from "@clerk/react";
 import logo from "@assets/oss-logo-white.png";
+import ptBg from "@assets/pt-login-bg.png";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -27,7 +28,7 @@ export default function SignInPage() {
       </div>
       
       <div className="hidden flex-1 bg-secondary flex-col items-center justify-center lg:flex p-12 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10 bg-[url('/pt-login-bg.png')] bg-cover bg-center"></div>
+        <div className="absolute inset-0 opacity-30 bg-cover bg-center" style={{ backgroundImage: `url(${ptBg})` }}></div>
         <div className="relative z-10 max-w-md text-center">
           <img src={logo} alt="OSS Logo" className="h-16 mx-auto mb-8" />
           <h1 className="text-4xl font-serif font-bold text-white mb-4">Continuing Education Portal</h1>
