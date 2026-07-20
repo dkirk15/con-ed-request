@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useLocation, useParams } from "wouter";
 import { 
+  useDeleteRequest,
   useGetRequest, 
   useGetMe,
   getGetRequestQueryKey,
@@ -9,11 +10,12 @@ import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Upload, FileText, Check, X, CreditCard, PenTool } from "lucide-react";
+import { ArrowLeft, Upload, FileText, Check, X, CreditCard, PenTool, Pencil, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { formatCurrency, formatDate } from "@/lib/constants";
 import { StatusBadge } from "@/components/StatusBadge";
 import { RepaymentGuaranteeDialog } from "@/components/RepaymentGuaranteeDialog";
+import { RequestTimeline } from "@/components/RequestTimeline";
 import { useToast } from "@/hooks/use-toast";
 import { customFetch } from "@workspace/api-client-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -37,7 +39,6 @@ const ALLOWED_RECEIPT_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
   "image/png",
-  "image/webp",
 ]);
 
 // Adding local mutation definitions since they aren't fully typed out or readily available in our minimal check
@@ -122,6 +123,7 @@ const useSubmitReceipt = () => {
 export default function RequestDetailPage() {
   const params = useParams();
   const id = Number(params.id);
+  const [, setLocation] = useLocation();
   const { data: user } = useGetMe();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -131,6 +133,7 @@ export default function RequestDetailPage() {
   });
 
   const cancelMutation = useCancelRequest();
+  const deleteMutation = useDeleteRequest();
   const managerApproveMutation = useManagerApproveRequest();
   const managerDenyMutation = useManagerDenyRequest();
   const boApproveMutation = useBoApproveRequest();
@@ -176,7 +179,7 @@ export default function RequestDetailPage() {
     if (!ALLOWED_RECEIPT_TYPES.has(file.type)) {
       toast({
         title: "Unsupported receipt type",
-        description: "Choose a PDF, JPG, PNG, or WebP file.",
+        description: "Choose a PDF, JPG, or PNG file.",
         variant: "destructive",
       });
       e.target.value = "";
@@ -271,31 +274,63 @@ export default function RequestDetailPage() {
               Request #{request.id}
               <StatusBadge status={request.status} />
             </h1>
-            <p className="text-slate-500 mt-1">Submitted on {formatDate(request.createdAt)}</p>
+            <p className="text-slate-500 mt-1">Created on {formatDate(request.createdAt)}</p>
           </div>
         </div>
         
         {/* Actions Menu */}
         <div className="flex flex-wrap gap-2">
           {isMyRequest && request.status === "draft" && (
-            <Button
-              onClick={async () => {
-                try {
-                  await customFetch(`/api/requests/${id}/submit`, { method: "POST", body: JSON.stringify({}) });
-                  toast({ title: "Submitted", description: "Your request has been submitted for manager review." });
-                  queryClient.invalidateQueries({ queryKey: getGetRequestQueryKey(id) });
-                  queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
-                } catch (err: any) {
-                  toast({ title: "Error", description: err.message || "Failed to submit", variant: "destructive" });
-                }
-              }}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              Submit Request
-            </Button>
+            <>
+              <Button asChild>
+                <Link href={`/requests/${id}/edit`}>
+                  <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Continue editing
+                </Link>
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800">
+                    <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                    Delete draft
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this draft?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This permanently removes the request. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep draft</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() => deleteMutation.mutate(
+                        { requestId: id },
+                        {
+                          onSuccess: () => {
+                            queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
+                            toast({ title: "Draft deleted", description: "The draft has been permanently removed." });
+                            setLocation("/requests?status=draft");
+                          },
+                          onError: (error: unknown) => toast({
+                            title: "Draft was not deleted",
+                            description: error instanceof Error ? error.message : "Try again.",
+                            variant: "destructive",
+                          }),
+                        },
+                      )}
+                    >
+                      Delete draft
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
           )}
 
-          {isMyRequest && (request.status === "draft" || request.status === "pending_manager") && (
+          {isMyRequest && request.status === "pending_manager" && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive">Cancel Request</Button>
@@ -343,9 +378,30 @@ export default function RequestDetailPage() {
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-              <Button onClick={() => handleAction(managerApproveMutation, id, "Request approved by manager")} className="bg-green-600 hover:bg-green-700 text-white">
-                <Check className="mr-2 h-4 w-4" /> Approve
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button className="bg-green-600 hover:bg-green-700 text-white">
+                    <Check className="mr-2 h-4 w-4" /> Approve
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Approve request #{request.id}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {request.employeeName}&apos;s {formatCurrency(request.totalRequested)} request will move to the Business Office queue. Your name and approval time will be recorded.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Go Back</AlertDialogCancel>
+                    <AlertDialogAction
+                      disabled={managerApproveMutation.isPending}
+                      onClick={() => handleAction(managerApproveMutation, id, "Request approved by manager")}
+                    >
+                      Confirm Approval
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </>
           )}
 
@@ -430,7 +486,7 @@ export default function RequestDetailPage() {
                 type="file"
                 className="hidden"
                 onChange={handleFileSelect}
-                accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
               />
               {pendingReceiptFile ? (
                 <div className="flex items-center gap-2">
@@ -645,68 +701,10 @@ export default function RequestDetailPage() {
         <div className="space-y-6">
           <Card className="shadow-sm border-slate-200">
             <CardHeader className="border-b border-slate-100 bg-slate-50/50">
-              <CardTitle className="font-serif">Status Timeline</CardTitle>
+              <CardTitle className="font-serif">Request Timeline</CardTitle>
             </CardHeader>
-            <CardContent className="p-6 space-y-6">
-              
-              <div className="relative pl-6 border-l-2 border-slate-200 space-y-6">
-                
-                <div className="relative">
-                  <div className="absolute -left-[31px] bg-slate-200 p-1 rounded-full"><Check className="h-3 w-3 text-white" /></div>
-                  <h4 className="text-sm font-semibold text-slate-900">Submitted</h4>
-                  <p className="text-xs text-slate-500 mt-1">{formatDate(request.createdAt)} by {request.employeeName}</p>
-                </div>
-
-                {request.managerApprovedAt && (
-                  <div className="relative">
-                    <div className="absolute -left-[31px] bg-green-500 p-1 rounded-full"><Check className="h-3 w-3 text-white" /></div>
-                    <h4 className="text-sm font-semibold text-slate-900">Manager Approved</h4>
-                    <p className="text-xs text-slate-500 mt-1">{formatDate(request.managerApprovedAt)} by {request.managerName}</p>
-                  </div>
-                )}
-                {request.managerDeniedAt && (
-                  <div className="relative">
-                    <div className="absolute -left-[31px] bg-red-500 p-1 rounded-full"><X className="h-3 w-3 text-white" /></div>
-                    <h4 className="text-sm font-semibold text-slate-900">Manager Denied</h4>
-                    <p className="text-xs text-slate-500 mt-1">{formatDate(request.managerDeniedAt)} by {request.managerName}</p>
-                    <p className="text-xs mt-2 bg-red-50 text-red-800 p-2 rounded border border-red-100">{request.managerDenialReason}</p>
-                  </div>
-                )}
-
-                {request.boApprovedAt && (
-                  <div className="relative">
-                    <div className="absolute -left-[31px] bg-green-500 p-1 rounded-full"><Check className="h-3 w-3 text-white" /></div>
-                    <h4 className="text-sm font-semibold text-slate-900">Business Office Approved</h4>
-                    <p className="text-xs text-slate-500 mt-1">{formatDate(request.boApprovedAt)} by {request.boApproverName}</p>
-                  </div>
-                )}
-                {request.boDeniedAt && (
-                  <div className="relative">
-                    <div className="absolute -left-[31px] bg-red-500 p-1 rounded-full"><X className="h-3 w-3 text-white" /></div>
-                    <h4 className="text-sm font-semibold text-slate-900">Business Office Denied</h4>
-                    <p className="text-xs text-slate-500 mt-1">{formatDate(request.boDeniedAt)} by {request.boApproverName}</p>
-                    <p className="text-xs mt-2 bg-red-50 text-red-800 p-2 rounded border border-red-100">{request.boDenialReason}</p>
-                  </div>
-                )}
-                
-                {request.receipts && request.receipts.length > 0 && (
-                  <div className="relative">
-                    <div className="absolute -left-[31px] bg-blue-500 p-1 rounded-full"><FileText className="h-3 w-3 text-white" /></div>
-                    <h4 className="text-sm font-semibold text-slate-900">Receipts Submitted</h4>
-                    <p className="text-xs text-slate-500 mt-1">{formatDate(request.receipts[0].uploadedAt)}</p>
-                  </div>
-                )}
-
-                {request.reimbursement && (
-                  <div className="relative">
-                    <div className="absolute -left-[31px] bg-green-500 p-1 rounded-full"><CreditCard className="h-3 w-3 text-white" /></div>
-                    <h4 className="text-sm font-semibold text-slate-900">Reimbursed</h4>
-                    <p className="text-xs text-slate-500 mt-1">Processed {formatDate(request.reimbursement.markedAt)}</p>
-                    <p className="text-xs font-medium text-slate-700 mt-1">Paycheck Date: {formatDate(request.reimbursement.paycheckDate)}</p>
-                  </div>
-                )}
-
-              </div>
+            <CardContent className="p-6">
+              <RequestTimeline request={request} />
             </CardContent>
           </Card>
           

@@ -1,11 +1,22 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-20 by Replit Agent
+Last updated: 2026-07-20 by Codex
 
 ## Current State
 
-All development is on the `main` branch in Replit. The GitHub repo at
-`https://github.com/dkirk15/con-ed-request` is kept as a backup.
+GitHub `main` is the current integrated source of truth. Replit should pull `main`
+before further development or deployment, then run the authenticated E2E suite.
+
+### GitHub Integration
+
+- PR #3 (`Improve draft request workflow`) merged the Phase 2 draft lifecycle,
+  request-form redesign, receipt corrections, generated API updates, and tests.
+- PR #4 (`Patch brace-expansion Dependabot vulnerability`) merged the isolated
+  dependency hotfix into `main`.
+- Dependabot alert #1 is marked **fixed** as of 2026-07-20.
+- GitHub `main` currently points to merge commit `e8a1fb9`.
+- Phase 3 approval-workspace work is in progress on
+  `codex/phase-3-approval-workspace` and has not yet been pushed.
 
 ## Project Overview
 
@@ -22,6 +33,111 @@ Annual CE benefit is $2,000 per employee, prorated in the hire year, with advanc
 - Database: `lib/db` - Drizzle schema and seed scripts
 - Auth: Clerk with Microsoft SSO; frontend uses `VITE_CLERK_PUBLISHABLE_KEY`, backend uses `CLERK_SECRET_KEY`
 - Validation: `codegen-drift` validation step guards against API contract drift
+
+---
+
+## Recent Changes (2026-07-20 via Codex - Approval Workspace)
+
+### Manager and Business Office Review
+
+- Added a dedicated desktop approval workspace at `/approvals`. Managers and the
+  Business Office now review an oldest-first queue beside the selected request,
+  without returning to the request list after each decision.
+- Approval links in role navigation, dashboards, queue tabs, and request-list
+  actions now open the workspace. The selected request and queue filters remain in
+  the URL, preserving review context across refreshes and direct links.
+- Queue summary shows the number waiting and age of the oldest request. Business
+  Office reviewers can filter by clinic; both roles can search the queue.
+- The review pane brings employee, clinic, course, requested costs, current CE
+  balance, other pending requests, carry-forward debt, projected balance, and any
+  future CE advance together on one screen.
+- Manager self-approvals are clearly identified and explain the current OSS policy.
+  Requests that require a repayment guarantee cannot be approved until the signed
+  agreement is present.
+- Manager approval now requires explicit confirmation on both the new workspace and
+  the existing request-detail page. Denials continue to require a reason.
+- **Approve and open next** records the decision and advances directly to the next
+  item. When no requests remain, the workspace shows a clear completed state.
+
+### Business Office Funding Decisions
+
+- Requested and approved amounts now appear side by side with an immediately
+  calculated approved total.
+- **Use requested amounts** restores all six requested cost categories in one step.
+- Changed funding categories are highlighted, summarized before approval, and include
+  the Other Costs category.
+- The approval confirmation states the exact final amount before it is recorded and
+  the request becomes eligible for receipt submission.
+
+### Audit Timeline
+
+- Added one reusable request timeline for the workspace and request-detail page.
+- The timeline uses only timestamps the application actually records: request
+  creation, repayment-guarantee signature, manager decision, Business Office
+  decision, receipt submission, and reimbursement.
+- Approver names, timestamps, denial reasons, receipt names, and paycheck details are
+  displayed when available. The previous misleading use of `createdAt` as a
+  submission timestamp was removed.
+
+### Phase 3 Validation
+
+- Full workspace TypeScript check passes.
+- Frontend Vite production build passes. Existing source-map and large-chunk warnings
+  remain unchanged in nature; the build completes successfully.
+- Playwright discovers 31 tests in 13 files. Three new approval-workspace scenarios
+  cover sequential manager review and denial, manager self-approval, and Business
+  Office funding adjustments.
+- The authenticated 31-test suite still needs to run in Replit, where Clerk,
+  PostgreSQL, and object-storage secrets are available.
+- This phase does not require a database schema change or migration.
+
+---
+
+## Recent Changes (2026-07-20 via Codex - Draft Workflow UX)
+
+### Draft Lifecycle
+
+- New requests can now be saved without entering the approval workflow. The course
+  or event name is the only field required to save a draft.
+- Saved drafts reopen at `/requests/:id/edit` and use the same form as new requests.
+- Employees and managers can edit, resume, submit, or permanently delete their own
+  drafts. Submitted requests remain read-only.
+- Draft rows link directly to **Continue editing** for their owner. Admins viewing
+  another user's draft continue to the read-only request detail instead.
+- Unsaved-change protection covers page close/reload, in-app links, and the form's
+  back/cancel actions.
+- Added `DELETE /api/requests/:requestId`, restricted to the draft owner while the
+  request is still in `draft` status. Associated draft guarantee records are removed
+  in the same transaction.
+
+### Request Form Redesign
+
+- Reorganized the desktop form into clear course-detail and estimated-cost sections.
+- Added a sticky funding-impact summary showing the request total, current balance,
+  used and pending funding, projected remaining funds, and future CE debt.
+- Over-budget requests surface the repayment policy and signing controls in context.
+- **Submit for approval** is the primary action; **Save draft** is secondary.
+- The approval-before-purchase warning remains visible at the top of the workflow.
+- Cost inputs now have direct accessible labels and open blank instead of displaying
+  six zero values.
+
+### Receipt Baseline Corrections
+
+- Receipt uploads are standardized to PDF, JPG, or PNG files up to 10 MB.
+- WebP was removed from the frontend and both server-side validation layers.
+- Receipt downloads again force `application/octet-stream` in addition to attachment,
+  `nosniff`, and private/no-store headers.
+
+### Validation
+
+- Resolved Dependabot alert GHSA-3jxr-9vmj-r5cp / CVE-2026-13149 by forcing
+  `brace-expansion@5.0.7`; `pnpm audit --audit-level high` reports no known
+  vulnerabilities.
+- API client and Zod validators regenerated from OpenAPI; code generation passes.
+- Full workspace TypeScript check passes.
+- API and frontend production builds pass.
+- Playwright discovers 28 tests in 12 files, including save/edit/submit, delete-draft,
+  and unsaved-change scenarios. Replit subsequently ran all 28 tests successfully.
 
 ---
 
@@ -49,9 +165,8 @@ Annual CE benefit is $2,000 per employee, prorated in the hire year, with advanc
   now returns 403 if the referenced request is not in `awaiting_receipt` status,
   preventing low-privilege users from using the upload endpoint as arbitrary storage.
 
-- **Receipt input constraints reinstated** — the OpenAPI `ReceiptInput` schema
-  enforces a strict MIME type allowlist (`image/jpeg`, `image/png`, `application/pdf`)
-  and a 20 MB maximum file size (encoded as `20_000_000` in the generated zod schema).
+- **Receipt input constraints reinstated** — upload URL validation and post-upload
+  signature checks enforce PDF, JPG, or PNG files with a 10 MB maximum size.
 
 - **Safe-serving headers added** — `GET /api/storage/objects/*` now sets
   `Content-Disposition: attachment` and `X-Content-Type-Options: nosniff`, mitigating
@@ -84,8 +199,9 @@ broke under Replit's artifact path-based routing.
 
 ### Tests
 
-Suite: **23 tests, all passing** (including repayment guarantee, receipt upload,
-  draft edit, admin user management, multi-role dashboard coverage).
+Before the draft-workflow batch, Replit reported **26 tests passing**. Replit later
+reported all 28 Phase 2 tests passing. Phase 3 expands the suite to 31 tests and
+requires a fresh Replit run.
 
 ---
 
@@ -451,7 +567,8 @@ Not OSS clinics for this app: Renton, Enumclaw, Issaquah, Lacey, Monroe, Mukilte
 
 - PTO/request-for-leave workflow is out of scope.
 - Email notifications are not implemented.
-- Admission control (Task #10) — pending (currently all valid Clerk sessions are auto-provisioned as `role=employee`).
+- Structured provider, course URL, start/end dates, and delivery-method fields are
+  held for the next form-data batch.
 
 ## Key Files
 

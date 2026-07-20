@@ -51,10 +51,9 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
     { label: "Overview", href: "/dashboard", icon: Home, path: "/dashboard" },
     {
       label: "Approvals",
-      href: "/requests?status=pending_manager&scope=approvals",
+      href: "/approvals",
       icon: ClipboardCheck,
-      path: "/requests",
-      query: { status: "pending_manager", scope: "approvals" },
+      path: "/approvals",
     },
     {
       label: "My Requests",
@@ -69,10 +68,9 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
     { label: "Overview", href: "/dashboard", icon: Home, path: "/dashboard" },
     {
       label: "CE Approvals",
-      href: "/requests?status=pending_bo",
+      href: "/approvals",
       icon: ClipboardCheck,
-      path: "/requests",
-      query: { status: "pending_bo" },
+      path: "/approvals",
     },
     { label: "All Requests", href: "/requests", icon: Files, path: "/requests", exactQuery: true },
   ],

@@ -70,8 +70,8 @@ const QUEUES: Record<Role, QueueLink[]> = {
   manager: [
     {
       label: "Needs My Approval",
-      href: "/requests?status=pending_manager&scope=approvals",
-      matches: { status: "pending_manager", scope: "approvals" },
+      href: "/approvals",
+      matches: { workspace: "approvals" },
     },
     {
       label: "My Requests",
@@ -83,8 +83,8 @@ const QUEUES: Record<Role, QueueLink[]> = {
   business_office: [
     {
       label: "Needs CE Approval",
-      href: "/requests?status=pending_bo",
-      matches: { status: "pending_bo" },
+      href: "/approvals",
+      matches: { workspace: "approvals" },
     },
     {
       label: "Awaiting Receipts",
@@ -164,6 +164,7 @@ function pageCopy(role: Role, status: string | null, scope: string | null) {
 }
 
 function isQueueActive(queue: QueueLink, params: URLSearchParams): boolean {
+  if (queue.matches.workspace) return false;
   const tracked = ["status", "scope"];
   return tracked.every((key) => {
     const expected = queue.matches[key] ?? null;
@@ -171,11 +172,35 @@ function isQueueActive(queue: QueueLink, params: URLSearchParams): boolean {
   });
 }
 
-function requestActionLabel(role: Role, status: string) {
+function requestActionLabel(role: Role, status: string, canEditDraft: boolean) {
+  if (canEditDraft) return "Continue editing";
   if (role === "manager" && status === "pending_manager") return "Review";
   if ((role === "business_office" || role === "admin") && status === "pending_bo") return "Review";
   if ((role === "accounting" || role === "admin") && status === "receipt_submitted") return "Process";
   return "View";
+}
+
+function requestHref(
+  request: { id: number; status: string; employeeId: number },
+  currentUserId?: number,
+) {
+  return request.status === "draft" && request.employeeId === currentUserId
+    ? `/requests/${request.id}/edit`
+    : `/requests/${request.id}`;
+}
+
+function requestActionHref(
+  request: { id: number; status: string; employeeId: number },
+  role: Role,
+  currentUserId?: number,
+) {
+  if (role === "manager" && request.status === "pending_manager") {
+    return `/approvals?selected=${request.id}`;
+  }
+  if (role === "business_office" && request.status === "pending_bo") {
+    return `/approvals?selected=${request.id}`;
+  }
+  return requestHref(request, currentUserId);
 }
 
 export default function RequestsPage() {
@@ -382,7 +407,7 @@ export default function RequestsPage() {
               <TableHead>Approved</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Updated</TableHead>
-              <TableHead className="w-24 text-right">Action</TableHead>
+              <TableHead className="w-36 text-right">Action</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -442,7 +467,7 @@ export default function RequestsPage() {
                 <TableRow key={request.id} className="hover:bg-slate-50/70">
                   <TableCell className="max-w-80">
                     <Link
-                      href={`/requests/${request.id}`}
+                      href={requestHref(request, user?.id)}
                       className="font-medium text-slate-950 hover:text-primary hover:underline"
                     >
                       {request.courseNames}
@@ -467,10 +492,11 @@ export default function RequestsPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/requests/${request.id}`}>
+                      <Link href={requestActionHref(request, role, user?.id)} className="whitespace-nowrap">
                         {requestActionLabel(
                           role,
                           request.status,
+                          request.status === "draft" && request.employeeId === user?.id,
                         )}
                       </Link>
                     </Button>
