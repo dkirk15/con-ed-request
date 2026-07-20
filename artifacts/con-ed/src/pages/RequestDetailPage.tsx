@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useLocation, useParams } from "wouter";
 import { 
+  useDeleteRequest,
   useGetRequest, 
   useGetMe,
   getGetRequestQueryKey,
@@ -9,7 +10,7 @@ import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Upload, FileText, Check, X, CreditCard, PenTool } from "lucide-react";
+import { ArrowLeft, Upload, FileText, Check, X, CreditCard, PenTool, Pencil, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { formatCurrency, formatDate } from "@/lib/constants";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -37,7 +38,6 @@ const ALLOWED_RECEIPT_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
   "image/png",
-  "image/webp",
 ]);
 
 // Adding local mutation definitions since they aren't fully typed out or readily available in our minimal check
@@ -122,6 +122,7 @@ const useSubmitReceipt = () => {
 export default function RequestDetailPage() {
   const params = useParams();
   const id = Number(params.id);
+  const [, setLocation] = useLocation();
   const { data: user } = useGetMe();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -131,6 +132,7 @@ export default function RequestDetailPage() {
   });
 
   const cancelMutation = useCancelRequest();
+  const deleteMutation = useDeleteRequest();
   const managerApproveMutation = useManagerApproveRequest();
   const managerDenyMutation = useManagerDenyRequest();
   const boApproveMutation = useBoApproveRequest();
@@ -176,7 +178,7 @@ export default function RequestDetailPage() {
     if (!ALLOWED_RECEIPT_TYPES.has(file.type)) {
       toast({
         title: "Unsupported receipt type",
-        description: "Choose a PDF, JPG, PNG, or WebP file.",
+        description: "Choose a PDF, JPG, or PNG file.",
         variant: "destructive",
       });
       e.target.value = "";
@@ -278,24 +280,56 @@ export default function RequestDetailPage() {
         {/* Actions Menu */}
         <div className="flex flex-wrap gap-2">
           {isMyRequest && request.status === "draft" && (
-            <Button
-              onClick={async () => {
-                try {
-                  await customFetch(`/api/requests/${id}/submit`, { method: "POST", body: JSON.stringify({}) });
-                  toast({ title: "Submitted", description: "Your request has been submitted for manager review." });
-                  queryClient.invalidateQueries({ queryKey: getGetRequestQueryKey(id) });
-                  queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
-                } catch (err: any) {
-                  toast({ title: "Error", description: err.message || "Failed to submit", variant: "destructive" });
-                }
-              }}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              Submit Request
-            </Button>
+            <>
+              <Button asChild>
+                <Link href={`/requests/${id}/edit`}>
+                  <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Continue editing
+                </Link>
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800">
+                    <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
+                    Delete draft
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this draft?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This permanently removes the request. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep draft</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() => deleteMutation.mutate(
+                        { requestId: id },
+                        {
+                          onSuccess: () => {
+                            queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
+                            toast({ title: "Draft deleted", description: "The draft has been permanently removed." });
+                            setLocation("/requests?status=draft");
+                          },
+                          onError: (error: unknown) => toast({
+                            title: "Draft was not deleted",
+                            description: error instanceof Error ? error.message : "Try again.",
+                            variant: "destructive",
+                          }),
+                        },
+                      )}
+                    >
+                      Delete draft
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
           )}
 
-          {isMyRequest && (request.status === "draft" || request.status === "pending_manager") && (
+          {isMyRequest && request.status === "pending_manager" && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive">Cancel Request</Button>
@@ -430,7 +464,7 @@ export default function RequestDetailPage() {
                 type="file"
                 className="hidden"
                 onChange={handleFileSelect}
-                accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
+                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
               />
               {pendingReceiptFile ? (
                 <div className="flex items-center gap-2">

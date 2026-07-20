@@ -59,6 +59,7 @@ function ProtectedRouter() {
       <Switch>
         <Route path="/dashboard" component={DashboardPage} />
         <Route path="/requests/new" component={NewRequestPage} />
+        <Route path="/requests/:id/edit" component={NewRequestPage} />
         <Route path="/requests/:id" component={RequestDetailPage} />
         <Route path="/requests" component={RequestsPage} />
         <Route path="/users/:id" component={UserDetailPage} />

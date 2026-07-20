@@ -38,7 +38,7 @@ router.post("/storage/uploads/request-url", requireAuth, async (req: Request, re
       return;
     }
     if (!ALLOWED_RECEIPT_TYPES.has(contentType)) {
-      res.status(400).json({ error: "Receipt must be a PDF, JPG, PNG, or WebP file" });
+      res.status(400).json({ error: "Receipt must be a PDF, JPG, or PNG file" });
       return;
     }
     if (size > MAX_RECEIPT_SIZE_BYTES) {
@@ -156,6 +156,7 @@ router.get("/storage/objects/*path", requireAuth, async (req: Request, res: Resp
 
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
+    res.setHeader("Content-Type", "application/octet-stream");
     res.setHeader("Content-Disposition", `attachment; filename="${safeDownloadName(receipt.fileName)}"`);
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Cache-Control", "private, no-store");

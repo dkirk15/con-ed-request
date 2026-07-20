@@ -112,9 +112,9 @@ test.describe("Manager review", () => {
     await signInAs(manager);
     await page.goto("/requests/new");
 
-    await page.getByLabel("Course Name(s)").fill("E2E Manager Self Course");
-    await page.locator('input[step="0.01"]').first().fill("300");
-    await page.getByRole("button", { name: "Submit Request" }).click();
+    await page.getByLabel("Course or event name *").fill("E2E Manager Self Course");
+    await page.getByLabel("Tuition / registration ($)").fill("300");
+    await page.getByRole("button", { name: "Submit for approval" }).click();
 
     await expect(page).toHaveURL(/\/requests\/\d+/);
     await expect(page.getByText("Pending Manager Approval")).toBeVisible();
