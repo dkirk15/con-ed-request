@@ -1,11 +1,10 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-20 by Codex
+Last updated: 2026-07-20 by Replit Agent
 
 ## Current State
 
-GitHub `main` is the current integrated source of truth. Replit should pull `main`
-before further development or deployment, then run the authenticated E2E suite.
+GitHub `main` is the current integrated source of truth and is fully up to date.
 
 ### GitHub Integration
 
@@ -13,10 +12,12 @@ before further development or deployment, then run the authenticated E2E suite.
   request-form redesign, receipt corrections, generated API updates, and tests.
 - PR #4 (`Patch brace-expansion Dependabot vulnerability`) merged the isolated
   dependency hotfix into `main`.
+- PR #6 (`Add approval review workspace`) merged Phase 3 — the dedicated
+  approval workspace, BO funding comparison UI, audit timeline, and all
+  associated API and generated-client changes.
 - Dependabot alert #1 is marked **fixed** as of 2026-07-20.
-- GitHub `main` currently points to merge commit `e8a1fb9`.
-- Phase 3 approval-workspace work is in progress on
-  `codex/phase-3-approval-workspace` and has not yet been pushed.
+- GitHub `main` currently points to commit `4c8303e`.
+- **All 31 Playwright E2E tests pass** in Replit as of 2026-07-20.
 
 ## Project Overview
 
@@ -87,8 +88,8 @@ Annual CE benefit is $2,000 per employee, prorated in the hire year, with advanc
 - Playwright discovers 31 tests in 13 files. Three new approval-workspace scenarios
   cover sequential manager review and denial, manager self-approval, and Business
   Office funding adjustments.
-- The authenticated 31-test suite still needs to run in Replit, where Clerk,
-  PostgreSQL, and object-storage secrets are available.
+- **All 31 authenticated E2E tests pass in Replit** (3.9 min, 1 worker) as of
+  2026-07-20. The suite runs against live Clerk, PostgreSQL, and object-storage.
 - This phase does not require a database schema change or migration.
 
 ---
