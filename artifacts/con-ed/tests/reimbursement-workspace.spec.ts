@@ -31,7 +31,8 @@ test.describe("Reimbursement workspace", () => {
       totalRequested: 500,
       approvedTuition: 500,
       totalApproved: 500,
-      createdAt: new Date(Date.now() - 120_000),
+      createdAt: new Date(Date.now() - 600_000),
+      updatedAt: new Date(Date.now() - 600_000),
     });
     await insertReceipt(firstRequestId, "reduced-reimbursement.pdf");
 
@@ -43,7 +44,8 @@ test.describe("Reimbursement workspace", () => {
       totalRequested: 300,
       approvedTuition: 300,
       totalApproved: 300,
-      createdAt: new Date(Date.now() - 60_000),
+      createdAt: new Date(Date.now() - 300_000),
+      updatedAt: new Date(Date.now() - 300_000),
     });
     await insertReceipt(secondRequestId, "next-reimbursement.pdf");
 
@@ -52,7 +54,7 @@ test.describe("Reimbursement workspace", () => {
 
     await expect(page.getByRole("heading", { name: "Reimbursement Queue" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "E2E Reduced Reimbursement Course" })).toBeVisible();
-    await expect(page.getByText("reduced-reimbursement.pdf")).toBeVisible();
+    await expect(page.getByText("reduced-reimbursement.pdf").first()).toBeVisible();
 
     await page.getByLabel("Actual amount").fill("400");
     await page.getByLabel("Paycheck date").fill("2026-07-31");
@@ -62,6 +64,7 @@ test.describe("Reimbursement workspace", () => {
     await expect(page.getByText(/Record \$400\.00 reimbursement/)).toBeVisible();
     await page.getByRole("button", { name: "Confirm reimbursement" }).click();
 
+    await expect(page).toHaveURL(new RegExp(`selected=${secondRequestId}`));
     await expect(page.getByRole("heading", { name: "E2E Next Reimbursement Course" })).toBeVisible();
     expect((await getRequest(firstRequestId))?.status).toBe("reimbursed");
     expect(Number((await getReimbursement(firstRequestId))?.amount)).toBe(400);
