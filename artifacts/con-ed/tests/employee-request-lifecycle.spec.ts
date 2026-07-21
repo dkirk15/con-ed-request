@@ -1,6 +1,7 @@
 import { test, expect } from "./fixtures";
 import { createClinic, insertRequest, getRequest } from "./helpers/db";
 import type { RequestRow } from "./helpers/db";
+import { fillRequiredCourseDetails } from "./helpers/course";
 
 function requestIdFromUrl(url: string): number {
   const match = url.match(/\/requests\/(\d+)/);
@@ -13,7 +14,7 @@ test("employee creates and submits an in-budget request", async ({
   provisionUser,
   signInAs,
 }) => {
-  const clinicId = await createClinic(`E2E-Clinic-newreq`);
+  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-newreq`);
   const manager = await provisionUser({ role: "manager", clinicId });
   const employee = await provisionUser({
     role: "employee",
@@ -24,6 +25,12 @@ test("employee creates and submits an in-budget request", async ({
   await signInAs(employee);
   await page.goto("/requests/new");
   await page.getByLabel("Course or event name *").fill("E2E Advanced Manual Therapy");
+  await fillRequiredCourseDetails(page, {
+    provider: "E2E Manual Therapy Institute",
+    deliveryMethod: "Hybrid",
+    location: "Tacoma, WA",
+  });
+  await page.getByLabel("Course webpage").fill("https://example.com/manual-therapy");
   await page.getByLabel("Tuition / registration ($)").fill("500");
   await page.getByRole("button", { name: "Submit for approval" }).click();
 
@@ -35,6 +42,11 @@ test("employee creates and submits an in-budget request", async ({
   expect(row?.status).toBe("pending_manager");
   expect(Number(row?.total_requested)).toBe(500);
   expect(row?.requires_repayment_guarantee).toBe(false);
+  expect(row?.course_provider).toBe("E2E Manual Therapy Institute");
+  expect(String(row?.course_start_date)).toContain("2026-09-15");
+  expect(String(row?.course_end_date)).toContain("2026-09-16");
+  expect(row?.delivery_method).toBe("hybrid");
+  expect(row?.location).toBe("Tacoma, WA");
 
   await page.goto("/requests");
   const requestRow = page
@@ -49,7 +61,7 @@ test("employee reopens and submits a saved draft", async ({
   provisionUser,
   signInAs,
 }) => {
-  const clinicId = await createClinic(`E2E-Clinic-draft`);
+  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-draft`);
   const manager = await provisionUser({ role: "manager", clinicId });
   const employee = await provisionUser({
     role: "employee",
@@ -61,6 +73,10 @@ test("employee reopens and submits a saved draft", async ({
     managerId: manager.dbId,
     status: "draft",
     courseNames: "E2E Draft Lifecycle Course",
+    courseProvider: "E2E Draft Provider",
+    courseStartDate: "2026-10-01",
+    courseEndDate: "2026-10-01",
+    deliveryMethod: "virtual",
     tuition: 350,
     totalRequested: 350,
   });
@@ -70,6 +86,13 @@ test("employee reopens and submits a saved draft", async ({
   await expect(page.getByText("Draft", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Continue editing" }).click();
   await expect(page).toHaveURL(new RegExp(`/requests/${requestId}/edit`));
+  // Wait for the form to hydrate with the draft's data before submitting.
+  await expect(page.locator('input[name="courseProvider"]')).toHaveValue("E2E Draft Provider");
+  // Explicitly confirm delivery method via the Select to guard against a Radix ↔ react-hook-form
+  // sync race where onValueChange("") can be fired while the controlled value transitions from
+  // undefined → "virtual", leaving the form state poisoned with an empty string.
+  await page.getByRole("combobox").click();
+  await page.getByRole("option", { name: "Virtual", exact: true }).click();
   await page.getByRole("button", { name: "Submit for approval" }).click();
 
   await expect(page.getByText("Pending Manager Approval")).toBeVisible();
@@ -81,7 +104,7 @@ test("employee edits and saves a draft before submitting", async ({
   provisionUser,
   signInAs,
 }) => {
-  const clinicId = await createClinic(`E2E-Clinic-edit`);
+  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-edit`);
   const manager = await provisionUser({ role: "manager", clinicId });
   const employee = await provisionUser({
     role: "employee",
@@ -93,12 +116,22 @@ test("employee edits and saves a draft before submitting", async ({
     managerId: manager.dbId,
     status: "draft",
     courseNames: "E2E Draft Original Title",
+    courseProvider: "E2E Draft Provider",
+    courseStartDate: "2026-11-05",
+    courseEndDate: "2026-11-06",
+    deliveryMethod: "virtual",
     tuition: 200,
     totalRequested: 200,
   });
 
   await signInAs(employee);
   await page.goto(`/requests/${requestId}/edit`);
+  // Wait for the form to hydrate with the draft's data before editing fields.
+  await expect(page.locator('input[name="courseProvider"]')).toHaveValue("E2E Draft Provider");
+  // Confirm delivery method explicitly to avoid a Radix ↔ react-hook-form sync race condition
+  // that can leave the form state with an empty string instead of the pre-populated "virtual" value.
+  await page.getByRole("combobox").click();
+  await page.getByRole("option", { name: "Virtual", exact: true }).click();
   await page.getByLabel("Course or event name *").fill("E2E Draft Edited Title");
   await page.getByLabel("Tuition / registration ($)").fill("300");
   await page.getByRole("button", { name: "Save draft" }).click();
@@ -111,13 +144,17 @@ test("employee edits and saves a draft before submitting", async ({
   await page.reload();
   await expect(page.getByLabel("Course or event name *")).toHaveValue("E2E Draft Edited Title");
   await expect(page.getByLabel("Tuition / registration ($)")).toHaveValue("300");
+  // Wait for hydration and re-confirm delivery method after reload.
+  await expect(page.locator('input[name="courseProvider"]')).toHaveValue("E2E Draft Provider");
+  await page.getByRole("combobox").click();
+  await page.getByRole("option", { name: "Virtual", exact: true }).click();
   await page.getByRole("button", { name: "Submit for approval" }).click();
   await expect(page.getByText("Pending Manager Approval")).toBeVisible();
   expect((await getRequest(requestId))?.status).toBe("pending_manager");
 });
 
 test("employee deletes a saved draft", async ({ page, provisionUser, signInAs }) => {
-  const clinicId = await createClinic(`E2E-Clinic-delete-draft`);
+  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-delete-draft`);
   const employee = await provisionUser({ role: "employee", clinicId });
   const requestId = await insertRequest({
     employeeId: employee.dbId,

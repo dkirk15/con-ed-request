@@ -10,9 +10,9 @@ import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Upload, FileText, Check, X, CreditCard, PenTool, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Upload, FileText, Check, X, CreditCard, ExternalLink, PenTool, Pencil, Trash2 } from "lucide-react";
 import { Link } from "wouter";
-import { formatCurrency, formatDate } from "@/lib/constants";
+import { DELIVERY_METHOD_LABELS, formatCourseDateRange, formatCurrency, formatDate } from "@/lib/constants";
 import { StatusBadge } from "@/components/StatusBadge";
 import { RepaymentGuaranteeDialog } from "@/components/RepaymentGuaranteeDialog";
 import { RequestTimeline } from "@/components/RequestTimeline";
@@ -621,7 +621,7 @@ export default function RequestDetailPage() {
             <CardContent className="p-6">
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1">Course Name(s)</h3>
+                  <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1">Course name</h3>
                   <p className="text-lg font-medium text-slate-900">{request.courseNames}</p>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
@@ -631,17 +631,32 @@ export default function RequestDetailPage() {
                     <p className="text-xs text-slate-400">{request.clinicName}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-slate-500 mb-1">Dates</h3>
-                    <p className="font-medium">{request.courseDates || "TBD"}</p>
+                    <h3 className="text-sm font-medium text-slate-500 mb-1">Provider</h3>
+                    <p className="font-medium">{request.courseProvider || "Not provided"}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-500 mb-1">Course dates</h3>
+                    <p className="font-medium">{formatCourseDateRange(request.courseStartDate, request.courseEndDate, request.courseDates)}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-500 mb-1">Delivery</h3>
+                    <p className="font-medium">{request.deliveryMethod ? DELIVERY_METHOD_LABELS[request.deliveryMethod] : "Not provided"}</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-slate-500 mb-1">Location</h3>
-                    <p className="font-medium">{request.location || "Online"}</p>
+                    <p className="font-medium">{request.location || (request.deliveryMethod === "virtual" ? "Online" : "Not provided")}</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-slate-500 mb-1">CEUs</h3>
                     <p className="font-medium">{request.ceuCount || "N/A"}</p>
                   </div>
+                  {request.courseUrl && (
+                    <div className="col-span-2 sm:col-span-3">
+                      <a href={request.courseUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+                        Open course webpage <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>

@@ -9,6 +9,10 @@ if (!connectionString) {
 
 export const pool = new Pool({ connectionString });
 
+// Return PostgreSQL DATE columns as "YYYY-MM-DD" strings rather than JS Date objects
+// so that test assertions like String(row.course_start_date).toContain("2026-09-15") work.
+pg.types.setTypeParser(1082, (val: string) => val);
+
 export type Role =
   | "employee"
   | "manager"
@@ -88,6 +92,11 @@ export interface InsertRequestInput {
   managerId?: number | null;
   status: RequestStatus;
   courseNames: string;
+  courseProvider?: string | null;
+  courseUrl?: string | null;
+  courseStartDate?: string | null;
+  courseEndDate?: string | null;
+  deliveryMethod?: "in_person" | "virtual" | "hybrid" | null;
   courseDates?: string | null;
   ceuCount?: number | null;
   location?: string | null;
@@ -117,6 +126,11 @@ export async function insertRequest(input: InsertRequestInput): Promise<number> 
     manager_id: input.managerId ?? null,
     status: input.status,
     course_names: input.courseNames,
+    course_provider: input.courseProvider ?? null,
+    course_url: input.courseUrl ?? null,
+    course_start_date: input.courseStartDate ?? null,
+    course_end_date: input.courseEndDate ?? null,
+    delivery_method: input.deliveryMethod ?? null,
     course_dates: input.courseDates ?? null,
     ceu_count: input.ceuCount ?? null,
     location: input.location ?? null,
@@ -149,6 +163,12 @@ export async function insertRequest(input: InsertRequestInput): Promise<number> 
 export interface RequestRow {
   id: number;
   status: RequestStatus;
+  course_provider: string | null;
+  course_url: string | null;
+  course_start_date: string | Date | null;
+  course_end_date: string | Date | null;
+  delivery_method: "in_person" | "virtual" | "hybrid" | null;
+  location: string | null;
   total_requested: string;
   total_approved: string | null;
   requires_repayment_guarantee: boolean;

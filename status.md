@@ -1,12 +1,17 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-21 by Replit Agent
+Last updated: 2026-07-21 by Codex
 
 ## Current State
 
 GitHub `main` is the integrated source of truth through Phase 4. All 39 E2E tests
 pass. The `reimbursements.amount numeric(10,2)` migration has been applied to the
 local database.
+
+Phase 5 structured course data is implemented on
+`codex/phase-5-structured-course-data` and is ready for Replit validation.
+Playwright discovers 41 tests in 16 files; the authenticated run is pending after
+the schema push described below.
 
 ### GitHub Integration
 
@@ -20,6 +25,55 @@ local database.
 - Dependabot alert #1 is marked **fixed** as of 2026-07-20.
 - **All 36 Playwright E2E tests pass** in Replit as of 2026-07-20 (35 after the
   no-flash suite, 36 after the empty-queue cold-start test was added).
+
+---
+
+## Recent Changes (2026-07-21 via Codex - Structured Course Data)
+
+### One Course Per Request
+
+- Formalized the product rule that each CE request represents one course or event.
+- Added structured course provider, webpage, start date, end date, and delivery
+  method (`in_person`, `virtual`, or `hybrid`) fields.
+- Course name remains the only field required to save a draft. Provider, both
+  dates, and delivery method are required before submission; location is also
+  required for in-person and hybrid courses.
+- Course URLs are optional but validated as complete URLs. End dates cannot be
+  earlier than start dates in either the UI or API.
+
+### Workflow Presentation
+
+- Redesigned the course-details section around provider, webpage, date range,
+  delivery method, venue/location, and expected CEUs.
+- Request detail, approval workspace, reimbursement workspace, request lists, and
+  dashboards now use the same structured course information and date formatting.
+- Reviewers can open the provider's course webpage directly from request detail
+  and the approval workspace.
+- Request search now includes the course provider.
+
+### Compatibility And Validation
+
+- New database fields are nullable so existing requests remain readable.
+- Legacy `course_dates` text remains in API responses as a display fallback; new
+  requests use `course_start_date` and `course_end_date`.
+- OpenAPI clients and Zod validators were regenerated successfully.
+- Full workspace TypeScript check, API production build, and frontend production
+  build pass. Existing source-map and large-chunk warnings remain non-blocking.
+- Playwright discovers 41 tests in 16 files. Two new tests cover required course
+  data, physical-course location rules, date ordering, server enforcement, and
+  legacy date display. Existing submission tests now provide structured data.
+
+### Required Replit Schema Push
+
+Before running the E2E suite or deploying, apply the normal database schema push
+so `con_ed_requests` has nullable `course_provider`, `course_url`,
+`course_start_date`, `course_end_date`, and `delivery_method` columns:
+
+```bash
+pnpm --filter @workspace/db run push
+```
+
+Then run all 41 authenticated E2E tests in Replit.
 
 ---
 
@@ -585,10 +639,10 @@ These changes were implemented and pushed via `codex/finish-ce-request-workflow`
 | --- | --- |
 | `clinics` | `id`, `name` |
 | `users` | `id`, `clerkId`, `name`, `email`, `role`, `clinicId`, `managerId`, `hireDate`, `conEdAllocation` |
-| `con_ed_requests` | `id`, `employeeId`, `status`, `courseNames`, `courseDates`, `ceuCount`, `location`, `tuition`, `lodging`, `airfare`, `rentalCar`, `parking`, `otherCosts`, `totalRequested`, approved amount fields, approver/denial fields, `requiresRepaymentGuarantee` |
+| `con_ed_requests` | `id`, `employeeId`, `status`, `courseNames`, `courseProvider`, `courseUrl`, `courseStartDate`, `courseEndDate`, `deliveryMethod`, legacy `courseDates`, `ceuCount`, `location`, requested/approved cost fields, approver/denial fields, `requiresRepaymentGuarantee` |
 | `repayment_guarantees` | `id`, `requestId`, `employeeId`, `signedName`, `signedDate`, `signedAt`, `acknowledged`, `email`, `ip_address`, `session_id` |
 | `receipts` | `id`, `requestId`, `fileUrl`, `fileName`, `uploadedAt` |
-| `reimbursements` | `id`, `requestId`, `paycheckDate`, `markedById`, `markedAt` |
+| `reimbursements` | `id`, `requestId`, `amount`, `paycheckDate`, `markedById`, `markedAt` |
 
 ## API Endpoints
 
@@ -690,8 +744,7 @@ Not OSS clinics for this app: Renton, Enumclaw, Issaquah, Lacey, Monroe, Mukilte
 
 - PTO/request-for-leave workflow is out of scope.
 - Email notifications are not implemented.
-- Structured provider, course URL, start/end dates, and delivery-method fields are
-  held for the next form-data batch.
+- Admin reporting and CSV export are not implemented.
 
 ## Key Files
 

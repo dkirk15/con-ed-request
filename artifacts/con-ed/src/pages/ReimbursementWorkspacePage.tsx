@@ -56,7 +56,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RequestTimeline } from "@/components/RequestTimeline";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/hooks/use-toast";
-import { formatCurrency, formatDateTime } from "@/lib/constants";
+import { DELIVERY_METHOD_LABELS, formatCourseDateRange, formatCurrency, formatDateTime } from "@/lib/constants";
 
 function requestAge(createdAt: string) {
   const minutes = Math.max(0, Math.floor((Date.now() - new Date(createdAt).getTime()) / 60_000));
@@ -377,6 +377,11 @@ function ReimbursementPane({
                 <div className="flex items-center gap-2"><span className="text-sm font-medium text-slate-500">Request #{request.id}</span><StatusBadge status={request.status} /></div>
                 <h2 className="mt-2 text-2xl font-serif font-bold text-slate-950">{request.courseNames}</h2>
                 <p className="mt-1 text-sm text-slate-500">{request.employeeName} - {request.clinicName || "No clinic"}</p>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
+                  <span>{request.courseProvider || "Provider not provided"}</span>
+                  <span>{formatCourseDateRange(request.courseStartDate, request.courseEndDate, request.courseDates)}</span>
+                  <span>{request.deliveryMethod ? DELIVERY_METHOD_LABELS[request.deliveryMethod] : "Delivery not provided"}</span>
+                </div>
               </div>
               <div className="text-right">
                 <div className="text-xs font-medium uppercase text-slate-500">Approved</div>

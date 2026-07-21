@@ -24,6 +24,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -59,7 +66,11 @@ import { formatCurrency } from "@/lib/constants";
 
 const formSchema = z.object({
   courseNames: z.string().trim().min(1, "Enter the course or event name"),
-  courseDates: z.string().optional(),
+  courseProvider: z.string().optional(),
+  courseUrl: z.string().trim().url("Enter a complete URL, including https://").or(z.literal("")),
+  courseStartDate: z.string().optional(),
+  courseEndDate: z.string().optional(),
+  deliveryMethod: z.enum(["in_person", "virtual", "hybrid"]).optional(),
   ceuCount: z.coerce.number().min(0, "CEUs cannot be negative").optional(),
   location: z.string().optional(),
   tuition: z.coerce.number().min(0, "Cost cannot be negative").optional(),
@@ -68,6 +79,37 @@ const formSchema = z.object({
   rentalCar: z.coerce.number().min(0, "Cost cannot be negative").optional(),
   parking: z.coerce.number().min(0, "Cost cannot be negative").optional(),
   otherCosts: z.coerce.number().min(0, "Cost cannot be negative").optional(),
+});
+
+const submissionSchema = formSchema.superRefine((data, context) => {
+  const requiredFields = [
+    ["courseProvider", data.courseProvider, "Enter the course provider"],
+    ["courseStartDate", data.courseStartDate, "Select the course start date"],
+    ["courseEndDate", data.courseEndDate, "Select the course end date"],
+    ["deliveryMethod", data.deliveryMethod, "Select how the course is delivered"],
+  ] as const;
+
+  requiredFields.forEach(([field, value, message]) => {
+    if (!value?.trim()) {
+      context.addIssue({ code: z.ZodIssueCode.custom, path: [field], message });
+    }
+  });
+
+  if (data.courseStartDate && data.courseEndDate && data.courseEndDate < data.courseStartDate) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["courseEndDate"],
+      message: "End date cannot be before the start date",
+    });
+  }
+
+  if ((data.deliveryMethod === "in_person" || data.deliveryMethod === "hybrid") && !data.location?.trim()) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["location"],
+      message: "Enter the course location",
+    });
+  }
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -85,7 +127,11 @@ interface BalanceData {
 
 const DEFAULT_VALUES: FormValues = {
   courseNames: "",
-  courseDates: "",
+  courseProvider: "",
+  courseUrl: "",
+  courseStartDate: "",
+  courseEndDate: "",
+  deliveryMethod: undefined,
   ceuCount: undefined,
   location: "",
   tuition: undefined,
@@ -107,7 +153,11 @@ const COST_FIELDS = [
 
 function requestToFormValues(request: {
   courseNames: string;
-  courseDates?: string | null;
+  courseProvider?: string | null;
+  courseUrl?: string | null;
+  courseStartDate?: string | null;
+  courseEndDate?: string | null;
+  deliveryMethod?: "in_person" | "virtual" | "hybrid" | null;
   ceuCount?: number | null;
   location?: string | null;
   tuition?: number | null;
@@ -119,7 +169,11 @@ function requestToFormValues(request: {
 }): FormValues {
   return {
     courseNames: request.courseNames,
-    courseDates: request.courseDates ?? "",
+    courseProvider: request.courseProvider ?? "",
+    courseUrl: request.courseUrl ?? "",
+    courseStartDate: request.courseStartDate ?? "",
+    courseEndDate: request.courseEndDate ?? "",
+    deliveryMethod: request.deliveryMethod ?? undefined,
     ceuCount: request.ceuCount || undefined,
     location: request.location ?? "",
     tuition: request.tuition || undefined,
@@ -255,7 +309,11 @@ export default function NewRequestPage() {
   const requestPayload = (data: FormValues) => ({
     ...data,
     courseNames: data.courseNames.trim(),
-    courseDates: data.courseDates?.trim() || null,
+    courseProvider: data.courseProvider?.trim() || null,
+    courseUrl: data.courseUrl?.trim() || null,
+    courseStartDate: data.courseStartDate || null,
+    courseEndDate: data.courseEndDate || null,
+    deliveryMethod: data.deliveryMethod ?? null,
     location: data.location?.trim() || null,
     totalRequested,
   });
@@ -302,6 +360,22 @@ export default function NewRequestPage() {
   };
 
   const submitForApproval = async (data: FormValues) => {
+    const submissionResult = submissionSchema.safeParse(data);
+    if (!submissionResult.success) {
+      const firstIssue = submissionResult.error.issues[0];
+      submissionResult.error.issues.forEach((issue) => {
+        const field = issue.path[0] as keyof FormValues;
+        form.setError(field, { type: "manual", message: issue.message });
+      });
+      if (firstIssue?.path[0]) form.setFocus(firstIssue.path[0] as keyof FormValues);
+      toast({
+        title: "Complete the course details",
+        description: "Add the required course information before sending this request for approval.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (isOverBudget && (!guaranteeName.trim() || !guaranteeDate || !guaranteeAcknowledged)) {
       toast({
         title: "Complete the repayment guarantee",
@@ -453,22 +527,73 @@ export default function NewRequestPage() {
                 />
                 <FormField
                   control={form.control}
-                  name="courseDates"
+                  name="courseProvider"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Course dates</FormLabel>
-                      <FormControl><Input placeholder="October 12-14, 2026" autoComplete="off" {...field} /></FormControl>
+                      <FormLabel>Course provider <span className="text-destructive">*</span></FormLabel>
+                      <FormControl><Input placeholder="Institute of Physical Art" autoComplete="organization" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
                   control={form.control}
-                  name="location"
+                  name="courseUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location or delivery method</FormLabel>
-                      <FormControl><Input placeholder="Seattle, WA or online" autoComplete="off" {...field} /></FormControl>
+                      <FormLabel>Course webpage</FormLabel>
+                      <FormControl><Input type="url" placeholder="https://provider.org/course" autoComplete="url" {...field} /></FormControl>
+                      <FormDescription>Optional link reviewers can use to verify course details.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="courseStartDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start date <span className="text-destructive">*</span></FormLabel>
+                      <FormControl><Input type="date" autoComplete="off" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="courseEndDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End date <span className="text-destructive">*</span></FormLabel>
+                      <FormControl><Input type="date" min={values.courseStartDate || undefined} autoComplete="off" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="deliveryMethod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Delivery method <span className="text-destructive">*</span></FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={(value: "in_person" | "virtual" | "hybrid") => {
+                          field.onChange(value);
+                          if (value === "virtual") {
+                            form.setValue("location", "", { shouldDirty: true, shouldValidate: true });
+                          }
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger><SelectValue placeholder="Select delivery method" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="in_person">In person</SelectItem>
+                          <SelectItem value="virtual">Virtual</SelectItem>
+                          <SelectItem value="hybrid">Hybrid</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -484,6 +609,20 @@ export default function NewRequestPage() {
                     </FormItem>
                   )}
                 />
+                {(values.deliveryMethod === "in_person" || values.deliveryMethod === "hybrid") && (
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabel>Course location <span className="text-destructive">*</span></FormLabel>
+                        <FormControl><Input placeholder="Seattle, WA" autoComplete="off" {...field} /></FormControl>
+                        <FormDescription>Enter the venue, city, or both.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </CardContent>
             </Card>
 

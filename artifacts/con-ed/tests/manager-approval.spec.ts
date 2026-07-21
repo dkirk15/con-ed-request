@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures";
+import { fillRequiredCourseDetails } from "./helpers/course";
 import { createClinic, insertRequest, getRequest } from "./helpers/db";
 
 function requestIdFromUrl(url: string): number {
@@ -17,7 +18,7 @@ test.describe("Manager review", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-mgrapp`);
+    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-mgrapp`);
     const manager = await provisionUser({ role: "manager", clinicId });
     const employee = await provisionUser({
       role: "employee",
@@ -61,7 +62,7 @@ test.describe("Manager review", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-mgrdeny`);
+    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-mgrdeny`);
     const manager = await provisionUser({ role: "manager", clinicId });
     const employee = await provisionUser({
       role: "employee",
@@ -101,7 +102,7 @@ test.describe("Manager review", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-mgrself`);
+    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-mgrself`);
     // A senior manager who will receive the self-submitting manager's request.
     const senior = await provisionUser({ role: "manager", clinicId });
     const manager = await provisionUser({
@@ -114,6 +115,7 @@ test.describe("Manager review", () => {
     await page.goto("/requests/new");
 
     await page.getByLabel("Course or event name *").fill("E2E Manager Self Course");
+    await fillRequiredCourseDetails(page);
     await page.getByLabel("Tuition / registration ($)").fill("300");
     await page.getByRole("button", { name: "Submit for approval" }).click();
 

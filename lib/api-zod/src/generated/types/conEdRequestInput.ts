@@ -5,10 +5,30 @@
  * OSS Continuing Education Portal API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConEdRequestInputDeliveryMethod } from './conEdRequestInputDeliveryMethod';
 
 export interface ConEdRequestInput {
   courseNames: string;
   /** @nullable */
+  courseProvider?: string | null;
+  /** @nullable */
+  courseUrl?: string | null;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  courseStartDate?: string | null;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  courseEndDate?: string | null;
+  /** @nullable */
+  deliveryMethod?: ConEdRequestInputDeliveryMethod;
+  /**
+     * @deprecated
+     * @nullable
+     */
   courseDates?: string | null;
   /** @nullable */
   ceuCount?: number | null;
