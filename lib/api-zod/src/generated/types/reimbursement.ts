@@ -10,6 +10,11 @@ export interface Reimbursement {
   id: number;
   requestId: number;
   paycheckDate: Date;
+  /**
+     * Actual amount reimbursed. Legacy records may be null and use the approved total.
+     * @nullable
+     */
+  amount?: number | null;
   /** @nullable */
   markedById?: number | null;
   /** @nullable */

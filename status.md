@@ -1,10 +1,12 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-20 by Replit Agent
+Last updated: 2026-07-20 by Codex
 
 ## Current State
 
-GitHub `main` is the current integrated source of truth and is fully up to date.
+GitHub `main` is the integrated Phase 3 source of truth. Phase 4 reimbursement
+workspace changes are in progress locally on `codex/phase-4-reimbursement-workspace`
+and have not yet been pushed.
 
 ### GitHub Integration
 
@@ -18,6 +20,62 @@ GitHub `main` is the current integrated source of truth and is fully up to date.
 - Dependabot alert #1 is marked **fixed** as of 2026-07-20.
 - **All 36 Playwright E2E tests pass** in Replit as of 2026-07-20 (35 after the
   no-flash suite, 36 after the empty-queue cold-start test was added).
+
+---
+
+## Recent Changes (2026-07-20 via Codex - Reimbursement and Closeout)
+
+### Actual Reimbursement Accounting
+
+- Reimbursement records now capture the actual amount paid in addition to the
+  paycheck date, Accounting user, and timestamp.
+- New reimbursements require a positive amount and cannot exceed the Business
+  Office approved total. The server validates the cap and requires an attached
+  receipt before changing the request to `reimbursed`.
+- Reimbursement creation and the request-status update now run in one database
+  transaction.
+- Legacy reimbursement rows remain supported: a null actual amount falls back to
+  the approved total when requests and balances are displayed.
+- Employee CE balance calculations now consume the actual reimbursed amount after
+  closeout. If a $500 approval results in a $400 reimbursement, the unused $100 is
+  released back to the employee's available CE balance.
+
+### Accounting Workspace
+
+- Added a dedicated desktop workspace at `/reimbursements` with an oldest-receipt
+  queue, search, clinic filtering, waiting count, approved queue value, and direct
+  access to reimbursement history.
+- The selected request keeps its URL-backed state while Accounting reviews the
+  employee, clinic, approved amount, receipt file, audit timeline, actual amount,
+  and paycheck date together.
+- A requested-to-approved-to-actual reconciliation strip makes funding changes
+  visible before closeout.
+- Reduced reimbursements show exactly how much funding returns to the employee.
+  Overpayments are blocked in both the UI and API.
+- **Record reimbursement and open next** confirms the final amount and advances
+  directly to the next receipt without returning to the request list.
+- Accounting dashboard, navigation, and request-list processing links now open the
+  reimbursement workspace.
+
+### Employee Closeout Visibility
+
+- Reimbursed request details show the actual paid amount in the financial table.
+- The audit timeline records the actual amount, paycheck date, Accounting user, and
+  processing timestamp.
+- Employee and manager recent-request cards show the actual reimbursed amount after
+  closeout instead of continuing to show only the original request.
+
+### Phase 4 Validation and Deployment
+
+- OpenAPI clients and Zod validators were regenerated successfully.
+- Full workspace TypeScript check passes.
+- Playwright discovers 39 tests in 15 files. Three new reimbursement-workspace tests
+  cover reduced reimbursement and balance release, overpayment protection, and queue
+  status boundaries. The existing request-detail reimbursement test now records and
+  verifies an actual amount.
+- The authenticated 39-test suite still needs to run in Replit.
+- **Database deployment step required:** run the normal Drizzle schema push before
+  testing or deployment so nullable `reimbursements.amount numeric(10,2)` exists.
 
 ## Project Overview
 

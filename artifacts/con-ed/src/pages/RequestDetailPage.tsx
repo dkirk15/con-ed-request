@@ -100,11 +100,11 @@ const useSignRepaymentGuarantee = () => {
 
 const useMarkReimbursed = () => {
   return useMutation({
-    mutationFn: ({ id, paycheckDate }: { id: number, paycheckDate: string }) => 
-      customFetch(`/api/requests/${id}/reimburse`, { 
-        method: "POST", 
+    mutationFn: ({ id, paycheckDate, amount }: { id: number, paycheckDate: string, amount: number }) =>
+      customFetch(`/api/requests/${id}/reimburse`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paycheckDate }) 
+        body: JSON.stringify({ paycheckDate, amount })
       })
   });
 };
@@ -148,6 +148,7 @@ export default function RequestDetailPage() {
   const [signedName, setSignedName] = useState("");
   const [guaranteeAcknowledged, setGuaranteeAcknowledged] = useState(false);
   const [paycheckDate, setPaycheckDate] = useState("");
+  const [reimbursementAmount, setReimbursementAmount] = useState(0);
   const [pendingReceiptFile, setPendingReceiptFile] = useState<File | null>(null);
   
   // BO Approval form state
@@ -520,7 +521,12 @@ export default function RequestDetailPage() {
           )}
 
           {isAccounting && request.status === "receipt_submitted" && (
-            <Dialog>
+            <Dialog onOpenChange={(open) => {
+              if (open) {
+                setReimbursementAmount(request.totalApproved ?? request.totalRequested);
+                setPaycheckDate("");
+              }
+            }}>
               <DialogTrigger asChild>
                 <Button className="bg-blue-600 hover:bg-blue-700 text-white"><CreditCard className="mr-2 h-4 w-4" /> Mark Reimbursed</Button>
               </DialogTrigger>
@@ -529,11 +535,38 @@ export default function RequestDetailPage() {
                   <DialogTitle>Mark as Reimbursed</DialogTitle>
                   <DialogDescription>Enter the paycheck date this reimbursement will be included in.</DialogDescription>
                 </DialogHeader>
-                <Input type="date" value={paycheckDate} onChange={e => setPaycheckDate(e.target.value)} />
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="detail-reimbursement-amount" className="mb-1.5 block text-sm font-medium">Actual reimbursement amount</label>
+                    <Input
+                      id="detail-reimbursement-amount"
+                      type="number"
+                      min="0.01"
+                      max={request.totalApproved ?? request.totalRequested}
+                      step="0.01"
+                      value={reimbursementAmount}
+                      onChange={e => setReimbursementAmount(Math.max(0, Number(e.target.value) || 0))}
+                    />
+                    {reimbursementAmount < (request.totalApproved ?? request.totalRequested) && reimbursementAmount > 0 && (
+                      <p className="mt-1.5 text-sm text-emerald-700">
+                        {formatCurrency((request.totalApproved ?? request.totalRequested) - reimbursementAmount)} will return to the employee&apos;s CE balance.
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label htmlFor="detail-paycheck-date" className="mb-1.5 block text-sm font-medium">Paycheck date</label>
+                    <Input id="detail-paycheck-date" type="date" value={paycheckDate} onChange={e => setPaycheckDate(e.target.value)} />
+                  </div>
+                </div>
                 <DialogFooter>
                   <Button
-                    disabled={!paycheckDate || markReimbursedMutation.isPending}
-                    onClick={() => handleAction(markReimbursedMutation, { id, paycheckDate }, "Marked as reimbursed")}
+                    disabled={
+                      !paycheckDate ||
+                      reimbursementAmount <= 0 ||
+                      reimbursementAmount > (request.totalApproved ?? request.totalRequested) ||
+                      markReimbursedMutation.isPending
+                    }
+                    onClick={() => handleAction(markReimbursedMutation, { id, paycheckDate, amount: reimbursementAmount }, "Marked as reimbursed")}
                   >
                     Confirm Reimbursement
                   </Button>
@@ -665,6 +698,15 @@ export default function RequestDetailPage() {
                     <td className="px-6 py-4 text-right text-base">{formatCurrency(request.totalRequested)}</td>
                     <td className="px-6 py-4 text-right text-base text-primary">{request.totalApproved != null ? formatCurrency(request.totalApproved) : "Pending"}</td>
                   </tr>
+                  {request.reimbursement && (
+                    <tr className="bg-emerald-50 font-bold text-emerald-900">
+                      <td className="px-6 py-4">Actual Reimbursement</td>
+                      <td className="px-6 py-4 text-right text-slate-400">-</td>
+                      <td className="px-6 py-4 text-right text-base">
+                        {formatCurrency(request.reimbursement.amount ?? request.totalApproved)}
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </CardContent>

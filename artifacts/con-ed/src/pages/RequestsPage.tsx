@@ -96,8 +96,8 @@ const QUEUES: Record<Role, QueueLink[]> = {
   accounting: [
     {
       label: "Ready to Reimburse",
-      href: "/requests?status=receipt_submitted",
-      matches: { status: "receipt_submitted" },
+      href: "/reimbursements",
+      matches: { workspace: "reimbursements" },
     },
     {
       label: "Reimbursement History",
@@ -199,6 +199,9 @@ function requestActionHref(
   }
   if (role === "business_office" && request.status === "pending_bo") {
     return `/approvals?selected=${request.id}`;
+  }
+  if ((role === "accounting" || role === "admin") && request.status === "receipt_submitted") {
+    return `/reimbursements?selected=${request.id}`;
   }
   return requestHref(request, currentUserId);
 }

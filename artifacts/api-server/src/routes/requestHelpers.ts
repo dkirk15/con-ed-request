@@ -110,6 +110,7 @@ export async function formatRequestSimple(row: typeof conEdRequests.$inferSelect
     reimbursement: reimbursement ? {
       id: reimbursement.id,
       requestId: reimbursement.requestId,
+      amount: reimbursement.amount ? parseFloat(reimbursement.amount) : null,
       paycheckDate: reimbursement.paycheckDate,
       markedById: reimbursement.markedById ?? null,
       markedByName: reimbursementMarkedByName,
