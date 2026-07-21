@@ -78,10 +78,9 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
     { label: "Overview", href: "/dashboard", icon: Home, path: "/dashboard" },
     {
       label: "Reimbursements",
-      href: "/requests?status=receipt_submitted",
+      href: "/reimbursements",
       icon: ReceiptText,
-      path: "/requests",
-      query: { status: "receipt_submitted" },
+      path: "/reimbursements",
     },
     {
       label: "History",

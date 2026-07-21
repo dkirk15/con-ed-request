@@ -12,6 +12,7 @@ import SignUpPage from "@/pages/SignUpPage";
 import DashboardPage from "@/pages/DashboardPage";
 import RequestsPage from "@/pages/RequestsPage";
 import ApprovalWorkspacePage from "@/pages/ApprovalWorkspacePage";
+import ReimbursementWorkspacePage from "@/pages/ReimbursementWorkspacePage";
 import AccountPage from "@/pages/AccountPage";
 import NewRequestPage from "@/pages/NewRequestPage";
 import RequestDetailPage from "@/pages/RequestDetailPage";
@@ -61,6 +62,7 @@ function ProtectedRouter() {
         <Route path="/dashboard" component={DashboardPage} />
         <Route path="/requests/new" component={NewRequestPage} />
         <Route path="/approvals" component={ApprovalWorkspacePage} />
+        <Route path="/reimbursements" component={ReimbursementWorkspacePage} />
         <Route path="/requests/:id/edit" component={NewRequestPage} />
         <Route path="/requests/:id" component={RequestDetailPage} />
         <Route path="/requests" component={RequestsPage} />

@@ -335,6 +335,7 @@ export const ListRequestsResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -426,6 +427,7 @@ export const CreateRequestResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -502,6 +504,7 @@ export const GetRequestResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -592,6 +595,7 @@ export const UpdateRequestResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -684,6 +688,7 @@ export const SubmitRequestResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -760,6 +765,7 @@ export const CancelRequestResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -836,6 +842,7 @@ export const ManagerApproveRequestResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -916,6 +923,7 @@ export const ManagerDenyRequestResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -1002,6 +1010,7 @@ export const BoApproveRequestResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -1082,6 +1091,7 @@ export const BoDenyRequestResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -1166,14 +1176,20 @@ export const MarkReimbursedParams = zod.object({
   "requestId": zod.coerce.number()
 })
 
+export const markReimbursedBodyAmountExclusiveMin = 0;
+
+
+
 export const MarkReimbursedBody = zod.object({
-  "paycheckDate": zod.coerce.date()
+  "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().gt(markReimbursedBodyAmountExclusiveMin).describe('Actual amount to reimburse; cannot exceed the Business Office approved total.')
 })
 
 export const MarkReimbursedResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -1262,6 +1278,7 @@ export const GetEmployeeDashboardResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -1348,6 +1365,7 @@ export const GetManagerDashboardResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -1415,6 +1433,7 @@ export const GetManagerDashboardResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -1495,6 +1514,7 @@ export const GetBoDashboardResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -1562,6 +1582,7 @@ export const GetBoDashboardResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -1638,6 +1659,7 @@ export const GetAccountingDashboardResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()
@@ -1705,6 +1727,7 @@ export const GetAccountingDashboardResponse = zod.object({
   "id": zod.number(),
   "requestId": zod.number(),
   "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
   "markedById": zod.number().nullish(),
   "markedByName": zod.string().nullish(),
   "markedAt": zod.coerce.date()

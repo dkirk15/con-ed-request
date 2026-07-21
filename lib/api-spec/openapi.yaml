@@ -1286,6 +1286,10 @@ components:
         paycheckDate:
           type: string
           format: date
+        amount:
+          type: ["number", "null"]
+          format: float
+          description: Actual amount reimbursed. Legacy records may be null and use the approved total.
         markedById:
           type: ["integer", "null"]
         markedByName:
@@ -1296,11 +1300,16 @@ components:
 
     ReimbursementInput:
       type: object
-      required: [paycheckDate]
+      required: [paycheckDate, amount]
       properties:
         paycheckDate:
           type: string
           format: date
+        amount:
+          type: number
+          format: float
+          exclusiveMinimum: 0
+          description: Actual amount to reimburse; cannot exceed the Business Office approved total.
 
     # ─── Dashboards ───────────────────────────────────────────────────────────
 

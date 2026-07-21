@@ -180,6 +180,7 @@ async function formatRequest(req_row: typeof conEdRequests.$inferSelect) {
       ? {
           id: reimbursement.id,
           requestId: reimbursement.requestId,
+          amount: reimbursement.amount ? parseFloat(reimbursement.amount) : null,
           paycheckDate: reimbursement.paycheckDate,
           markedById: reimbursement.markedById ?? null,
           markedByName: reimbursementMarkedByName,
@@ -1158,7 +1159,7 @@ router.post(
       const requestId = parseInt(req.params.requestId as string);
       const parsed = MarkReimbursedBody.safeParse(req.body);
       if (!parsed.success) {
-        res.status(400).json({ error: "Paycheck date required" });
+        res.status(400).json({ error: "A valid reimbursement amount and paycheck date are required" });
         return;
       }
 
@@ -1179,23 +1180,49 @@ router.post(
         return;
       }
 
-      const [reimb] = await db
-        .insert(reimbursements)
-        .values({
-          requestId,
-          paycheckDate: parsed.data.paycheckDate as unknown as string,
-          markedById: req.dbUser!.id,
-        })
-        .returning();
+      const [submittedReceipt] = await db
+        .select({ id: receipts.id })
+        .from(receipts)
+        .where(eq(receipts.requestId, requestId))
+        .limit(1);
+      if (!submittedReceipt) {
+        res.status(400).json({ error: "A receipt file is required before reimbursement" });
+        return;
+      }
 
-      await db
-        .update(conEdRequests)
-        .set({ status: "reimbursed", updatedAt: new Date() })
-        .where(eq(conEdRequests.id, requestId));
+      const approvedAmount = parseFloat(
+        existingReq.totalApproved ?? existingReq.totalRequested,
+      );
+      if (parsed.data.amount > approvedAmount) {
+        res.status(400).json({
+          error: "Reimbursement amount cannot exceed the Business Office approved total",
+        });
+        return;
+      }
+
+      const reimb = await db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(reimbursements)
+          .values({
+            requestId,
+            amount: String(parsed.data.amount),
+            paycheckDate: parsed.data.paycheckDate as unknown as string,
+            markedById: req.dbUser!.id,
+          })
+          .returning();
+
+        await tx
+          .update(conEdRequests)
+          .set({ status: "reimbursed", updatedAt: new Date() })
+          .where(eq(conEdRequests.id, requestId));
+
+        return created;
+      });
 
       res.status(201).json({
         id: reimb.id,
         requestId: reimb.requestId,
+        amount: reimb.amount ? parseFloat(reimb.amount) : null,
         paycheckDate: reimb.paycheckDate,
         markedById: reimb.markedById ?? null,
         markedByName: req.dbUser!.name,

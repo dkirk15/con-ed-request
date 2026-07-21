@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { conEdRequests } from "@workspace/db/schema";
+import { conEdRequests, reimbursements } from "@workspace/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 
 const ANNUAL_BUDGET = 2000;
@@ -63,8 +63,10 @@ export async function getUserBalance(userId: number, hireDateStr: string | null,
       createdAt: conEdRequests.createdAt,
       totalRequested: conEdRequests.totalRequested,
       totalApproved: conEdRequests.totalApproved,
+      reimbursedAmount: reimbursements.amount,
     })
     .from(conEdRequests)
+    .leftJoin(reimbursements, eq(reimbursements.requestId, conEdRequests.id))
     .where(
       and(
         eq(conEdRequests.employeeId, userId),
@@ -75,7 +77,7 @@ export async function getUserBalance(userId: number, hireDateStr: string | null,
   const approvedByYear = new Map<number, number>();
   for (const row of approvedRows) {
     const approvedYear = row.createdAt.getFullYear();
-    const amount = parseMoney(row.totalApproved ?? row.totalRequested);
+    const amount = parseMoney(row.reimbursedAmount ?? row.totalApproved ?? row.totalRequested);
     approvedByYear.set(approvedYear, (approvedByYear.get(approvedYear) ?? 0) + amount);
   }
 

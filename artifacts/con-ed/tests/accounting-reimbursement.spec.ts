@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures";
-import { createClinic, insertRequest, getRequest } from "./helpers/db";
+import { createClinic, insertReceipt, insertRequest, getRequest, getReimbursement } from "./helpers/db";
 
 /**
  * Accounting processes requests that have a submitted receipt. The dashboard
@@ -11,10 +11,10 @@ test("accounting marks a request reimbursed -> reimbursed", async ({
   provisionUser,
   signInAs,
 }) => {
-  const clinicId = await createClinic(`E2E-Clinic-acct`);
+  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-acct`);
   const accounting = await provisionUser({ role: "accounting" });
   const employee = await provisionUser({ role: "employee", clinicId });
-  const courseName = `E2E Reimbursement Course`;
+  const courseName = `E2E Reimbursement Course ${Date.now()}`;
   const requestId = await insertRequest({
     employeeId: employee.dbId,
     status: "receipt_submitted",
@@ -24,6 +24,7 @@ test("accounting marks a request reimbursed -> reimbursed", async ({
     approvedTuition: 300,
     totalApproved: 300,
   });
+  await insertReceipt(requestId);
 
   await signInAs(accounting);
 
@@ -37,6 +38,7 @@ test("accounting marks a request reimbursed -> reimbursed", async ({
   await page.goto(`/requests/${requestId}`);
 
   await page.getByRole("button", { name: "Mark Reimbursed" }).click();
+  await page.getByLabel("Actual reimbursement amount").fill("275");
   await page.locator('input[type="date"]').fill("2026-06-30");
   await page.getByRole("button", { name: "Confirm Reimbursement" }).click();
 
@@ -46,4 +48,5 @@ test("accounting marks a request reimbursed -> reimbursed", async ({
 
   const row = await getRequest(requestId);
   expect(row?.status).toBe("reimbursed");
+  expect(Number((await getReimbursement(requestId))?.amount)).toBe(275);
 });
