@@ -1,12 +1,12 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-20 by Codex
+Last updated: 2026-07-21 by Replit Agent
 
 ## Current State
 
-GitHub `main` is the integrated Phase 3 source of truth. Phase 4 reimbursement
-workspace changes are in progress locally on `codex/phase-4-reimbursement-workspace`
-and have not yet been pushed.
+GitHub `main` is the integrated source of truth through Phase 4. All 39 E2E tests
+pass. The `reimbursements.amount numeric(10,2)` migration has been applied to the
+local database.
 
 ### GitHub Integration
 
@@ -73,9 +73,37 @@ and have not yet been pushed.
   cover reduced reimbursement and balance release, overpayment protection, and queue
   status boundaries. The existing request-detail reimbursement test now records and
   verifies an actual amount.
-- The authenticated 39-test suite still needs to run in Replit.
-- **Database deployment step required:** run the normal Drizzle schema push before
-  testing or deployment so nullable `reimbursements.amount numeric(10,2)` exists.
+- **All 39 E2E tests pass** in Replit as of 2026-07-21. See E2E fix section below.
+- Database migration (`reimbursements.amount numeric(10,2)`) applied to local DB.
+
+---
+
+## Recent Changes (2026-07-21 via Replit Agent — E2E Fix: Reimbursement Workspace)
+
+### Reimbursement Workspace Test #28 Hardened
+
+PR #7 introduced three new `reimbursement-workspace.spec.ts` tests. Test #28
+("records a reduced reimbursement, opens the next receipt, and releases unused CE
+funds") was intermittently failing due to three issues fixed here:
+
+- **Strict-mode violation** — `getByText('reduced-reimbursement.pdf')` matched both
+  the workspace card label and the audit timeline entry. Fixed with `.first()`.
+- **Queue pollution** — `openNextAfter` selects the first non-completed request
+  sorted by `updatedAt asc`. Leftover `receipt_submitted` rows from other spec files
+  had older timestamps and were picked ahead of this test's second request. Fixed by
+  pinning both `insertRequest` calls to 10 min and 5 min in the past, guaranteeing
+  the test's own requests are always the oldest pair in the queue.
+- **Navigation assertion added** — `expect(page).toHaveURL(/selected=<secondId>/)` is
+  now checked immediately after confirmation, before the heading assertion, so intent
+  is locked in regardless of heading text changes.
+
+`InsertRequestInput` in `tests/helpers/db.ts` was extended with an optional
+`updatedAt` field so tests can control queue ordering without touching application
+code.
+
+**Result: 39/39 tests pass** in a single run with no retries (~4.8 min, 1 worker).
+
+---
 
 ## Project Overview
 
