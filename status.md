@@ -1,30 +1,55 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-21 by Codex
+Last updated: 2026-07-21 by Replit Agent
 
 ## Current State
 
-GitHub `main` is the integrated source of truth through Phase 4. All 39 E2E tests
-pass. The `reimbursements.amount numeric(10,2)` migration has been applied to the
-local database.
-
-Phase 5 structured course data is implemented on
-`codex/phase-5-structured-course-data` and is ready for Replit validation.
-Playwright discovers 41 tests in 16 files; the authenticated run is pending after
-the schema push described below.
+GitHub `main` is the integrated source of truth through Phase 5. **All 41 E2E
+tests pass** in Replit (4.8 min, 1 worker, no retries). The Phase 5 schema
+columns (`course_provider`, `course_url`, `course_start_date`, `course_end_date`,
+`delivery_method`) have been applied to the local database.
 
 ### GitHub Integration
 
-- PR #3 (`Improve draft request workflow`) merged the Phase 2 draft lifecycle,
-  request-form redesign, receipt corrections, generated API updates, and tests.
+- PR #3 (`Improve draft request workflow`) merged Phase 2.
 - PR #4 (`Patch brace-expansion Dependabot vulnerability`) merged the isolated
   dependency hotfix into `main`.
-- PR #6 (`Add approval review workspace`) merged Phase 3 — the dedicated
-  approval workspace, BO funding comparison UI, audit timeline, and all
-  associated API and generated-client changes.
+- PR #6 (`Add approval review workspace`) merged Phase 3.
+- PR #7 (`Add reimbursement workspace and actual-amount accounting`) merged Phase 4.
+- PR #8 (`Add structured course data per request`) merged Phase 5.
 - Dependabot alert #1 is marked **fixed** as of 2026-07-20.
-- **All 36 Playwright E2E tests pass** in Replit as of 2026-07-20 (35 after the
-  no-flash suite, 36 after the empty-queue cold-start test was added).
+- **All 41 Playwright E2E tests pass** in Replit as of 2026-07-21.
+
+---
+
+## Recent Changes (2026-07-21 via Replit Agent — E2E Fix: Phase 5 Tests)
+
+### All 41 Tests Now Pass
+
+After merging PR #8 (Phase 5 structured course data), two of the three new
+lifecycle tests were failing due to a combination of type-parser, strict-mode,
+and form-state issues. Four fixes were applied:
+
+1. **pg DATE type parser** — Added `pg.types.setTypeParser(1082, val => val)` to
+   `tests/helpers/db.ts` so DATE columns are returned as raw `"YYYY-MM-DD"` strings
+   instead of JS Date objects, making direct string comparisons in assertions reliable.
+
+2. **Strict-mode selector** — Appended `.first()` to `getByText("Draft")` in
+   `structured-course-data.spec.ts` to resolve a strict-mode violation when multiple
+   elements matched.
+
+3. **Form hydration wait** — Added `await expect(page.locator('input[name="courseProvider"]')).toHaveValue(...)` waits in lifecycle tests 2 and 3 so
+   react-hook-form has finished resetting field values from the API before the test
+   interacts with the form.
+
+4. **Radix Select ↔ react-hook-form race** — When the controlled `<Select value={field.value}>` receives `undefined` initially and transitions to `"virtual"` via
+   `form.reset()`, Radix UI can emit `onValueChange("")`, writing `""` into the form
+   state. `requestPayload` then sends `deliveryMethod: ""` in the PATCH, which the
+   submit endpoint rejects (`!""` → true → 400). Fixed by explicitly clicking the
+   combobox and selecting "Virtual" after hydration in both affected tests (before
+   Save Draft and before Submit for Approval, including after `page.reload()`).
+
+**Result: 41/41 tests pass** in a single run with no retries (~4.8 min, 1 worker).
 
 ---
 
