@@ -17,7 +17,7 @@ test.describe("Structured course data", () => {
     await page.getByLabel("Tuition / registration ($)").fill("450");
     await page.getByRole("button", { name: "Submit for approval" }).click();
 
-    await expect(page.getByText("Complete the course details")).toBeVisible();
+    await expect(page.getByText("Complete the course details").first()).toBeVisible();
     await expect(page.getByText("Enter the course provider")).toBeVisible();
     await expect(page.getByText("Select the course start date")).toBeVisible();
 

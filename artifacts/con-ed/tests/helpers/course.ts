@@ -12,13 +12,19 @@ export async function fillRequiredCourseDetails(
 ) {
   const deliveryMethod = options.deliveryMethod ?? "Virtual";
 
-  await page.getByLabel("Course provider *").fill(options.provider ?? "E2E Course Provider");
-  await page.getByLabel("Start date *").fill(options.startDate ?? "2026-09-15");
-  await page.getByLabel("End date *").fill(options.endDate ?? "2026-09-16");
-  await page.getByLabel("Delivery method *").click();
-  await page.getByRole("option", { name: deliveryMethod, exact: true }).click();
+  await page.locator('input[name="courseProvider"]').fill(options.provider ?? "E2E Course Provider");
+  await page.locator('input[name="courseStartDate"]').fill(options.startDate ?? "2026-09-15");
+  await page.locator('input[name="courseEndDate"]').fill(options.endDate ?? "2026-09-16");
+
+  // Radix UI <SelectTrigger> renders as role="combobox"; target it directly
+  // rather than via getByLabel to avoid accidentally hitting the hidden native
+  // <select> that some Radix versions inject for form accessibility.
+  await page.getByRole("combobox").click();
+  const option = page.getByRole("option", { name: deliveryMethod, exact: true });
+  await option.waitFor({ state: "visible" });
+  await option.click();
 
   if (deliveryMethod !== "Virtual") {
-    await page.getByLabel("Course location *").fill(options.location ?? "Seattle, WA");
+    await page.locator('input[name="location"]').fill(options.location ?? "Seattle, WA");
   }
 }

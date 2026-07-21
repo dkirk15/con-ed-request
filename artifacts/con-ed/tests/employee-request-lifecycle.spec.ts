@@ -86,6 +86,13 @@ test("employee reopens and submits a saved draft", async ({
   await expect(page.getByText("Draft", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Continue editing" }).click();
   await expect(page).toHaveURL(new RegExp(`/requests/${requestId}/edit`));
+  // Wait for the form to hydrate with the draft's data before submitting.
+  await expect(page.locator('input[name="courseProvider"]')).toHaveValue("E2E Draft Provider");
+  // Explicitly confirm delivery method via the Select to guard against a Radix ↔ react-hook-form
+  // sync race where onValueChange("") can be fired while the controlled value transitions from
+  // undefined → "virtual", leaving the form state poisoned with an empty string.
+  await page.getByRole("combobox").click();
+  await page.getByRole("option", { name: "Virtual", exact: true }).click();
   await page.getByRole("button", { name: "Submit for approval" }).click();
 
   await expect(page.getByText("Pending Manager Approval")).toBeVisible();
@@ -119,6 +126,12 @@ test("employee edits and saves a draft before submitting", async ({
 
   await signInAs(employee);
   await page.goto(`/requests/${requestId}/edit`);
+  // Wait for the form to hydrate with the draft's data before editing fields.
+  await expect(page.locator('input[name="courseProvider"]')).toHaveValue("E2E Draft Provider");
+  // Confirm delivery method explicitly to avoid a Radix ↔ react-hook-form sync race condition
+  // that can leave the form state with an empty string instead of the pre-populated "virtual" value.
+  await page.getByRole("combobox").click();
+  await page.getByRole("option", { name: "Virtual", exact: true }).click();
   await page.getByLabel("Course or event name *").fill("E2E Draft Edited Title");
   await page.getByLabel("Tuition / registration ($)").fill("300");
   await page.getByRole("button", { name: "Save draft" }).click();
@@ -131,6 +144,10 @@ test("employee edits and saves a draft before submitting", async ({
   await page.reload();
   await expect(page.getByLabel("Course or event name *")).toHaveValue("E2E Draft Edited Title");
   await expect(page.getByLabel("Tuition / registration ($)")).toHaveValue("300");
+  // Wait for hydration and re-confirm delivery method after reload.
+  await expect(page.locator('input[name="courseProvider"]')).toHaveValue("E2E Draft Provider");
+  await page.getByRole("combobox").click();
+  await page.getByRole("option", { name: "Virtual", exact: true }).click();
   await page.getByRole("button", { name: "Submit for approval" }).click();
   await expect(page.getByText("Pending Manager Approval")).toBeVisible();
   expect((await getRequest(requestId))?.status).toBe("pending_manager");

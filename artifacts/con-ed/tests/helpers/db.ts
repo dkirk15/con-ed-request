@@ -9,6 +9,10 @@ if (!connectionString) {
 
 export const pool = new Pool({ connectionString });
 
+// Return PostgreSQL DATE columns as "YYYY-MM-DD" strings rather than JS Date objects
+// so that test assertions like String(row.course_start_date).toContain("2026-09-15") work.
+pg.types.setTypeParser(1082, (val: string) => val);
+
 export type Role =
   | "employee"
   | "manager"
