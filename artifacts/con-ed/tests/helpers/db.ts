@@ -108,6 +108,7 @@ export interface InsertRequestInput {
   boApproverId?: number | null;
   requiresRepaymentGuarantee?: boolean;
   createdAt?: Date | null;
+  updatedAt?: Date | null;
 }
 
 export async function insertRequest(input: InsertRequestInput): Promise<number> {
@@ -138,6 +139,9 @@ export async function insertRequest(input: InsertRequestInput): Promise<number> 
   };
   if (input.createdAt) {
     data.created_at = input.createdAt;
+  }
+  if (input.updatedAt) {
+    data.updated_at = input.updatedAt;
   }
   return insertRow("con_ed_requests", data);
 }
