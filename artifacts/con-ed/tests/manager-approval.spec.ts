@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures";
+import { fillRequiredCourseDetails } from "./helpers/course";
 import { createClinic, insertRequest, getRequest } from "./helpers/db";
 
 function requestIdFromUrl(url: string): number {
@@ -114,6 +115,7 @@ test.describe("Manager review", () => {
     await page.goto("/requests/new");
 
     await page.getByLabel("Course or event name *").fill("E2E Manager Self Course");
+    await fillRequiredCourseDetails(page);
     await page.getByLabel("Tuition / registration ($)").fill("300");
     await page.getByRole("button", { name: "Submit for approval" }).click();
 

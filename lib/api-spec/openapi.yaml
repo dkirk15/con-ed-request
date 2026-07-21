@@ -975,8 +975,23 @@ components:
             - cancelled
         courseNames:
           type: string
+        courseProvider:
+          type: ["string", "null"]
+        courseUrl:
+          type: ["string", "null"]
+          format: uri
+        courseStartDate:
+          type: ["string", "null"]
+          format: date
+        courseEndDate:
+          type: ["string", "null"]
+          format: date
+        deliveryMethod:
+          type: ["string", "null"]
+          enum: [in_person, virtual, hybrid, null]
         courseDates:
           type: ["string", "null"]
+          description: Legacy free-text course dates retained for existing requests.
         ceuCount:
           type: ["number", "null"]
           format: float
@@ -1093,8 +1108,23 @@ components:
       properties:
         courseNames:
           type: string
+        courseProvider:
+          type: ["string", "null"]
+        courseUrl:
+          type: ["string", "null"]
+          format: uri
+        courseStartDate:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        courseEndDate:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        deliveryMethod:
+          type: ["string", "null"]
+          enum: [in_person, virtual, hybrid, null]
         courseDates:
           type: ["string", "null"]
+          deprecated: true
         ceuCount:
           type: ["number", "null"]
           format: float
@@ -1127,8 +1157,23 @@ components:
       properties:
         courseNames:
           type: string
+        courseProvider:
+          type: ["string", "null"]
+        courseUrl:
+          type: ["string", "null"]
+          format: uri
+        courseStartDate:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        courseEndDate:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        deliveryMethod:
+          type: ["string", "null"]
+          enum: [in_person, virtual, hybrid, null]
         courseDates:
           type: ["string", "null"]
+          deprecated: true
         ceuCount:
           type: ["number", "null"]
           format: float

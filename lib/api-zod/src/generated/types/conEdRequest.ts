@@ -5,6 +5,7 @@
  * OSS Continuing Education Portal API
  * OpenAPI spec version: 0.1.0
  */
+import type { ConEdRequestDeliveryMethod } from './conEdRequestDeliveryMethod';
 import type { ConEdRequestStatus } from './conEdRequestStatus';
 import type { Receipt } from './receipt';
 import type { Reimbursement } from './reimbursement';
@@ -22,6 +23,19 @@ export interface ConEdRequest {
   status: ConEdRequestStatus;
   courseNames: string;
   /** @nullable */
+  courseProvider?: string | null;
+  /** @nullable */
+  courseUrl?: string | null;
+  /** @nullable */
+  courseStartDate?: Date | null;
+  /** @nullable */
+  courseEndDate?: Date | null;
+  /** @nullable */
+  deliveryMethod?: ConEdRequestDeliveryMethod;
+  /**
+     * Legacy free-text course dates retained for existing requests.
+     * @nullable
+     */
   courseDates?: string | null;
   /** @nullable */
   ceuCount?: number | null;

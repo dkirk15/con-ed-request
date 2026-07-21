@@ -51,6 +51,12 @@ export const formatDate = (dateString: string | null | undefined) => {
   }).format(new Date(dateString));
 };
 
+export const DELIVERY_METHOD_LABELS: Record<string, string> = {
+  in_person: "In person",
+  virtual: "Virtual",
+  hybrid: "Hybrid",
+};
+
 export const formatDateTime = (dateString: string | null | undefined) => {
   if (!dateString) return "N/A";
   return new Intl.DateTimeFormat("en-US", {
@@ -60,4 +66,22 @@ export const formatDateTime = (dateString: string | null | undefined) => {
     hour: "numeric",
     minute: "2-digit",
   }).format(new Date(dateString));
+};
+
+const formatDateOnly = (dateString: string) =>
+  new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${dateString}T00:00:00Z`));
+
+export const formatCourseDateRange = (
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+  legacyDates?: string | null,
+) => {
+  if (!startDate || !endDate) return legacyDates || "Dates not provided";
+  if (startDate === endDate) return formatDateOnly(startDate);
+  return `${formatDateOnly(startDate)} - ${formatDateOnly(endDate)}`;
 };

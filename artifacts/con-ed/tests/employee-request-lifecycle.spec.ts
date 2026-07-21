@@ -1,6 +1,7 @@
 import { test, expect } from "./fixtures";
 import { createClinic, insertRequest, getRequest } from "./helpers/db";
 import type { RequestRow } from "./helpers/db";
+import { fillRequiredCourseDetails } from "./helpers/course";
 
 function requestIdFromUrl(url: string): number {
   const match = url.match(/\/requests\/(\d+)/);
@@ -24,6 +25,12 @@ test("employee creates and submits an in-budget request", async ({
   await signInAs(employee);
   await page.goto("/requests/new");
   await page.getByLabel("Course or event name *").fill("E2E Advanced Manual Therapy");
+  await fillRequiredCourseDetails(page, {
+    provider: "E2E Manual Therapy Institute",
+    deliveryMethod: "Hybrid",
+    location: "Tacoma, WA",
+  });
+  await page.getByLabel("Course webpage").fill("https://example.com/manual-therapy");
   await page.getByLabel("Tuition / registration ($)").fill("500");
   await page.getByRole("button", { name: "Submit for approval" }).click();
 
@@ -35,6 +42,11 @@ test("employee creates and submits an in-budget request", async ({
   expect(row?.status).toBe("pending_manager");
   expect(Number(row?.total_requested)).toBe(500);
   expect(row?.requires_repayment_guarantee).toBe(false);
+  expect(row?.course_provider).toBe("E2E Manual Therapy Institute");
+  expect(String(row?.course_start_date)).toContain("2026-09-15");
+  expect(String(row?.course_end_date)).toContain("2026-09-16");
+  expect(row?.delivery_method).toBe("hybrid");
+  expect(row?.location).toBe("Tacoma, WA");
 
   await page.goto("/requests");
   const requestRow = page
@@ -61,6 +73,10 @@ test("employee reopens and submits a saved draft", async ({
     managerId: manager.dbId,
     status: "draft",
     courseNames: "E2E Draft Lifecycle Course",
+    courseProvider: "E2E Draft Provider",
+    courseStartDate: "2026-10-01",
+    courseEndDate: "2026-10-01",
+    deliveryMethod: "virtual",
     tuition: 350,
     totalRequested: 350,
   });
@@ -93,6 +109,10 @@ test("employee edits and saves a draft before submitting", async ({
     managerId: manager.dbId,
     status: "draft",
     courseNames: "E2E Draft Original Title",
+    courseProvider: "E2E Draft Provider",
+    courseStartDate: "2026-11-05",
+    courseEndDate: "2026-11-06",
+    deliveryMethod: "virtual",
     tuition: 200,
     totalRequested: 200,
   });
