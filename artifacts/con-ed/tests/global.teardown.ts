@@ -12,7 +12,7 @@ import { pool } from "./helpers/db";
  */
 export default async function globalTeardown() {
   try {
-    const testUsers = `(SELECT id FROM users WHERE email LIKE 'e2e.%+clerk_test@example.com')`;
+    const testUsers = `(SELECT id FROM users WHERE email LIKE 'e2e.%+clerk_test@osstherapy.com')`;
     const testClinics = `(SELECT id FROM clinics WHERE name LIKE 'E2E-%')`;
     const testRequests = `(
       SELECT id FROM con_ed_requests
@@ -28,7 +28,7 @@ export default async function globalTeardown() {
     await pool.query(`DELETE FROM con_ed_requests      WHERE id IN ${testRequests}`);
     await pool.query(`UPDATE users SET manager_id = NULL WHERE manager_id IN ${testUsers}`);
     await pool.query(`UPDATE users SET clinic_id  = NULL WHERE clinic_id  IN ${testClinics}`);
-    await pool.query(`DELETE FROM users   WHERE email LIKE 'e2e.%+clerk_test@example.com'`);
+    await pool.query(`DELETE FROM users   WHERE email LIKE 'e2e.%+clerk_test@osstherapy.com'`);
     await pool.query(`DELETE FROM clinics WHERE name LIKE 'E2E-%'`);
   } finally {
     await pool.end();
