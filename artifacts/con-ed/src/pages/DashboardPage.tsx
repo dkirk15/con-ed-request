@@ -1,6 +1,6 @@
 import { useGetMe, useGetEmployeeDashboard, useGetManagerDashboard, useGetBoDashboard, useGetAccountingDashboard, useGetAdminDashboard } from "@workspace/api-client-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatCurrency } from "@/lib/constants";
+import { formatCourseDateRange, formatCurrency } from "@/lib/constants";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -140,7 +140,7 @@ function EmployeeDashboard() {
                   <div className="mb-2 sm:mb-0">
                     <h4 className="font-medium text-slate-900 line-clamp-1">{req.courseNames}</h4>
                     <div className="text-sm text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                      <span>{req.courseDates || "TBD"}</span>
+                      <span>{formatCourseDateRange(req.courseStartDate, req.courseEndDate, req.courseDates)}</span>
                       <span>•</span>
                       <span>
                         {req.status === "reimbursed"
@@ -306,7 +306,7 @@ function ManagerDashboard() {
                   <div className="mb-2 sm:mb-0">
                     <h4 className="font-medium text-slate-900 line-clamp-1">{req.courseNames}</h4>
                     <div className="text-sm text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                      <span>{req.courseDates || "TBD"}</span>
+                      <span>{formatCourseDateRange(req.courseStartDate, req.courseEndDate, req.courseDates)}</span>
                       <span>•</span>
                       <span>
                         {req.status === "reimbursed"

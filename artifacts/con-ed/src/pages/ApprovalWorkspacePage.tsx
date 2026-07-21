@@ -23,6 +23,7 @@ import {
   ChevronRight,
   CircleDollarSign,
   Clock3,
+  ExternalLink,
   FileCheck2,
   RefreshCw,
   Search,
@@ -67,7 +68,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RequestTimeline } from "@/components/RequestTimeline";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/hooks/use-toast";
-import { formatCurrency, formatDate, formatDateTime } from "@/lib/constants";
+import { DELIVERY_METHOD_LABELS, formatCourseDateRange, formatCurrency, formatDate, formatDateTime } from "@/lib/constants";
 
 type ReviewRole = "manager" | "business_office";
 type CostKey =
@@ -557,9 +558,21 @@ function ReviewPane({
               <dl className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2">
                 <Detail label="Employee" value={request.employeeName || "Unknown"} secondary={request.employeeEmail} />
                 <Detail label="Clinic" value={request.clinicName || "No clinic assigned"} />
-                <Detail label="Course dates" value={request.courseDates || "Not provided"} />
-                <Detail label="Location" value={request.location || "Not provided"} />
+                <Detail label="Provider" value={request.courseProvider || "Not provided"} />
+                <Detail label="Course dates" value={formatCourseDateRange(request.courseStartDate, request.courseEndDate, request.courseDates)} />
+                <Detail label="Delivery" value={request.deliveryMethod ? DELIVERY_METHOD_LABELS[request.deliveryMethod] : "Not provided"} />
+                <Detail label="Location" value={request.location || (request.deliveryMethod === "virtual" ? "Online" : "Not provided")} />
                 <Detail label="CEUs" value={request.ceuCount != null ? String(request.ceuCount) : "Not provided"} />
+                {request.courseUrl && (
+                  <div>
+                    <dt className="text-xs font-medium uppercase text-slate-500">Course webpage</dt>
+                    <dd className="mt-1">
+                      <a href={request.courseUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline">
+                        Open provider page <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                      </a>
+                    </dd>
+                  </div>
+                )}
               </dl>
             </div>
             <FundingSummary request={request} balance={balance} loading={balanceLoading} />

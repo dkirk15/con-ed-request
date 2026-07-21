@@ -175,6 +175,18 @@ export const ConEdRequestStatus = {
   cancelled: 'cancelled',
 } as const;
 
+/**
+ * @nullable
+ */
+export type ConEdRequestDeliveryMethod = typeof ConEdRequestDeliveryMethod[keyof typeof ConEdRequestDeliveryMethod] | null;
+
+
+export const ConEdRequestDeliveryMethod = {
+  in_person: 'in_person',
+  virtual: 'virtual',
+  hybrid: 'hybrid',
+} as const;
+
 export interface Receipt {
   id: number;
   requestId: number;
@@ -212,6 +224,19 @@ export interface ConEdRequest {
   status: ConEdRequestStatus;
   courseNames: string;
   /** @nullable */
+  courseProvider?: string | null;
+  /** @nullable */
+  courseUrl?: string | null;
+  /** @nullable */
+  courseStartDate?: string | null;
+  /** @nullable */
+  courseEndDate?: string | null;
+  /** @nullable */
+  deliveryMethod?: ConEdRequestDeliveryMethod;
+  /**
+     * Legacy free-text course dates retained for existing requests.
+     * @nullable
+     */
   courseDates?: string | null;
   /** @nullable */
   ceuCount?: number | null;
@@ -282,9 +307,40 @@ export interface RequestListResponse {
   totalPages: number;
 }
 
+/**
+ * @nullable
+ */
+export type ConEdRequestInputDeliveryMethod = typeof ConEdRequestInputDeliveryMethod[keyof typeof ConEdRequestInputDeliveryMethod] | null;
+
+
+export const ConEdRequestInputDeliveryMethod = {
+  in_person: 'in_person',
+  virtual: 'virtual',
+  hybrid: 'hybrid',
+} as const;
+
 export interface ConEdRequestInput {
   courseNames: string;
   /** @nullable */
+  courseProvider?: string | null;
+  /** @nullable */
+  courseUrl?: string | null;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  courseStartDate?: string | null;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  courseEndDate?: string | null;
+  /** @nullable */
+  deliveryMethod?: ConEdRequestInputDeliveryMethod;
+  /**
+     * @deprecated
+     * @nullable
+     */
   courseDates?: string | null;
   /** @nullable */
   ceuCount?: number | null;
@@ -305,9 +361,40 @@ export interface ConEdRequestInput {
   totalRequested: number;
 }
 
+/**
+ * @nullable
+ */
+export type ConEdRequestUpdateDeliveryMethod = typeof ConEdRequestUpdateDeliveryMethod[keyof typeof ConEdRequestUpdateDeliveryMethod] | null;
+
+
+export const ConEdRequestUpdateDeliveryMethod = {
+  in_person: 'in_person',
+  virtual: 'virtual',
+  hybrid: 'hybrid',
+} as const;
+
 export interface ConEdRequestUpdate {
   courseNames?: string;
   /** @nullable */
+  courseProvider?: string | null;
+  /** @nullable */
+  courseUrl?: string | null;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  courseStartDate?: string | null;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  courseEndDate?: string | null;
+  /** @nullable */
+  deliveryMethod?: ConEdRequestUpdateDeliveryMethod;
+  /**
+     * @deprecated
+     * @nullable
+     */
   courseDates?: string | null;
   /** @nullable */
   ceuCount?: number | null;

@@ -126,6 +126,11 @@ async function formatRequest(req_row: typeof conEdRequests.$inferSelect) {
     clinicName,
     status: req_row.status,
     courseNames: req_row.courseNames,
+    courseProvider: req_row.courseProvider ?? null,
+    courseUrl: req_row.courseUrl ?? null,
+    courseStartDate: req_row.courseStartDate ?? null,
+    courseEndDate: req_row.courseEndDate ?? null,
+    deliveryMethod: req_row.deliveryMethod ?? null,
     courseDates: req_row.courseDates ?? null,
     ceuCount: req_row.ceuCount ? parseFloat(req_row.ceuCount) : null,
     location: req_row.location ?? null,
@@ -293,6 +298,7 @@ router.get("/requests", requireAuth, async (req: Request, res: Response) => {
       conditions.push(
         or(
           ilike(conEdRequests.courseNames, query),
+          ilike(conEdRequests.courseProvider, query),
           ilike(conEdRequests.location, query),
           ...(matchingUserIds.length
             ? [inArray(conEdRequests.employeeId, matchingUserIds)]
@@ -355,6 +361,11 @@ router.post("/requests", requireAuth, async (req: Request, res: Response) => {
 
     const {
       courseNames,
+      courseProvider,
+      courseUrl,
+      courseStartDate,
+      courseEndDate,
+      deliveryMethod,
       courseDates,
       ceuCount,
       location,
@@ -389,6 +400,11 @@ router.post("/requests", requireAuth, async (req: Request, res: Response) => {
       .values({
         employeeId: user.id,
         courseNames,
+        courseProvider: courseProvider ?? null,
+        courseUrl: courseUrl ?? null,
+        courseStartDate: courseStartDate ?? null,
+        courseEndDate: courseEndDate ?? null,
+        deliveryMethod: deliveryMethod ?? null,
         courseDates: courseDates ?? null,
         ceuCount: ceuCount != null ? String(ceuCount) : null,
         location: location ?? null,
@@ -435,6 +451,27 @@ router.post(
 
       if (existing.status !== "draft") {
         res.status(400).json({ error: "Only draft requests can be submitted" });
+        return;
+      }
+
+      const missingCourseDetails = [
+        !existing.courseProvider?.trim() && "provider",
+        !existing.courseStartDate && "start date",
+        !existing.courseEndDate && "end date",
+        !existing.deliveryMethod && "delivery method",
+        (existing.deliveryMethod === "in_person" || existing.deliveryMethod === "hybrid")
+          && !existing.location?.trim() && "location",
+      ].filter(Boolean);
+
+      if (missingCourseDetails.length > 0) {
+        res.status(400).json({
+          error: `Complete the course ${missingCourseDetails.join(", ")} before submitting for approval.`,
+        });
+        return;
+      }
+
+      if (existing.courseEndDate! < existing.courseStartDate!) {
+        res.status(400).json({ error: "Course end date cannot be before the start date." });
         return;
       }
 
@@ -580,8 +617,24 @@ router.patch("/requests/:requestId", requireAuth, async (req: Request, res: Resp
     }
 
     const data = parsed.data;
+    const nextStartDate = data.courseStartDate === undefined
+      ? existing.courseStartDate
+      : data.courseStartDate;
+    const nextEndDate = data.courseEndDate === undefined
+      ? existing.courseEndDate
+      : data.courseEndDate;
+    if (nextStartDate && nextEndDate && nextEndDate < nextStartDate) {
+      res.status(400).json({ error: "Course end date cannot be before the start date." });
+      return;
+    }
+
     const updates: Partial<typeof conEdRequests.$inferInsert> = { updatedAt: new Date() };
     if (data.courseNames !== undefined) updates.courseNames = data.courseNames;
+    if (data.courseProvider !== undefined) updates.courseProvider = data.courseProvider ?? null;
+    if (data.courseUrl !== undefined) updates.courseUrl = data.courseUrl ?? null;
+    if (data.courseStartDate !== undefined) updates.courseStartDate = data.courseStartDate ?? null;
+    if (data.courseEndDate !== undefined) updates.courseEndDate = data.courseEndDate ?? null;
+    if (data.deliveryMethod !== undefined) updates.deliveryMethod = data.deliveryMethod ?? null;
     if (data.courseDates !== undefined) updates.courseDates = data.courseDates ?? null;
     if (data.ceuCount !== undefined) updates.ceuCount = data.ceuCount != null ? String(data.ceuCount) : null;
     if (data.location !== undefined) updates.location = data.location ?? null;

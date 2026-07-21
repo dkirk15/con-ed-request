@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/StatusBadge";
-import { formatCurrency, formatDate } from "@/lib/constants";
+import { formatCourseDateRange, formatCurrency, formatDate } from "@/lib/constants";
 import {
   ArrowUpDown,
   ChevronLeft,
@@ -322,7 +322,7 @@ export default function RequestsPage() {
                 name="search"
                 value={searchValue}
                 onChange={(event) => setSearchValue(event.target.value)}
-                placeholder="Course, employee, clinic, or location…"
+                placeholder="Course, provider, employee, clinic, or location…"
                 className="rounded-r-none"
                 autoComplete="off"
               />
@@ -476,7 +476,8 @@ export default function RequestsPage() {
                       {request.courseNames}
                     </Link>
                     <div className="mt-0.5 text-xs text-slate-500">
-                      {request.courseDates || "Dates not provided"}
+                      {formatCourseDateRange(request.courseStartDate, request.courseEndDate, request.courseDates)}
+                      {request.courseProvider ? ` · ${request.courseProvider}` : ""}
                     </div>
                   </TableCell>
                   {showEmployee && (

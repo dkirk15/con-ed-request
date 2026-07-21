@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures";
+import { fillRequiredCourseDetails } from "./helpers/course";
 import {
   createClinic,
   insertRequest,
@@ -42,6 +43,7 @@ test("over-budget request requires and records a repayment guarantee", async ({
   await page.goto("/requests/new");
 
   await page.getByLabel("Course or event name *").fill("E2E Over-Budget Course");
+  await fillRequiredCourseDetails(page);
   await page.getByLabel("Tuition / registration ($)").fill("500");
 
   await expect(page.getByText(/future CE debt/)).toBeVisible();
