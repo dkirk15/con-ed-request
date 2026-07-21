@@ -1,6 +1,6 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-20 by Codex
+Last updated: 2026-07-20 by Replit Agent
 
 ## Current State
 
@@ -16,8 +16,8 @@ GitHub `main` is the current integrated source of truth and is fully up to date.
   approval workspace, BO funding comparison UI, audit timeline, and all
   associated API and generated-client changes.
 - Dependabot alert #1 is marked **fixed** as of 2026-07-20.
-- GitHub `main` currently points to the merge of all local E2E fixes.
-- **All 31 Playwright E2E tests pass** in Replit as of 2026-07-20.
+- **All 36 Playwright E2E tests pass** in Replit as of 2026-07-20 (35 after the
+  no-flash suite, 36 after the empty-queue cold-start test was added).
 
 ## Project Overview
 
@@ -34,6 +34,41 @@ Annual CE benefit is $2,000 per employee, prorated in the hire year, with advanc
 - Database: `lib/db` - Drizzle schema and seed scripts
 - Auth: Clerk with Microsoft SSO; frontend uses `VITE_CLERK_PUBLISHABLE_KEY`, backend uses `CLERK_SECRET_KEY`
 - Validation: `codegen-drift` validation step guards against API contract drift
+
+---
+
+## Recent Changes (2026-07-20 via Replit Agent — E2E Hardening)
+
+### Approval Workspace Bug Fix
+
+- Fixed a React race condition in `ApprovalWorkspacePage.tsx` where a just-approved
+  or just-denied request would briefly reappear in the sidebar queue before the
+  server re-fetch arrived. `openNextAfter` now optimistically removes the completed
+  request from the React Query cache synchronously, before triggering the background
+  invalidation. The `total` count is only decremented when the item was actually
+  present in that cache entry.
+
+### E2E Test Suite Hardening
+
+- **No-flash regression guard** — new `approval-queue-no-flash.spec.ts` with four
+  tests (manager approve, manager deny, BO approve, BO deny) confirming the acted-on
+  request is absent from the sidebar immediately after each action.
+- **Empty-queue cold-start coverage** — new test in `approval-workspace.spec.ts`
+  confirming that a manager with zero pending requests sees "Queue is clear" on first
+  load, and that the workspace auto-selects correctly after a new request appears.
+- **Global teardown fix** — the teardown script was matching `@example.com` but all
+  test users are provisioned at `@osstherapy.com`. Fixed both occurrences so teardown
+  now correctly removes all test data after every run.
+- **Stable clinic/course names** — removed `${Date.now()}` suffixes from all clinic
+  and course names across 11 spec files. Tests use clean descriptive names
+  (e.g. `E2E-Clinic-newreq`) because teardown reliably cleans up after each run.
+- **Idempotent `createClinic`** — the test helper now does a SELECT before INSERT,
+  returning the existing clinic ID if one was left behind by an interrupted teardown.
+
+### Suite Size
+
+- **36 E2E tests** (31 original + 4 no-flash + 1 empty-queue cold-start). All pass
+  in ~4 min on 1 worker.
 
 ---
 
