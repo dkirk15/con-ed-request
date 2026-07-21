@@ -53,6 +53,11 @@ async function insertRow(
 }
 
 export async function createClinic(name: string): Promise<number> {
+  const existing = await query<{ id: number }>(
+    "SELECT id FROM clinics WHERE name = $1",
+    [name],
+  );
+  if (existing.length > 0) return existing[0].id;
   return insertRow("clinics", { name });
 }
 
