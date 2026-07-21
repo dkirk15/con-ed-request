@@ -16,7 +16,7 @@ test("prior-year overspend shows as carry-forward debt", async ({
   signInAs,
 }) => {
   const year = new Date().getFullYear();
-  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-carry`);
+  const clinicId = await createClinic(`E2E-Clinic-carry`);
   const employee = await provisionUser({
     role: "employee",
     clinicId,

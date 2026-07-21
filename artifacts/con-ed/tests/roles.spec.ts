@@ -13,7 +13,7 @@ test.describe("Role-based dashboards and navigation", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-emp`);
+    const clinicId = await createClinic(`E2E-Clinic-emp`);
     const user = await provisionUser({ role: "employee", clinicId });
     await signInAs(user);
 
@@ -33,7 +33,7 @@ test.describe("Role-based dashboards and navigation", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-mgr`);
+    const clinicId = await createClinic(`E2E-Clinic-mgr`);
     const user = await provisionUser({ role: "manager", clinicId });
     await signInAs(user);
 

@@ -18,7 +18,7 @@ test.describe("Approval queue — no flash after action", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-noflash-mgr-approve`);
+    const clinicId = await createClinic(`E2E-Clinic-noflash-mgr-approve`);
     const manager = await provisionUser({ role: "manager", clinicId });
     const emp1 = await provisionUser({ role: "employee", clinicId, managerId: manager.dbId });
     const emp2 = await provisionUser({ role: "employee", clinicId, managerId: manager.dbId });
@@ -65,7 +65,7 @@ test.describe("Approval queue — no flash after action", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-noflash-mgr-deny`);
+    const clinicId = await createClinic(`E2E-Clinic-noflash-mgr-deny`);
     const manager = await provisionUser({ role: "manager", clinicId });
     const emp1 = await provisionUser({ role: "employee", clinicId, managerId: manager.dbId });
     const emp2 = await provisionUser({ role: "employee", clinicId, managerId: manager.dbId });
@@ -112,7 +112,7 @@ test.describe("Approval queue — no flash after action", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-noflash-bo-approve`);
+    const clinicId = await createClinic(`E2E-Clinic-noflash-bo-approve`);
     const bo = await provisionUser({ role: "business_office" });
     const emp1 = await provisionUser({ role: "employee", clinicId });
     const emp2 = await provisionUser({ role: "employee", clinicId });
@@ -156,7 +156,7 @@ test.describe("Approval queue — no flash after action", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-noflash-bo-deny`);
+    const clinicId = await createClinic(`E2E-Clinic-noflash-bo-deny`);
     const bo = await provisionUser({ role: "business_office" });
     const emp1 = await provisionUser({ role: "employee", clinicId });
     const emp2 = await provisionUser({ role: "employee", clinicId });

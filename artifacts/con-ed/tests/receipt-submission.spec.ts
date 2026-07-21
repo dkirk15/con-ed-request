@@ -13,7 +13,7 @@ test("employee uploads a receipt -> receipt_submitted", async ({
   provisionUser,
   signInAs,
 }) => {
-  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-receipt`);
+  const clinicId = await createClinic(`E2E-Clinic-receipt`);
   const manager = await provisionUser({ role: "manager", clinicId });
   const employee = await provisionUser({
     role: "employee",
@@ -72,7 +72,7 @@ test("receipt upload URLs reject unsafe files and requests owned by someone else
   provisionUser,
   signInAs,
 }) => {
-  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-receipt-security`);
+  const clinicId = await createClinic(`E2E-Clinic-receipt-security`);
   const manager = await provisionUser({ role: "manager", clinicId });
   const employee = await provisionUser({
     role: "employee",

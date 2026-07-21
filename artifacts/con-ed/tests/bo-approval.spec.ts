@@ -12,7 +12,7 @@ test.describe("Business Office review", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-boapp`);
+    const clinicId = await createClinic(`E2E-Clinic-boapp`);
     const bo = await provisionUser({ role: "business_office" });
     const employee = await provisionUser({ role: "employee", clinicId });
     const requestId = await insertRequest({
@@ -55,7 +55,7 @@ test.describe("Business Office review", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-bodeny`);
+    const clinicId = await createClinic(`E2E-Clinic-bodeny`);
     const bo = await provisionUser({ role: "business_office" });
     const employee = await provisionUser({ role: "employee", clinicId });
     const requestId = await insertRequest({

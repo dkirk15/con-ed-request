@@ -7,7 +7,7 @@ test.describe("Approval workspace", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-workspace-manager`);
+    const clinicId = await createClinic(`E2E-Clinic-workspace-manager`);
     const manager = await provisionUser({ role: "manager", clinicId });
     const firstEmployee = await provisionUser({
       role: "employee",
@@ -66,7 +66,7 @@ test.describe("Approval workspace", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-workspace-self`);
+    const clinicId = await createClinic(`E2E-Clinic-workspace-self`);
     const manager = await provisionUser({ role: "manager", clinicId });
     const requestId = await insertRequest({
       employeeId: manager.dbId,
@@ -95,7 +95,7 @@ test.describe("Approval workspace", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-workspace-bo`);
+    const clinicId = await createClinic(`E2E-Clinic-workspace-bo`);
     const businessOffice = await provisionUser({ role: "business_office" });
     const employee = await provisionUser({ role: "employee", clinicId });
     const requestId = await insertRequest({

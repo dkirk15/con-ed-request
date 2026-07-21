@@ -17,7 +17,7 @@ test.describe("Manager review", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-mgrapp`);
+    const clinicId = await createClinic(`E2E-Clinic-mgrapp`);
     const manager = await provisionUser({ role: "manager", clinicId });
     const employee = await provisionUser({
       role: "employee",
@@ -61,7 +61,7 @@ test.describe("Manager review", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-mgrdeny`);
+    const clinicId = await createClinic(`E2E-Clinic-mgrdeny`);
     const manager = await provisionUser({ role: "manager", clinicId });
     const employee = await provisionUser({
       role: "employee",
@@ -101,7 +101,7 @@ test.describe("Manager review", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-mgrself`);
+    const clinicId = await createClinic(`E2E-Clinic-mgrself`);
     // A senior manager who will receive the self-submitting manager's request.
     const senior = await provisionUser({ role: "manager", clinicId });
     const manager = await provisionUser({

@@ -25,7 +25,7 @@ test("over-budget request requires and records a repayment guarantee", async ({
   provisionUser,
   signInAs,
 }) => {
-  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-guarantee`);
+  const clinicId = await createClinic(`E2E-Clinic-guarantee`);
   const employee = await provisionUser({ role: "employee", clinicId });
   const admin = await provisionUser({ role: "admin", clinicId });
 

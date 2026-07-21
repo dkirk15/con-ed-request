@@ -11,10 +11,10 @@ test("accounting marks a request reimbursed -> reimbursed", async ({
   provisionUser,
   signInAs,
 }) => {
-  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-acct`);
+  const clinicId = await createClinic(`E2E-Clinic-acct`);
   const accounting = await provisionUser({ role: "accounting" });
   const employee = await provisionUser({ role: "employee", clinicId });
-  const courseName = `E2E Reimbursement Course ${Date.now()}`;
+  const courseName = `E2E Reimbursement Course`;
   const requestId = await insertRequest({
     employeeId: employee.dbId,
     status: "receipt_submitted",

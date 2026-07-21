@@ -6,7 +6,7 @@ test("employee request queue keeps status filters in the URL", async ({
   provisionUser,
   signInAs,
 }) => {
-  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-queue-employee`);
+  const clinicId = await createClinic(`E2E-Clinic-queue-employee`);
   const manager = await provisionUser({ role: "manager", clinicId });
   const employee = await provisionUser({
     role: "employee",
@@ -52,7 +52,7 @@ test("manager can switch between approval work and personal drafts", async ({
   provisionUser,
   signInAs,
 }) => {
-  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-queue-manager`);
+  const clinicId = await createClinic(`E2E-Clinic-queue-manager`);
   const seniorManager = await provisionUser({ role: "manager", clinicId });
   const manager = await provisionUser({
     role: "manager",

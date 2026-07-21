@@ -13,7 +13,7 @@ test("employee creates and submits an in-budget request", async ({
   provisionUser,
   signInAs,
 }) => {
-  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-newreq`);
+  const clinicId = await createClinic(`E2E-Clinic-newreq`);
   const manager = await provisionUser({ role: "manager", clinicId });
   const employee = await provisionUser({
     role: "employee",
@@ -49,7 +49,7 @@ test("employee reopens and submits a saved draft", async ({
   provisionUser,
   signInAs,
 }) => {
-  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-draft`);
+  const clinicId = await createClinic(`E2E-Clinic-draft`);
   const manager = await provisionUser({ role: "manager", clinicId });
   const employee = await provisionUser({
     role: "employee",
@@ -81,7 +81,7 @@ test("employee edits and saves a draft before submitting", async ({
   provisionUser,
   signInAs,
 }) => {
-  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-edit`);
+  const clinicId = await createClinic(`E2E-Clinic-edit`);
   const manager = await provisionUser({ role: "manager", clinicId });
   const employee = await provisionUser({
     role: "employee",
@@ -117,7 +117,7 @@ test("employee edits and saves a draft before submitting", async ({
 });
 
 test("employee deletes a saved draft", async ({ page, provisionUser, signInAs }) => {
-  const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-delete-draft`);
+  const clinicId = await createClinic(`E2E-Clinic-delete-draft`);
   const employee = await provisionUser({ role: "employee", clinicId });
   const requestId = await insertRequest({
     employeeId: employee.dbId,
