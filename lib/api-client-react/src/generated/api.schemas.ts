@@ -188,6 +188,11 @@ export interface Reimbursement {
   id: number;
   requestId: number;
   paycheckDate: string;
+  /**
+     * Actual amount reimbursed. Legacy records may be null and use the approved total.
+     * @nullable
+     */
+  amount?: number | null;
   /** @nullable */
   markedById?: number | null;
   /** @nullable */
@@ -369,6 +374,11 @@ export interface ReceiptInput {
 
 export interface ReimbursementInput {
   paycheckDate: string;
+  /**
+     * Actual amount to reimburse; cannot exceed the Business Office approved total.
+     * @exclusiveMinimum 0
+     */
+  amount: number;
 }
 
 export type EmployeeDashboardRequestCounts = {

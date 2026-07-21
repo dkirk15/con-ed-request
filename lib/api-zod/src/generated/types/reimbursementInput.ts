@@ -8,4 +8,9 @@
 
 export interface ReimbursementInput {
   paycheckDate: Date;
+  /**
+     * Actual amount to reimburse; cannot exceed the Business Office approved total.
+     * @exclusiveMinimum 0
+     */
+  amount: number;
 }

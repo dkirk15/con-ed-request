@@ -163,6 +163,36 @@ export async function getRequest(id: number): Promise<RequestRow | undefined> {
   return rows[0];
 }
 
+export async function insertReceipt(
+  requestId: number,
+  fileName = "e2e-receipt.pdf",
+): Promise<number> {
+  return insertRow("receipts", {
+    request_id: requestId,
+    file_url: `/requests/${requestId}/${fileName}`,
+    file_name: fileName,
+  });
+}
+
+export interface ReimbursementRow {
+  id: number;
+  request_id: number;
+  amount: string | null;
+  paycheck_date: string;
+  marked_by_id: number | null;
+  marked_at: Date;
+}
+
+export async function getReimbursement(
+  requestId: number,
+): Promise<ReimbursementRow | undefined> {
+  const rows = await query<ReimbursementRow>(
+    "SELECT * FROM reimbursements WHERE request_id = $1",
+    [requestId],
+  );
+  return rows[0];
+}
+
 export interface UserRow {
   id: number;
   role: Role;

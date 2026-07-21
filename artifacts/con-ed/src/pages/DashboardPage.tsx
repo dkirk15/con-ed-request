@@ -142,7 +142,11 @@ function EmployeeDashboard() {
                     <div className="text-sm text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
                       <span>{req.courseDates || "TBD"}</span>
                       <span>•</span>
-                      <span>{formatCurrency(req.totalRequested)}</span>
+                      <span>
+                        {req.status === "reimbursed"
+                          ? `${formatCurrency(req.reimbursement?.amount ?? req.totalApproved ?? req.totalRequested)} reimbursed`
+                          : formatCurrency(req.totalRequested)}
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -304,7 +308,11 @@ function ManagerDashboard() {
                     <div className="text-sm text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
                       <span>{req.courseDates || "TBD"}</span>
                       <span>•</span>
-                      <span>{formatCurrency(req.totalRequested)}</span>
+                      <span>
+                        {req.status === "reimbursed"
+                          ? `${formatCurrency(req.reimbursement?.amount ?? req.totalApproved ?? req.totalRequested)} reimbursed`
+                          : formatCurrency(req.totalRequested)}
+                      </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -409,7 +417,7 @@ function AccountingDashboard() {
 
   return (
     <div className="space-y-6">
-      <Link href="/requests?status=receipt_submitted" className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <Link href="/reimbursements" className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         <Card className="border-amber-200 bg-amber-50/70 shadow-sm transition-colors hover:border-amber-300 hover:bg-amber-50">
           <CardContent className="p-6">
             <div className="flex flex-col">
@@ -429,7 +437,7 @@ function AccountingDashboard() {
             <CardTitle className="text-lg font-serif">Ready for Reimbursement</CardTitle>
             <CardDescription>Requests with CE approval and submitted receipts</CardDescription>
           </div>
-          <Link href="/requests?status=receipt_submitted">
+          <Link href="/reimbursements">
             <Button variant="outline" size="sm">View All</Button>
           </Link>
         </CardHeader>
@@ -452,7 +460,7 @@ function AccountingDashboard() {
                       <div className="font-medium text-slate-900">{formatCurrency(req.totalApproved)}</div>
                       <div className="text-xs text-slate-500">Approved Amount</div>
                     </div>
-                    <Link href={`/requests/${req.id}`}>
+                      <Link href={`/reimbursements?selected=${req.id}`}>
                       <Button size="sm">Process</Button>
                     </Link>
                   </div>

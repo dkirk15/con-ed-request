@@ -100,6 +100,7 @@ function buildEvents(request: ConEdRequest): TimelineEvent[] {
   }
 
   if (request.reimbursement) {
+    const reimbursementAmount = request.reimbursement.amount ?? request.totalApproved;
     events.push({
       title: "Reimbursement recorded",
       detail: request.reimbursement.markedByName
@@ -108,7 +109,7 @@ function buildEvents(request: ConEdRequest): TimelineEvent[] {
       timestamp: request.reimbursement.markedAt,
       icon: CreditCard,
       tone: "success",
-      note: `Paycheck date: ${new Intl.DateTimeFormat("en-US", {
+      note: `${reimbursementAmount != null ? `Actual reimbursement: ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(reimbursementAmount)}. ` : ""}Paycheck date: ${new Intl.DateTimeFormat("en-US", {
         year: "numeric",
         month: "short",
         day: "numeric",

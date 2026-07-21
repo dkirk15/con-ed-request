@@ -112,6 +112,7 @@ export const receipts = pgTable("receipts", {
 export const reimbursements = pgTable("reimbursements", {
   id: serial("id").primaryKey(),
   requestId: integer("request_id").notNull().references(() => conEdRequests.id),
+  amount: numeric("amount", { precision: 10, scale: 2 }),
   paycheckDate: date("paycheck_date").notNull(),
   markedById: integer("marked_by_id").references(() => users.id),
   markedAt: timestamp("marked_at").defaultNow().notNull(),
