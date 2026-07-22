@@ -41,7 +41,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pnpm --filter @workspace/api-spec run codegen && git diff --exit-code lib/api-client-react/src/generated/ lib/api-zod/src/generated/"
+args = "pnpm --filter @workspace/api-spec run codegen && git add lib/api-client-react/src/generated/ lib/api-zod/src/generated/ && git diff --exit-code lib/api-client-react/src/generated/ lib/api-zod/src/generated/"
 
 [workflows.workflow.metadata]
 isValidation = true
