@@ -1910,6 +1910,134 @@ export const GetAdminDashboardResponse = zod.object({
 
 
 /**
+ * @summary Get role-scoped operational and financial report data
+ */
+export const getReportQueryYearMin = 2000;
+export const getReportQueryYearMax = 2100;
+
+export const getReportQuerySearchMax = 120;
+
+export const getReportQueryCourseFromRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const getReportQueryCourseToRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const getReportQuerySortDefault = `createdAt`;
+export const getReportQueryOrderDefault = `desc`;
+export const getReportQueryPageDefault = 1;
+
+export const getReportQueryPageSizeDefault = 25;
+export const getReportQueryPageSizeMin = 10;
+export const getReportQueryPageSizeMax = 100;
+
+
+
+export const GetReportQueryParams = zod.object({
+  "year": zod.coerce.number().min(getReportQueryYearMin).max(getReportQueryYearMax).optional(),
+  "clinicId": zod.coerce.number().nullish(),
+  "employeeId": zod.coerce.number().nullish(),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']).optional(),
+  "deliveryMethod": zod.enum(['in_person', 'virtual', 'hybrid']).optional(),
+  "search": zod.coerce.string().max(getReportQuerySearchMax).optional(),
+  "courseFrom": zod.coerce.string().regex(getReportQueryCourseFromRegExp).optional(),
+  "courseTo": zod.coerce.string().regex(getReportQueryCourseToRegExp).optional(),
+  "sort": zod.enum(['createdAt', 'courseStartDate', 'employeeName', 'totalRequested', 'totalApproved', 'status']).default(getReportQuerySortDefault),
+  "order": zod.enum(['asc', 'desc']).default(getReportQueryOrderDefault),
+  "page": zod.coerce.number().min(1).default(getReportQueryPageDefault),
+  "pageSize": zod.coerce.number().min(getReportQueryPageSizeMin).max(getReportQueryPageSizeMax).default(getReportQueryPageSizeDefault)
+})
+
+export const GetReportResponse = zod.object({
+  "summary": zod.object({
+  "totalRequests": zod.number(),
+  "totalRequested": zod.number(),
+  "totalApproved": zod.number(),
+  "totalReimbursed": zod.number(),
+  "outstandingApproved": zod.number()
+}),
+  "workflow": zod.array(zod.object({
+  "status": zod.enum(['pending_manager', 'pending_bo', 'awaiting_receipt', 'receipt_submitted']),
+  "label": zod.string(),
+  "count": zod.number(),
+  "oldestDays": zod.number().nullish()
+})),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "employeeName": zod.string(),
+  "employeeEmail": zod.string().optional(),
+  "clinicId": zod.number().nullish(),
+  "clinicName": zod.string().nullish(),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "courseName": zod.string(),
+  "courseProvider": zod.string().nullish(),
+  "courseUrl": zod.string().url().nullish(),
+  "courseStartDate": zod.coerce.date().nullish(),
+  "courseEndDate": zod.coerce.date().nullish(),
+  "legacyCourseDates": zod.string().nullish(),
+  "deliveryMethod": zod.union([zod.literal('in_person'),zod.literal('virtual'),zod.literal('hybrid'),zod.literal(null)]).nullish(),
+  "location": zod.string().nullish(),
+  "totalRequested": zod.number(),
+  "totalApproved": zod.number().nullish(),
+  "reimbursementAmount": zod.number().nullish(),
+  "paycheckDate": zod.coerce.date().nullish(),
+  "managerDecisionAt": zod.coerce.date().nullish(),
+  "boDecisionAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "total": zod.number(),
+  "page": zod.number(),
+  "pageSize": zod.number(),
+  "totalPages": zod.number()
+})
+
+
+/**
+ * @summary Get role-scoped reporting filter options
+ */
+export const GetReportOptionsResponse = zod.object({
+  "years": zod.array(zod.number()),
+  "clinics": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})),
+  "employees": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "clinicId": zod.number().nullable(),
+  "clinicName": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Export the filtered role-scoped report as CSV
+ */
+export const exportReportQueryYearMin = 2000;
+export const exportReportQueryYearMax = 2100;
+
+export const exportReportQuerySearchMax = 120;
+
+export const exportReportQueryCourseFromRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const exportReportQueryCourseToRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const exportReportQuerySortDefault = `createdAt`;
+export const exportReportQueryOrderDefault = `desc`;
+
+export const ExportReportQueryParams = zod.object({
+  "year": zod.coerce.number().min(exportReportQueryYearMin).max(exportReportQueryYearMax).optional(),
+  "clinicId": zod.coerce.number().nullish(),
+  "employeeId": zod.coerce.number().nullish(),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']).optional(),
+  "deliveryMethod": zod.enum(['in_person', 'virtual', 'hybrid']).optional(),
+  "search": zod.coerce.string().max(exportReportQuerySearchMax).optional(),
+  "courseFrom": zod.coerce.string().regex(exportReportQueryCourseFromRegExp).optional(),
+  "courseTo": zod.coerce.string().regex(exportReportQueryCourseToRegExp).optional(),
+  "sort": zod.enum(['createdAt', 'courseStartDate', 'employeeName', 'totalRequested', 'totalApproved', 'status']).default(exportReportQuerySortDefault),
+  "order": zod.enum(['asc', 'desc']).default(exportReportQueryOrderDefault)
+})
+
+export const ExportReportResponse = zod.unknown()
+
+
+/**
  * @summary Get a user's current con-ed balance for this year
  */
 export const GetUserBalanceParams = zod.object({

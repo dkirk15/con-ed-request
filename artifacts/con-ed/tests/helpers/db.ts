@@ -217,6 +217,20 @@ export async function getReimbursement(
   return rows[0];
 }
 
+export async function insertReimbursement(input: {
+  requestId: number;
+  amount: number;
+  paycheckDate: string;
+  markedById?: number | null;
+}): Promise<number> {
+  return insertRow("reimbursements", {
+    request_id: input.requestId,
+    amount: input.amount,
+    paycheck_date: input.paycheckDate,
+    marked_by_id: input.markedById ?? null,
+  });
+}
+
 export interface UserRow {
   id: number;
   role: Role;
