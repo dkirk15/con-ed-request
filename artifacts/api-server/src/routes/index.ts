@@ -5,6 +5,7 @@ import clinicsRouter from "./clinics";
 import requestsRouter from "./requests";
 import dashboardRouter from "./dashboard";
 import storageRouter from "./storage";
+import reportsRouter from "./reports";
 
 const router: IRouter = Router();
 
@@ -13,6 +14,7 @@ router.use(usersRouter);
 router.use(clinicsRouter);
 router.use(requestsRouter);
 router.use(dashboardRouter);
+router.use(reportsRouter);
 router.use(storageRouter);
 
 export default router;

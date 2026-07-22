@@ -523,6 +523,126 @@ export interface AdminDashboard {
   pendingRoleAssignment?: User[];
 }
 
+export interface ReportSummary {
+  totalRequests: number;
+  totalRequested: number;
+  totalApproved: number;
+  totalReimbursed: number;
+  outstandingApproved: number;
+}
+
+export type ReportWorkflowStageStatus = typeof ReportWorkflowStageStatus[keyof typeof ReportWorkflowStageStatus];
+
+
+export const ReportWorkflowStageStatus = {
+  pending_manager: 'pending_manager',
+  pending_bo: 'pending_bo',
+  awaiting_receipt: 'awaiting_receipt',
+  receipt_submitted: 'receipt_submitted',
+} as const;
+
+export interface ReportWorkflowStage {
+  status: ReportWorkflowStageStatus;
+  label: string;
+  count: number;
+  /** @nullable */
+  oldestDays?: number | null;
+}
+
+export type ReportRowStatus = typeof ReportRowStatus[keyof typeof ReportRowStatus];
+
+
+export const ReportRowStatus = {
+  draft: 'draft',
+  pending_manager: 'pending_manager',
+  manager_approved: 'manager_approved',
+  manager_denied: 'manager_denied',
+  pending_bo: 'pending_bo',
+  bo_approved: 'bo_approved',
+  bo_denied: 'bo_denied',
+  awaiting_receipt: 'awaiting_receipt',
+  receipt_submitted: 'receipt_submitted',
+  reimbursed: 'reimbursed',
+  cancelled: 'cancelled',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ReportRowDeliveryMethod = typeof ReportRowDeliveryMethod[keyof typeof ReportRowDeliveryMethod] | null;
+
+
+export const ReportRowDeliveryMethod = {
+  in_person: 'in_person',
+  virtual: 'virtual',
+  hybrid: 'hybrid',
+} as const;
+
+export interface ReportRow {
+  id: number;
+  employeeId: number;
+  employeeName: string;
+  employeeEmail?: string;
+  /** @nullable */
+  clinicId?: number | null;
+  /** @nullable */
+  clinicName?: string | null;
+  status: ReportRowStatus;
+  courseName: string;
+  /** @nullable */
+  courseProvider?: string | null;
+  /** @nullable */
+  courseUrl?: string | null;
+  /** @nullable */
+  courseStartDate?: string | null;
+  /** @nullable */
+  courseEndDate?: string | null;
+  /** @nullable */
+  legacyCourseDates?: string | null;
+  /** @nullable */
+  deliveryMethod?: ReportRowDeliveryMethod;
+  /** @nullable */
+  location?: string | null;
+  totalRequested: number;
+  /** @nullable */
+  totalApproved?: number | null;
+  /** @nullable */
+  reimbursementAmount?: number | null;
+  /** @nullable */
+  paycheckDate?: string | null;
+  /** @nullable */
+  managerDecisionAt?: string | null;
+  /** @nullable */
+  boDecisionAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReportResponse {
+  summary: ReportSummary;
+  workflow: ReportWorkflowStage[];
+  items: ReportRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface ReportEmployeeOption {
+  id: number;
+  name: string;
+  /** @nullable */
+  clinicId: number | null;
+  /** @nullable */
+  clinicName?: string | null;
+}
+
+export interface ReportOptions {
+  years: number[];
+  clinics: Clinic[];
+  employees: ReportEmployeeOption[];
+}
+
 export interface UploadUrlRequest {
   /** @minimum 1 */
   requestId: number;
@@ -539,6 +659,68 @@ export interface UploadUrlResponse {
   objectPath: string;
   metadata?: UploadUrlRequest;
 }
+
+export type ReportYearParameter = number;
+
+export type ReportClinicIdParameter = number | null;
+
+export type ReportEmployeeIdParameter = number | null;
+
+export type ReportStatusParameter = typeof ReportStatusParameter[keyof typeof ReportStatusParameter];
+
+
+export const ReportStatusParameter = {
+  draft: 'draft',
+  pending_manager: 'pending_manager',
+  manager_approved: 'manager_approved',
+  manager_denied: 'manager_denied',
+  pending_bo: 'pending_bo',
+  bo_approved: 'bo_approved',
+  bo_denied: 'bo_denied',
+  awaiting_receipt: 'awaiting_receipt',
+  receipt_submitted: 'receipt_submitted',
+  reimbursed: 'reimbursed',
+  cancelled: 'cancelled',
+} as const;
+
+export type ReportDeliveryMethodParameter = typeof ReportDeliveryMethodParameter[keyof typeof ReportDeliveryMethodParameter];
+
+
+export const ReportDeliveryMethodParameter = {
+  in_person: 'in_person',
+  virtual: 'virtual',
+  hybrid: 'hybrid',
+} as const;
+
+export type ReportSearchParameter = string;
+
+export type ReportCourseFromParameter = string;
+
+export type ReportCourseToParameter = string;
+
+export type ReportSortParameter = typeof ReportSortParameter[keyof typeof ReportSortParameter];
+
+
+export const ReportSortParameter = {
+  createdAt: 'createdAt',
+  courseStartDate: 'courseStartDate',
+  employeeName: 'employeeName',
+  totalRequested: 'totalRequested',
+  totalApproved: 'totalApproved',
+  status: 'status',
+} as const;
+
+export type ReportOrderParameter = typeof ReportOrderParameter[keyof typeof ReportOrderParameter];
+
+
+export const ReportOrderParameter = {
+  asc: 'asc',
+  desc: 'desc',
+} as const;
+
+export type ReportPageParameter = number;
+
+export type ReportPageSizeParameter = number;
 
 export type ListUsersParams = {
 role?: ListUsersRole;
@@ -637,4 +819,77 @@ export const ListRequestsOrder = {
   asc: 'asc',
   desc: 'desc',
 } as const;
+
+export type GetReportParams = {
+/**
+ * @minimum 2000
+ * @maximum 2100
+ */
+year?: ReportYearParameter;
+/**
+ * @nullable
+ */
+clinicId?: ReportClinicIdParameter;
+/**
+ * @nullable
+ */
+employeeId?: ReportEmployeeIdParameter;
+status?: ReportStatusParameter;
+deliveryMethod?: ReportDeliveryMethodParameter;
+/**
+ * @maxLength 120
+ */
+search?: ReportSearchParameter;
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+courseFrom?: ReportCourseFromParameter;
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+courseTo?: ReportCourseToParameter;
+sort?: ReportSortParameter;
+order?: ReportOrderParameter;
+/**
+ * @minimum 1
+ */
+page?: ReportPageParameter;
+/**
+ * @minimum 10
+ * @maximum 100
+ */
+pageSize?: ReportPageSizeParameter;
+};
+
+export type ExportReportParams = {
+/**
+ * @minimum 2000
+ * @maximum 2100
+ */
+year?: ReportYearParameter;
+/**
+ * @nullable
+ */
+clinicId?: ReportClinicIdParameter;
+/**
+ * @nullable
+ */
+employeeId?: ReportEmployeeIdParameter;
+status?: ReportStatusParameter;
+deliveryMethod?: ReportDeliveryMethodParameter;
+/**
+ * @maxLength 120
+ */
+search?: ReportSearchParameter;
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+courseFrom?: ReportCourseFromParameter;
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+courseTo?: ReportCourseToParameter;
+sort?: ReportSortParameter;
+order?: ReportOrderParameter;
+};
 
