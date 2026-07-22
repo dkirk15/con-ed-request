@@ -125,6 +125,6 @@ test("manager report remains limited to the assigned clinic", async ({
 
   await expect(page.getByText(ownCourse)).toBeVisible();
   await expect(page.getByText(otherCourse)).toHaveCount(0);
-  await expect(page.getByText("$275.00")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Financial summary" }).getByText("$275.00")).toBeVisible();
   await expect(page.getByLabel("Clinic")).toHaveCount(0);
 });

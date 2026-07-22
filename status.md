@@ -1,17 +1,12 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-21 by Codex
+Last updated: 2026-07-22 by Replit Agent
 
 ## Current State
 
-GitHub `main` is the integrated source of truth through Phase 5. **All 41 E2E
-tests pass** in Replit (4.8 min, 1 worker, no retries). The Phase 5 schema
-columns (`course_provider`, `course_url`, `course_start_date`, `course_end_date`,
-`delivery_method`) have been applied to the local database.
-
-Phase 6 operational reporting is implemented on the local
-`codex/phase-6-operational-reporting` branch and is ready for Replit validation.
-It has not yet been merged into `main`.
+GitHub `main` is the integrated source of truth through Phase 6. **All 43 E2E
+tests pass** in Replit (4.1 min, 1 worker, no retries). No database schema
+change is required for Phase 6.
 
 ### GitHub Integration
 
@@ -21,8 +16,9 @@ It has not yet been merged into `main`.
 - PR #6 (`Add approval review workspace`) merged Phase 3.
 - PR #7 (`Add reimbursement workspace and actual-amount accounting`) merged Phase 4.
 - PR #8 (`Add structured course data per request`) merged Phase 5.
+- PR #9 (`Add operational reporting workspace`) merged Phase 6.
 - Dependabot alert #1 is marked **fixed** as of 2026-07-20.
-- **All 41 Playwright E2E tests pass** in Replit as of 2026-07-21.
+- **All 43 Playwright E2E tests pass** in Replit as of 2026-07-22.
 
 ---
 
