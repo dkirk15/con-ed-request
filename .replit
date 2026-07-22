@@ -39,12 +39,12 @@ isValidation = true
 name = "codegen-drift"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm --filter @workspace/api-spec run codegen && git add lib/api-client-react/src/generated/ lib/api-zod/src/generated/ && git diff --exit-code lib/api-client-react/src/generated/ lib/api-zod/src/generated/"
-
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/api-spec run codegen && git add lib/api-client-react/src/generated/ lib/api-zod/src/generated/ && git diff --cached --exit-code lib/api-client-react/src/generated/ lib/api-zod/src/generated/"
 
 [agent]
 stack = "PNPM_WORKSPACE"
