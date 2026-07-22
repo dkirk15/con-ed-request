@@ -135,7 +135,7 @@ test("employee edits and saves a draft before submitting", async ({
   await page.getByLabel("Course or event name *").fill("E2E Draft Edited Title");
   await page.getByLabel("Tuition / registration ($)").fill("300");
   await page.getByRole("button", { name: "Save draft" }).click();
-  await expect(page.getByText("Draft saved")).toBeVisible();
+  await expect(page.getByText("Draft saved", { exact: true })).toBeVisible();
 
   const editedRow: RequestRow | undefined = await getRequest(requestId);
   expect(editedRow?.course_names).toBe("E2E Draft Edited Title");
