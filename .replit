@@ -44,7 +44,7 @@ isValidation = true
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pnpm --filter @workspace/api-spec run codegen && git add lib/api-client-react/src/generated/ lib/api-zod/src/generated/ && git diff --cached --exit-code lib/api-client-react/src/generated/ lib/api-zod/src/generated/"
+args = "pnpm --filter @workspace/api-spec run codegen && git add lib/api-client-react/src/generated/ lib/api-zod/src/generated/ && git diff --cached --exit-code lib/api-client-react/src/generated/ lib/api-zod/src/generated/ && pnpm --filter @workspace/api-client-react run typecheck && pnpm --filter @workspace/api-zod run typecheck"
 
 [agent]
 stack = "PNPM_WORKSPACE"
