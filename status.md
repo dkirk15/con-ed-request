@@ -1,13 +1,12 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-21 by Replit Agent
+Last updated: 2026-07-22 by Replit Agent
 
 ## Current State
 
-GitHub `main` is the integrated source of truth through Phase 5. **All 41 E2E
-tests pass** in Replit (4.8 min, 1 worker, no retries). The Phase 5 schema
-columns (`course_provider`, `course_url`, `course_start_date`, `course_end_date`,
-`delivery_method`) have been applied to the local database.
+GitHub `main` is the integrated source of truth through Phase 6. **All 43 E2E
+tests pass** in Replit (4.1 min, 1 worker, no retries). No database schema
+change is required for Phase 6.
 
 ### GitHub Integration
 
@@ -17,8 +16,56 @@ columns (`course_provider`, `course_url`, `course_start_date`, `course_end_date`
 - PR #6 (`Add approval review workspace`) merged Phase 3.
 - PR #7 (`Add reimbursement workspace and actual-amount accounting`) merged Phase 4.
 - PR #8 (`Add structured course data per request`) merged Phase 5.
+- PR #9 (`Add operational reporting workspace`) merged Phase 6.
 - Dependabot alert #1 is marked **fixed** as of 2026-07-20.
-- **All 41 Playwright E2E tests pass** in Replit as of 2026-07-21.
+- **All 43 Playwright E2E tests pass** in Replit as of 2026-07-22.
+
+---
+
+## Recent Changes (2026-07-21 via Codex - Operational Reporting)
+
+### Role-Scoped Reporting Workspace
+
+- Added a dedicated desktop reporting workspace at `/reports` for managers,
+  Business Office, Accounting, and administrators. Employees do not receive a
+  Reports navigation link and see an access-unavailable state on direct visits.
+- Managers are restricted by the server to employees in their assigned clinic,
+  even if another clinic ID is supplied in the URL. Business Office, Accounting,
+  and administrators can report across the organization.
+- Added Reports navigation to each authorized role without changing the existing
+  approval, reimbursement, request, or administrative workspaces.
+
+### Financial And Workflow Visibility
+
+- Added year-based financial totals for requested, approved, actually reimbursed,
+  and approved-but-outstanding funding. Legacy reimbursements without an amount
+  continue to fall back to the approved or requested amount.
+- Added workflow aging for manager approval, Business Office approval, awaiting
+  receipt, and ready-for-reimbursement queues.
+- Added a paginated request ledger with request drilldown, status, clinic,
+  requested/approved/reimbursed amounts, configurable sorting, and row counts.
+
+### Filters And Export
+
+- Report state is URL-backed and supports request year, clinic, employee, status,
+  delivery method, course-date range, and course/provider/employee search.
+- Employee choices follow the selected clinic. Search requests are deferred while
+  typing to avoid unnecessary rapid report refreshes.
+- Added a CSV export that uses the same role scope, filters, and sorting as the
+  visible report. Exported text is protected against spreadsheet formula injection.
+- Reporting years default dynamically to the current year and include years found
+  in the role-scoped request history.
+
+### Validation And Replit Handoff
+
+- OpenAPI React clients and Zod validators were regenerated successfully.
+- Full workspace TypeScript checks pass.
+- API and frontend production builds pass locally.
+- Playwright discovers **43 tests in 17 files**. Two new reporting tests cover
+  financial reconciliation, CSV export, and manager clinic isolation; role tests
+  now cover Reports navigation and employee access.
+- The authenticated 43-test E2E run still needs to be completed in Replit.
+- **No database schema push or migration is required for Phase 6.**
 
 ---
 

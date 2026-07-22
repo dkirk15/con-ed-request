@@ -13,7 +13,7 @@ test.describe("Role-based dashboards and navigation", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-emp`);
+    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-emp`);
     const user = await provisionUser({ role: "employee", clinicId });
     await signInAs(user);
 
@@ -21,6 +21,10 @@ test.describe("Role-based dashboards and navigation", () => {
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
     await expect(page.getByText(`Welcome back, ${user.name}`)).toBeVisible();
     await expect(page.getByRole("link", { name: "Team" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Reports" })).toHaveCount(0);
+
+    await page.goto("/reports");
+    await expect(page.getByText("Reports are not available for this account")).toBeVisible();
 
     await page.goto("/requests");
     await expect(
@@ -33,7 +37,7 @@ test.describe("Role-based dashboards and navigation", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-mgr`);
+    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-mgr`);
     const user = await provisionUser({ role: "manager", clinicId });
     await signInAs(user);
 
@@ -43,6 +47,7 @@ test.describe("Role-based dashboards and navigation", () => {
     await expect(page.getByText("My Annual Allocation")).toBeVisible();
     await expect(page.getByRole("link", { name: "Team" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Approvals" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Reports" })).toBeVisible();
 
     await page.goto("/requests");
     await expect(page.getByRole("link", { name: "New Request" })).toBeVisible();
@@ -64,6 +69,7 @@ test.describe("Role-based dashboards and navigation", () => {
     await expect(page.getByText("Total Funding Approved YTD")).toBeVisible();
     await expect(page.getByRole("link", { name: "Team" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "CE Approvals", exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Reports" })).toBeVisible();
 
     await page.goto("/requests");
     await expect(
@@ -87,6 +93,7 @@ test.describe("Role-based dashboards and navigation", () => {
     ).toBeVisible();
     await expect(page.getByRole("link", { name: "Team" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Reimbursements" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Reports" })).toBeVisible();
 
     await page.goto("/requests");
     await expect(
@@ -105,6 +112,7 @@ test.describe("Role-based dashboards and navigation", () => {
     await page.goto("/dashboard");
     await expect(page.getByRole("heading", { name: "Operations" })).toBeVisible();
     await expect(page.getByRole("link", { name: "People" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Reports" })).toBeVisible();
 
     await page.goto("/requests");
     await expect(

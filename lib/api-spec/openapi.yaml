@@ -21,6 +21,8 @@ tags:
     description: Reimbursement tracking
   - name: dashboard
     description: Aggregated dashboard data
+  - name: reports
+    description: Operational and financial reporting
   - name: Storage
     description: Object storage upload and serving endpoints.
 
@@ -680,6 +682,82 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminDashboard"
 
+  # Operational reporting
+
+  /reports:
+    get:
+      operationId: getReport
+      tags: [reports]
+      summary: Get role-scoped operational and financial report data
+      parameters:
+        - $ref: "#/components/parameters/ReportYear"
+        - $ref: "#/components/parameters/ReportClinicId"
+        - $ref: "#/components/parameters/ReportEmployeeId"
+        - $ref: "#/components/parameters/ReportStatus"
+        - $ref: "#/components/parameters/ReportDeliveryMethod"
+        - $ref: "#/components/parameters/ReportSearch"
+        - $ref: "#/components/parameters/ReportCourseFrom"
+        - $ref: "#/components/parameters/ReportCourseTo"
+        - $ref: "#/components/parameters/ReportSort"
+        - $ref: "#/components/parameters/ReportOrder"
+        - $ref: "#/components/parameters/ReportPage"
+        - $ref: "#/components/parameters/ReportPageSize"
+      responses:
+        "200":
+          description: Filtered report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportResponse"
+        "403":
+          description: Reporting is not available to this role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /reports/options:
+    get:
+      operationId: getReportOptions
+      tags: [reports]
+      summary: Get role-scoped reporting filter options
+      responses:
+        "200":
+          description: Reporting filter options
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportOptions"
+
+  /reports/export:
+    get:
+      operationId: exportReport
+      tags: [reports]
+      summary: Export the filtered role-scoped report as CSV
+      parameters:
+        - $ref: "#/components/parameters/ReportYear"
+        - $ref: "#/components/parameters/ReportClinicId"
+        - $ref: "#/components/parameters/ReportEmployeeId"
+        - $ref: "#/components/parameters/ReportStatus"
+        - $ref: "#/components/parameters/ReportDeliveryMethod"
+        - $ref: "#/components/parameters/ReportSearch"
+        - $ref: "#/components/parameters/ReportCourseFrom"
+        - $ref: "#/components/parameters/ReportCourseTo"
+        - $ref: "#/components/parameters/ReportSort"
+        - $ref: "#/components/parameters/ReportOrder"
+      responses:
+        "200":
+          description: CSV report export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+
   # ─── Employee Balance ─────────────────────────────────────────────────────────
 
   /users/{userId}/balance:
@@ -787,6 +865,83 @@ paths:
                 $ref: "#/components/schemas/ErrorEnvelope"
 
 components:
+  parameters:
+    ReportYear:
+      name: year
+      in: query
+      schema:
+        type: integer
+        minimum: 2000
+        maximum: 2100
+    ReportClinicId:
+      name: clinicId
+      in: query
+      schema:
+        type: ["integer", "null"]
+    ReportEmployeeId:
+      name: employeeId
+      in: query
+      schema:
+        type: ["integer", "null"]
+    ReportStatus:
+      name: status
+      in: query
+      schema:
+        type: string
+        enum: [draft, pending_manager, manager_approved, manager_denied, pending_bo, bo_approved, bo_denied, awaiting_receipt, receipt_submitted, reimbursed, cancelled]
+    ReportDeliveryMethod:
+      name: deliveryMethod
+      in: query
+      schema:
+        type: string
+        enum: [in_person, virtual, hybrid]
+    ReportSearch:
+      name: search
+      in: query
+      schema:
+        type: string
+        maxLength: 120
+    ReportCourseFrom:
+      name: courseFrom
+      in: query
+      schema:
+        type: string
+        pattern: '^\d{4}-\d{2}-\d{2}$'
+    ReportCourseTo:
+      name: courseTo
+      in: query
+      schema:
+        type: string
+        pattern: '^\d{4}-\d{2}-\d{2}$'
+    ReportSort:
+      name: sort
+      in: query
+      schema:
+        type: string
+        enum: [createdAt, courseStartDate, employeeName, totalRequested, totalApproved, status]
+        default: createdAt
+    ReportOrder:
+      name: order
+      in: query
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: desc
+    ReportPage:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    ReportPageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 10
+        maximum: 100
+        default: 25
   schemas:
     HealthStatus:
       type: object
@@ -1474,6 +1629,156 @@ components:
             $ref: "#/components/schemas/User"
 
     # ─── Object Storage ────────────────────────────────────────────────────────
+
+    ReportSummary:
+      type: object
+      required: [totalRequests, totalRequested, totalApproved, totalReimbursed, outstandingApproved]
+      properties:
+        totalRequests:
+          type: integer
+        totalRequested:
+          type: number
+          format: float
+        totalApproved:
+          type: number
+          format: float
+        totalReimbursed:
+          type: number
+          format: float
+        outstandingApproved:
+          type: number
+          format: float
+
+    ReportWorkflowStage:
+      type: object
+      required: [status, label, count]
+      properties:
+        status:
+          type: string
+          enum: [pending_manager, pending_bo, awaiting_receipt, receipt_submitted]
+        label:
+          type: string
+        count:
+          type: integer
+        oldestDays:
+          type: ["integer", "null"]
+
+    ReportRow:
+      type: object
+      required: [id, employeeId, employeeName, status, courseName, totalRequested, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        employeeId:
+          type: integer
+        employeeName:
+          type: string
+        employeeEmail:
+          type: string
+        clinicId:
+          type: ["integer", "null"]
+        clinicName:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [draft, pending_manager, manager_approved, manager_denied, pending_bo, bo_approved, bo_denied, awaiting_receipt, receipt_submitted, reimbursed, cancelled]
+        courseName:
+          type: string
+        courseProvider:
+          type: ["string", "null"]
+        courseUrl:
+          type: ["string", "null"]
+          format: uri
+        courseStartDate:
+          type: ["string", "null"]
+          format: date
+        courseEndDate:
+          type: ["string", "null"]
+          format: date
+        legacyCourseDates:
+          type: ["string", "null"]
+        deliveryMethod:
+          type: ["string", "null"]
+          enum: [in_person, virtual, hybrid, null]
+        location:
+          type: ["string", "null"]
+        totalRequested:
+          type: number
+          format: float
+        totalApproved:
+          type: ["number", "null"]
+          format: float
+        reimbursementAmount:
+          type: ["number", "null"]
+          format: float
+        paycheckDate:
+          type: ["string", "null"]
+          format: date
+        managerDecisionAt:
+          type: ["string", "null"]
+          format: date-time
+        boDecisionAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ReportResponse:
+      type: object
+      required: [summary, workflow, items, total, page, pageSize, totalPages]
+      properties:
+        summary:
+          $ref: "#/components/schemas/ReportSummary"
+        workflow:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportWorkflowStage"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportRow"
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalPages:
+          type: integer
+
+    ReportEmployeeOption:
+      type: object
+      required: [id, name, clinicId]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        clinicId:
+          type: ["integer", "null"]
+        clinicName:
+          type: ["string", "null"]
+
+    ReportOptions:
+      type: object
+      required: [years, clinics, employees]
+      properties:
+        years:
+          type: array
+          items:
+            type: integer
+        clinics:
+          type: array
+          items:
+            $ref: "#/components/schemas/Clinic"
+        employees:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportEmployeeOption"
 
     UploadUrlRequest:
       type: object

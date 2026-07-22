@@ -4,6 +4,7 @@ import { useGetMe } from "@workspace/api-client-react";
 import { useClerk } from "@clerk/react";
 import {
   Building2,
+  BarChart3,
   ClipboardCheck,
   FilePlus2,
   Files,
@@ -63,6 +64,7 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
       query: { scope: "mine" },
     },
     { label: "Team", href: "/users", icon: Users, path: "/users" },
+    { label: "Reports", href: "/reports", icon: BarChart3, path: "/reports" },
   ],
   business_office: [
     { label: "Overview", href: "/dashboard", icon: Home, path: "/dashboard" },
@@ -73,6 +75,7 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
       path: "/approvals",
     },
     { label: "All Requests", href: "/requests", icon: Files, path: "/requests", exactQuery: true },
+    { label: "Reports", href: "/reports", icon: BarChart3, path: "/reports" },
   ],
   accounting: [
     { label: "Overview", href: "/dashboard", icon: Home, path: "/dashboard" },
@@ -89,10 +92,12 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
       path: "/requests",
       query: { status: "reimbursed" },
     },
+    { label: "Reports", href: "/reports", icon: BarChart3, path: "/reports" },
   ],
   admin: [
     { label: "Operations", href: "/dashboard", icon: Home, path: "/dashboard" },
     { label: "All Requests", href: "/requests", icon: Files, path: "/requests", exactQuery: true },
+    { label: "Reports", href: "/reports", icon: BarChart3, path: "/reports" },
     { label: "People", href: "/users", icon: Users, path: "/users" },
     { label: "Clinics", href: "/clinics", icon: Building2, path: "/clinics" },
   ],
