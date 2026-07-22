@@ -578,7 +578,8 @@ export default function NewRequestPage() {
                       <FormLabel>Delivery method <span className="text-destructive">*</span></FormLabel>
                       <Select
                         value={field.value}
-                        onValueChange={(value: "in_person" | "virtual" | "hybrid") => {
+                        onValueChange={(value) => {
+                          if (value !== "in_person" && value !== "virtual" && value !== "hybrid") return;
                           field.onChange(value);
                           if (value === "virtual") {
                             form.setValue("location", "", { shouldDirty: true, shouldValidate: true });
