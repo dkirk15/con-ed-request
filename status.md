@@ -6,7 +6,7 @@ Last updated: 2026-07-22 by Replit Agent
 
 GitHub `main` is the integrated source of truth through Phase 6. **All 43 E2E
 tests pass** in Replit (4.1 min, 1 worker, no retries). No database schema
-change is required for Phase 6.
+change is required for Phase 6. CI validation pipeline is fully hardened.
 
 ### GitHub Integration
 
@@ -19,6 +19,46 @@ change is required for Phase 6.
 - PR #9 (`Add operational reporting workspace`) merged Phase 6.
 - Dependabot alert #1 is marked **fixed** as of 2026-07-20.
 - **All 43 Playwright E2E tests pass** in Replit as of 2026-07-22.
+
+---
+
+## Recent Changes (2026-07-22 by Replit Agent — CI Hardening)
+
+### Codegen-Drift Validation Fixed
+
+The `codegen-drift` validation workflow was updated to work without manual
+git staging:
+
+- Added `git add lib/api-client-react/src/generated/ lib/api-zod/src/generated/`
+  as an automatic step after orval regenerates files.
+- Changed `git diff --exit-code` to `git diff --cached --exit-code` so the
+  check compares staged output against HEAD rather than working tree against
+  index — correctly detecting stale committed files instead of always passing.
+
+### Full Type-Check Pipeline Added to Codegen-Drift
+
+The `codegen-drift` validation now also runs `tsc --noEmit` across all packages
+after verifying generated files are in sync:
+
+- `lib/db`, `lib/api-client-react`, `lib/api-zod` — lib packages
+- `artifacts/con-ed`, `artifacts/api-server` — consumer packages
+
+`typecheck` scripts were added to `lib/api-client-react/package.json`,
+`lib/api-zod/package.json`, and `lib/db/package.json` to support this.
+
+### Standalone Typecheck-Libs Validation
+
+A new `typecheck-libs` validation workflow (`pnpm -w run typecheck:libs`) runs
+independently of codegen so lib type regressions are caught even when codegen
+is skipped.
+
+### Post-Merge Auto-Codegen
+
+`scripts/post-merge.sh` now detects whether `lib/api-spec/openapi.yaml` changed
+anywhere in the merged commit range (using `ORIG_HEAD` with `HEAD~1` fallback)
+and automatically re-runs `pnpm --filter @workspace/api-spec run codegen` when
+it did. If generated files change, it stages and commits them so HEAD stays
+fully in sync without manual intervention.
 
 ---
 
