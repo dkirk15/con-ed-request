@@ -22,7 +22,29 @@ not yet been merged into `main`.
 - PR #8 (`Add structured course data per request`) merged Phase 5.
 - PR #9 (`Add operational reporting workspace`) merged Phase 6.
 - Dependabot alert #1 is marked **fixed** as of 2026-07-20.
+- Dependabot alert #2 (`body-parser`, CVE-2026-12590) is patched on the Phase 7
+  branch and will close after the branch is merged into `main`.
 - **All 43 Playwright E2E tests pass** in Replit as of 2026-07-22.
+
+---
+
+## Recent Changes (2026-07-22 via Codex - Dependabot Alert #2)
+
+- Updated the Express `body-parser` dependency from 2.2.2 to the patched 2.3.0
+  release, addressing the low-severity denial-of-service advisory
+  CVE-2026-12590 / GHSA-v422-hmwv-36x6.
+- Added a workspace security override requiring `body-parser` 2.3.0 or newer so
+  future dependency installs cannot restore the vulnerable version.
+- Dependency resolution confirms that 2.3.0 is the only installed
+  `body-parser` version. Workspace TypeScript checks and the API production
+  build pass locally.
+- The frontend production build did not complete in the local Windows/OneDrive
+  environment and should be rerun in Replit. The dependency fix does not
+  change frontend code.
+- A full dependency audit also identified separate advisories affecting
+  `linkify-it`, `fast-uri`, and `fast-xml-parser`; these are unrelated to
+  Dependabot alert #2 and remain follow-up work.
+- No application code or database schema changes are required for this fix.
 
 ---
 
