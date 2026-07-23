@@ -167,6 +167,7 @@ export default function RequestDetailPage() {
         toast({ title: "Success", description: successMsg });
         queryClient.invalidateQueries({ queryKey: getGetRequestQueryKey(id) });
         queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
       },
       onError: (err: any) => {
         toast({ title: "Error", description: err.message || "Action failed", variant: "destructive" });
@@ -312,6 +313,7 @@ export default function RequestDetailPage() {
                         {
                           onSuccess: () => {
                             queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
+                            queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
                             toast({ title: "Draft deleted", description: "The draft has been permanently removed." });
                             setLocation("/requests?status=draft");
                           },

@@ -6,6 +6,7 @@ import requestsRouter from "./requests";
 import dashboardRouter from "./dashboard";
 import storageRouter from "./storage";
 import reportsRouter from "./reports";
+import tasksRouter from "./tasks";
 
 const router: IRouter = Router();
 
@@ -15,6 +16,7 @@ router.use(clinicsRouter);
 router.use(requestsRouter);
 router.use(dashboardRouter);
 router.use(reportsRouter);
+router.use(tasksRouter);
 router.use(storageRouter);
 
 export default router;

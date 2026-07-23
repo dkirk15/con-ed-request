@@ -331,6 +331,7 @@ export default function NewRequestPage() {
   const invalidateRequestData = (id?: number) => {
     queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
     queryClient.invalidateQueries({ queryKey: ["/api/dashboard/employee/balance"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
     if (id) queryClient.invalidateQueries({ queryKey: getGetRequestQueryKey(id) });
   };
 
