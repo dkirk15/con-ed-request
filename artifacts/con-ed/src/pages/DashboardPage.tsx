@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, Plus, Clock, CheckCircle2, XCircle, CreditCard } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
+import TaskCenterPanel from "@/components/TaskCenterPanel";
 
 export default function DashboardPage() {
   const { data: user, isLoading: isUserLoading } = useGetMe();
@@ -45,6 +46,8 @@ export default function DashboardPage() {
           </Link>
         ) : null}
       </div>
+
+      <TaskCenterPanel role={user.role} />
 
       {user.role === "employee" && <EmployeeDashboard />}
       {user.role === "manager" && <ManagerDashboard />}
@@ -170,7 +173,7 @@ function ManagerDashboard() {
 
   if (isLoading || !data) return <DashboardSkeleton />;
 
-  const { myBalance, pendingClinicRequests, myRecentRequests = [], requestCounts, clinicEmployeeCount } = data;
+  const { myBalance, myRecentRequests = [], requestCounts, clinicEmployeeCount } = data;
   const availableAllocation = myBalance.availableAllocation ?? myBalance.annualAllocation;
   const percentUsed =
     availableAllocation > 0
@@ -225,63 +228,27 @@ function ManagerDashboard() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="col-span-1 lg:col-span-2 shadow-sm border-slate-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
-              <CardTitle className="text-lg font-serif">Needs Your Approval</CardTitle>
-              <CardDescription>Pending requests from your team</CardDescription>
-            </div>
-            <Link href="/approvals">
-              <Button variant="outline" size="sm">View All</Button>
-            </Link>
-          </CardHeader>
-          <CardContent>
-            {pendingClinicRequests.length === 0 ? (
-              <div className="text-center py-8 text-slate-500">
-                <CheckCircle2 className="h-10 w-10 mx-auto text-green-300 mb-3" />
-                <p>You're all caught up! No requests waiting for your approval.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {pendingClinicRequests.map(req => (
-                  <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors">
-                    <div className="mb-2 sm:mb-0">
-                      <h4 className="font-medium text-slate-900">{req.employeeName}</h4>
-                      <div className="text-sm text-slate-500 mt-1 line-clamp-1">{req.courseNames}</div>
-                      <div className="text-xs text-slate-400 mt-1">{formatCurrency(req.totalRequested)} requested</div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Link href={`/approvals?selected=${req.id}`}>
-                        <Button size="sm">Review</Button>
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-sm border-slate-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-serif">My Annual Allocation</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-900 mb-1">{formatCurrency(myBalance.remainingAmount)}</div>
-            <div className="text-sm text-slate-500 mb-3">Remaining of {formatCurrency(availableAllocation)}</div>
+      <Card className="border-slate-200 shadow-sm">
+        <CardContent className="grid gap-5 p-6 md:grid-cols-[minmax(0,1fr)_minmax(260px,0.7fr)] md:items-center">
+          <div>
+            <div className="font-serif text-lg font-semibold text-slate-900">My Annual Allocation</div>
+            <div className="mt-2 text-2xl font-bold text-slate-900">{formatCurrency(myBalance.remainingAmount)}</div>
+            <div className="mt-1 text-sm text-slate-500">Remaining of {formatCurrency(availableAllocation)}</div>
             {myBalance.carryoverDebt ? (
-              <div className="text-xs text-amber-700 mb-3">
+              <div className="mt-2 text-xs text-amber-700">
                 {formatCurrency(myBalance.carryoverDebt)} carry-forward advance applied
               </div>
             ) : null}
+          </div>
+          <div>
             <Progress value={percentUsed} className="h-2 rounded-full bg-slate-100" />
-            <Link href="/account">
-              <Button variant="link" className="w-full mt-4 text-primary">View My Profile</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+            <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+              <span>{percentUsed}% used</span>
+              <Link href="/account" className="font-medium text-primary hover:underline">View my profile</Link>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="shadow-sm border-slate-200">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -336,7 +303,7 @@ function BODashboard() {
 
   if (isLoading || !data) return <DashboardSkeleton />;
 
-  const { pendingApproval, approvedAwaitingReceipt, totalFundingApproved, totalPendingAmount } = data;
+  const { pendingApproval, totalFundingApproved, totalPendingAmount } = data;
 
   return (
     <div className="space-y-6">
@@ -364,46 +331,6 @@ function BODashboard() {
           </Card>
         </Link>
       </div>
-
-      <Card className="shadow-sm border-slate-200">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <div>
-            <CardTitle className="text-lg font-serif">Awaiting Business Office Approval</CardTitle>
-            <CardDescription>Requests approved by managers, waiting for final CE sign-off</CardDescription>
-          </div>
-          <Link href="/approvals">
-            <Button variant="outline" size="sm">View All</Button>
-          </Link>
-        </CardHeader>
-        <CardContent>
-          {pendingApproval.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
-              <CheckCircle2 className="h-10 w-10 mx-auto text-green-300 mb-3" />
-              <p>You're all caught up! No requests waiting for your approval.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {pendingApproval.slice(0, 5).map(req => (
-                <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors">
-                  <div className="mb-2 sm:mb-0">
-                    <h4 className="font-medium text-slate-900">{req.employeeName} <span className="text-slate-400 font-normal ml-1">({req.clinicName})</span></h4>
-                    <div className="text-sm text-slate-500 mt-1 line-clamp-1">{req.courseNames}</div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="font-medium text-slate-900">{formatCurrency(req.totalRequested)}</div>
-                      <div className="text-xs text-slate-500">Requested</div>
-                    </div>
-                    <Link href={`/approvals?selected=${req.id}`}>
-                      <Button size="sm">Review</Button>
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
@@ -413,7 +340,7 @@ function AccountingDashboard() {
 
   if (isLoading || !data) return <DashboardSkeleton />;
 
-  const { pendingReimbursement, totalPendingAmount, recentlyReimbursed } = data;
+  const { pendingReimbursement, totalPendingAmount } = data;
 
   return (
     <div className="space-y-6">
@@ -430,46 +357,6 @@ function AccountingDashboard() {
           </CardContent>
         </Card>
       </Link>
-
-      <Card className="shadow-sm border-slate-200">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <div>
-            <CardTitle className="text-lg font-serif">Ready for Reimbursement</CardTitle>
-            <CardDescription>Requests with CE approval and submitted receipts</CardDescription>
-          </div>
-          <Link href="/reimbursements">
-            <Button variant="outline" size="sm">View All</Button>
-          </Link>
-        </CardHeader>
-        <CardContent>
-          {pendingReimbursement.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
-              <CheckCircle2 className="h-10 w-10 mx-auto text-green-300 mb-3" />
-              <p>You're all caught up! No reimbursements to process.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {pendingReimbursement.map(req => (
-                <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors">
-                  <div className="mb-2 sm:mb-0">
-                    <h4 className="font-medium text-slate-900">{req.employeeName} <span className="text-slate-400 font-normal ml-1">({req.clinicName})</span></h4>
-                    <div className="text-sm text-slate-500 mt-1 line-clamp-1">{req.courseNames}</div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <div className="font-medium text-slate-900">{formatCurrency(req.totalApproved)}</div>
-                      <div className="text-xs text-slate-500">Approved Amount</div>
-                    </div>
-                      <Link href={`/reimbursements?selected=${req.id}`}>
-                      <Button size="sm">Process</Button>
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
