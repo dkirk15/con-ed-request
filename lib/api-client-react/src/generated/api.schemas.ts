@@ -523,6 +523,80 @@ export interface AdminDashboard {
   pendingRoleAssignment?: User[];
 }
 
+export interface TaskNavigationCounts {
+  myRequests: number;
+  approvals: number;
+  reimbursements: number;
+  reports: number;
+}
+
+export type TaskItemTaskType = typeof TaskItemTaskType[keyof typeof TaskItemTaskType];
+
+
+export const TaskItemTaskType = {
+  draft_request: 'draft_request',
+  manager_approval: 'manager_approval',
+  bo_approval: 'bo_approval',
+  approved_purchase: 'approved_purchase',
+  receipt_submitted: 'receipt_submitted',
+  reimbursement: 'reimbursement',
+} as const;
+
+export type TaskItemKind = typeof TaskItemKind[keyof typeof TaskItemKind];
+
+
+export const TaskItemKind = {
+  action: 'action',
+  waiting: 'waiting',
+  monitoring: 'monitoring',
+} as const;
+
+export type TaskItemPriority = typeof TaskItemPriority[keyof typeof TaskItemPriority];
+
+
+export const TaskItemPriority = {
+  standard: 'standard',
+  aging: 'aging',
+  stale: 'stale',
+} as const;
+
+export type TaskItemStatus = typeof TaskItemStatus[keyof typeof TaskItemStatus];
+
+
+export const TaskItemStatus = {
+  draft: 'draft',
+  pending_manager: 'pending_manager',
+  pending_bo: 'pending_bo',
+  awaiting_receipt: 'awaiting_receipt',
+  receipt_submitted: 'receipt_submitted',
+} as const;
+
+export interface TaskItem {
+  requestId: number;
+  taskType: TaskItemTaskType;
+  kind: TaskItemKind;
+  priority: TaskItemPriority;
+  status: TaskItemStatus;
+  courseName: string;
+  employeeName: string;
+  /** @nullable */
+  clinicName?: string | null;
+  /** @nullable */
+  courseStartDate?: string | null;
+  /** @nullable */
+  courseEndDate?: string | null;
+  ageDays: number;
+  updatedAt: string;
+}
+
+export interface TaskCenter {
+  navigationCounts: TaskNavigationCounts;
+  actionCount: number;
+  agingCount: number;
+  staleCount: number;
+  items: TaskItem[];
+}
+
 export interface ReportSummary {
   totalRequests: number;
   totalRequested: number;

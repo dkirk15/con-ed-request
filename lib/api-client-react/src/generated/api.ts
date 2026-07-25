@@ -49,6 +49,7 @@ import type {
   ReportResponse,
   RequestListResponse,
   SubmitRequestInput,
+  TaskCenter,
   UploadUrlRequest,
   UploadUrlResponse,
   User,
@@ -2231,6 +2232,83 @@ export function useGetAdminDashboard<TData = Awaited<ReturnType<typeof getAdminD
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetAdminDashboardQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetTaskCenterUrl = () => {
+
+
+
+
+  return `/api/tasks`
+}
+
+/**
+ * @summary Get role-scoped workflow tasks and navigation counts
+ */
+export const getTaskCenter = async ( options?: RequestInit): Promise<TaskCenter> => {
+
+  return customFetch<TaskCenter>(getGetTaskCenterUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetTaskCenterQueryKey = () => {
+    return [
+    `/api/tasks`
+    ] as const;
+    }
+
+
+export const getGetTaskCenterQueryOptions = <TData = Awaited<ReturnType<typeof getTaskCenter>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTaskCenter>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetTaskCenterQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTaskCenter>>> = ({ signal }) => getTaskCenter({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getTaskCenter>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetTaskCenterQueryResult = NonNullable<Awaited<ReturnType<typeof getTaskCenter>>>
+export type GetTaskCenterQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get role-scoped workflow tasks and navigation counts
+ */
+
+export function useGetTaskCenter<TData = Awaited<ReturnType<typeof getTaskCenter>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTaskCenter>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetTaskCenterQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

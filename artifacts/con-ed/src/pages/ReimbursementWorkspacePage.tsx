@@ -163,6 +163,7 @@ export default function ReimbursementWorkspacePage() {
     );
     queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
     queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
     queryClient.invalidateQueries({ queryKey: ["/api/users"] });
     toast({
       title: "Reimbursement recorded",

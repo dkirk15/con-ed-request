@@ -1,6 +1,10 @@
 import { type ReactNode } from "react";
 import { Link, useLocation, useSearch } from "wouter";
-import { useGetMe } from "@workspace/api-client-react";
+import {
+  getGetTaskCenterQueryKey,
+  useGetMe,
+  useGetTaskCenter,
+} from "@workspace/api-client-react";
 import { useClerk } from "@clerk/react";
 import {
   Building2,
@@ -40,12 +44,13 @@ interface NavItem {
   path: string;
   query?: Record<string, string>;
   exactQuery?: boolean;
+  badge?: "myRequests" | "approvals" | "reimbursements" | "reports";
 }
 
 const NAV_ITEMS: Record<Role, NavItem[]> = {
   employee: [
     { label: "Overview", href: "/dashboard", icon: Home, path: "/dashboard" },
-    { label: "My Requests", href: "/requests", icon: Files, path: "/requests", exactQuery: true },
+    { label: "My Requests", href: "/requests", icon: Files, path: "/requests", exactQuery: true, badge: "myRequests" },
     { label: "New Request", href: "/requests/new", icon: FilePlus2, path: "/requests/new" },
   ],
   manager: [
@@ -55,6 +60,7 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
       href: "/approvals",
       icon: ClipboardCheck,
       path: "/approvals",
+      badge: "approvals",
     },
     {
       label: "My Requests",
@@ -62,6 +68,7 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
       icon: Files,
       path: "/requests",
       query: { scope: "mine" },
+      badge: "myRequests",
     },
     { label: "Team", href: "/users", icon: Users, path: "/users" },
     { label: "Reports", href: "/reports", icon: BarChart3, path: "/reports" },
@@ -73,6 +80,7 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
       href: "/approvals",
       icon: ClipboardCheck,
       path: "/approvals",
+      badge: "approvals",
     },
     { label: "All Requests", href: "/requests", icon: Files, path: "/requests", exactQuery: true },
     { label: "Reports", href: "/reports", icon: BarChart3, path: "/reports" },
@@ -84,6 +92,7 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
       href: "/reimbursements",
       icon: ReceiptText,
       path: "/reimbursements",
+      badge: "reimbursements",
     },
     {
       label: "History",
@@ -97,7 +106,7 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
   admin: [
     { label: "Operations", href: "/dashboard", icon: Home, path: "/dashboard" },
     { label: "All Requests", href: "/requests", icon: Files, path: "/requests", exactQuery: true },
-    { label: "Reports", href: "/reports", icon: BarChart3, path: "/reports" },
+    { label: "Reports", href: "/reports", icon: BarChart3, path: "/reports", badge: "reports" },
     { label: "People", href: "/users", icon: Users, path: "/users" },
     { label: "Clinics", href: "/clinics", icon: Building2, path: "/clinics" },
   ],
@@ -126,6 +135,12 @@ function isNavItemActive(
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { data: user } = useGetMe();
+  const { data: taskCenter } = useGetTaskCenter({
+    query: {
+      enabled: Boolean(user),
+      queryKey: getGetTaskCenterQueryKey(),
+    },
+  });
   const { signOut } = useClerk();
   const [location] = useLocation();
   const search = useSearch();
@@ -180,6 +195,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <SidebarMenu>
               {NAV_ITEMS[role].map((item) => {
                 const Icon = item.icon;
+                const badgeCount = item.badge
+                  ? taskCenter?.navigationCounts[item.badge] ?? 0
+                  : 0;
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
@@ -189,6 +207,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                       <Link href={item.href} className="flex w-full items-center gap-3">
                         <Icon aria-hidden="true" className="h-4 w-4" />
                         <span>{item.label}</span>
+                        {badgeCount > 0 ? (
+                          <span
+                            className="ml-auto min-w-5 rounded bg-white/15 px-1.5 py-0.5 text-center text-[11px] font-semibold tabular-nums text-sidebar-foreground"
+                            aria-label={`${badgeCount} items need attention`}
+                          >
+                            {badgeCount > 99 ? "99+" : badgeCount}
+                          </span>
+                        ) : null}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

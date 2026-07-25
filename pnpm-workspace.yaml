@@ -159,6 +159,7 @@ overrides:
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.28.1"
   # Security: force patched versions of vulnerable transitive dependencies
+  body-parser: ">=2.3.0"
   js-cookie: ">=3.0.7"
   uuid: ">=11.1.1"
   markdown-it: ">=14.2.0"

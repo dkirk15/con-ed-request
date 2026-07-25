@@ -1,12 +1,12 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-22 by Replit Agent
+Last updated: 2026-07-25 by Replit Agent
 
 ## Current State
 
-GitHub `main` is the integrated source of truth through Phase 6. **All 43 E2E
+GitHub `main` is the integrated source of truth through Phase 7. **All 43 E2E
 tests pass** in Replit (4.1 min, 1 worker, no retries). No database schema
-change is required for Phase 6. CI validation pipeline is fully hardened.
+change is required for Phase 7. CI validation pipeline is fully hardened.
 
 ### GitHub Integration
 
@@ -17,8 +17,77 @@ change is required for Phase 6. CI validation pipeline is fully hardened.
 - PR #7 (`Add reimbursement workspace and actual-amount accounting`) merged Phase 4.
 - PR #8 (`Add structured course data per request`) merged Phase 5.
 - PR #9 (`Add operational reporting workspace`) merged Phase 6.
+- PR #10 (`Add role-based task center`) merged Phase 7.
 - Dependabot alert #1 is marked **fixed** as of 2026-07-20.
+- Dependabot alert #2 (`body-parser`, CVE-2026-12590) patched in Phase 7.
 - **All 43 Playwright E2E tests pass** in Replit as of 2026-07-22.
+
+---
+
+## Recent Changes (2026-07-22 via Codex - Dependabot Alert #2)
+
+- Updated the Express `body-parser` dependency from 2.2.2 to the patched 2.3.0
+  release, addressing the low-severity denial-of-service advisory
+  CVE-2026-12590 / GHSA-v422-hmwv-36x6.
+- Added a workspace security override requiring `body-parser` 2.3.0 or newer so
+  future dependency installs cannot restore the vulnerable version.
+- Dependency resolution confirms that 2.3.0 is the only installed
+  `body-parser` version. Workspace TypeScript checks and the API production
+  build pass locally.
+- The frontend production build did not complete in the local Windows/OneDrive
+  environment and should be rerun in Replit. The dependency fix does not
+  change frontend code.
+- A full dependency audit also identified separate advisories affecting
+  `linkify-it`, `fast-uri`, and `fast-xml-parser`; these are unrelated to
+  Dependabot alert #2 and remain follow-up work.
+- No application code or database schema changes are required for this fix.
+
+---
+
+## Recent Changes (2026-07-22 via Codex - In-App Task Center)
+
+### Role-Specific Next Steps
+
+- Added one shared, role-scoped task feed used by dashboards and navigation.
+- Employees see drafts to finish, requests moving through approval, approved
+  courses ready for receipt upload, and receipts waiting for Accounting.
+- Managers see pending approvals from their assigned clinic plus next steps for
+  their own CE requests. Server-side clinic restrictions remain enforced.
+- Business Office sees manager-approved requests ready for final funding review.
+- Accounting sees submitted receipts ready for reimbursement.
+- Administrators see an organization-wide workflow watchlist, with stale items
+  prioritized for follow-up.
+
+### Aging And Navigation
+
+- Added restrained aging indicators rather than formal deadlines. Approval and
+  reimbursement work is marked aging after 3 days and needs follow-up after 7.
+- Drafts use 14-day and 30-day thresholds. Approved requests use the course end
+  date, with 7-day and 30-day post-course thresholds for missing receipts.
+- Added count badges to My Requests, Approvals, CE Approvals, Reimbursements,
+  and the administrator Reports link as appropriate for each role.
+- Counts refresh immediately after drafts, submissions, approvals, denials,
+  receipt uploads, reimbursements, and draft deletions.
+
+### Dashboard Polish
+
+- Added a single task rail with direct Continue, Review, Add receipt, Process,
+  and View status actions.
+- Removed duplicate approval and reimbursement queue lists from the older
+  dashboards while retaining useful funding, allocation, and staffing summaries.
+- Added clear empty, waiting, aging, and follow-up states.
+
+### Validation And Replit Handoff
+
+- OpenAPI React clients and Zod validators were regenerated successfully.
+- Full workspace TypeScript checks pass.
+- API and frontend production builds pass locally. Existing source-map and
+  large-chunk warnings remain non-blocking.
+- Playwright discovers **45 tests in 18 files**. Two new tests cover employee
+  next-step separation, action badges, aging presentation, and manager clinic
+  isolation.
+- The authenticated 45-test E2E run still needs to be completed in Replit.
+- **No database schema push or migration is required for Phase 7.**
 
 ---
 
@@ -855,8 +924,8 @@ Not OSS clinics for this app: Renton, Enumclaw, Issaquah, Lacey, Monroe, Mukilte
 ## Known Gaps / Held Work
 
 - PTO/request-for-leave workflow is out of scope.
-- Email notifications are not implemented.
-- Admin reporting and CSV export are not implemented.
+- Email notifications are intentionally held pending IT permissions.
+- In-app task center (Phase 7) merged into main; full Replit E2E validation pending.
 
 ## Key Files
 

@@ -258,6 +258,7 @@ export default function ApprovalWorkspacePage() {
       },
     );
     queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
     toast({ title: message, description: nextRequest ? "The next request is ready for review." : "The approval queue is clear." });
     setParams({ selected: nextRequest ? String(nextRequest.id) : null });
   };

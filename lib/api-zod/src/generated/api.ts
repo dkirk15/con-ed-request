@@ -1910,6 +1910,36 @@ export const GetAdminDashboardResponse = zod.object({
 
 
 /**
+ * @summary Get role-scoped workflow tasks and navigation counts
+ */
+export const GetTaskCenterResponse = zod.object({
+  "navigationCounts": zod.object({
+  "myRequests": zod.number(),
+  "approvals": zod.number(),
+  "reimbursements": zod.number(),
+  "reports": zod.number()
+}),
+  "actionCount": zod.number(),
+  "agingCount": zod.number(),
+  "staleCount": zod.number(),
+  "items": zod.array(zod.object({
+  "requestId": zod.number(),
+  "taskType": zod.enum(['draft_request', 'manager_approval', 'bo_approval', 'approved_purchase', 'receipt_submitted', 'reimbursement']),
+  "kind": zod.enum(['action', 'waiting', 'monitoring']),
+  "priority": zod.enum(['standard', 'aging', 'stale']),
+  "status": zod.enum(['draft', 'pending_manager', 'pending_bo', 'awaiting_receipt', 'receipt_submitted']),
+  "courseName": zod.string(),
+  "employeeName": zod.string(),
+  "clinicName": zod.string().nullish(),
+  "courseStartDate": zod.coerce.date().nullish(),
+  "courseEndDate": zod.coerce.date().nullish(),
+  "ageDays": zod.number(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
  * @summary Get role-scoped operational and financial report data
  */
 export const getReportQueryYearMin = 2000;
