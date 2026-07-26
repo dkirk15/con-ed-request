@@ -500,6 +500,91 @@ test("business-office user sees employees from all clinics in the budget-usage v
   await expect(page.getByRole("tab", { name: "Clinics" })).toHaveCount(0);
 });
 
+test("quick view badges show the correct count and the ledger total matches after clicking", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-QuickViews-${unique()}`);
+  // One data-only employee per request so request counts are unambiguous.
+  const emp1Id = await dataUser(clinicId, "QV Emp 1");
+  const emp2Id = await dataUser(clinicId, "QV Emp 2");
+  const emp3Id = await dataUser(clinicId, "QV Emp 3");
+  const emp4Id = await dataUser(clinicId, "QV Emp 4");
+  const emp5Id = await dataUser(clinicId, "QV Emp 5");
+
+  // "Needs approval" quick view for admin = pending_manager ∪ pending_bo.
+  // 2 pending_manager + 1 pending_bo → badge count = 3; ledger total after clicking = 3.
+  await insertRequest({
+    employeeId: emp1Id,
+    status: "pending_manager",
+    courseNames: `QV Pending Manager A ${unique()}`,
+    totalRequested: 200,
+    createdAt: new Date(`${year}-02-01T12:00:00Z`),
+  });
+  await insertRequest({
+    employeeId: emp2Id,
+    status: "pending_manager",
+    courseNames: `QV Pending Manager B ${unique()}`,
+    totalRequested: 300,
+    createdAt: new Date(`${year}-03-01T12:00:00Z`),
+  });
+  await insertRequest({
+    employeeId: emp3Id,
+    status: "pending_bo",
+    courseNames: `QV Pending BO ${unique()}`,
+    totalRequested: 400,
+    createdAt: new Date(`${year}-04-01T12:00:00Z`),
+  });
+
+  // "Awaiting receipts" quick view = awaiting_receipt.
+  // 2 awaiting_receipt requests → badge count = 2; ledger total after clicking = 2.
+  await insertRequest({
+    employeeId: emp4Id,
+    status: "awaiting_receipt",
+    courseNames: `QV Awaiting Receipt A ${unique()}`,
+    totalRequested: 500,
+    totalApproved: 450,
+    createdAt: new Date(`${year}-05-01T12:00:00Z`),
+  });
+  await insertRequest({
+    employeeId: emp5Id,
+    status: "awaiting_receipt",
+    courseNames: `QV Awaiting Receipt B ${unique()}`,
+    totalRequested: 600,
+    totalApproved: 550,
+    createdAt: new Date(`${year}-06-01T12:00:00Z`),
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  // clinicId scopes both the quickView counts and the ledger to only these 5 requests.
+  await page.goto(`/reports?year=${year}&clinicId=${clinicId}`);
+
+  const quickViewsSection = page.getByRole("region", { name: "Quick views" });
+  const ledgerSection = page.getByRole("region", { name: "Request ledger" });
+
+  // --- "Needs approval" ---
+  const needsApprovalBtn = quickViewsSection.getByRole("button", { name: /Needs approval/ });
+  // toContainText waits through the initial loading skeleton.
+  await expect(needsApprovalBtn).toContainText("3");
+
+  // Clicking updates ?view=needs_approval and triggers a new API call; the new
+  // response's `total` reflects only pending_manager + pending_bo rows.
+  await needsApprovalBtn.click();
+  // Ledger subtitle: "{total} matching requests in needs approval"
+  await expect(ledgerSection.getByText(/3 matching requests/)).toBeVisible();
+
+  // --- "Awaiting receipts" ---
+  // quickView counts are view-independent (unviewedWhere has no view filter),
+  // so the badge on "Awaiting receipts" is correct regardless of the active view.
+  const awaitingReceiptsBtn = quickViewsSection.getByRole("button", { name: /Awaiting receipts/ });
+  await expect(awaitingReceiptsBtn).toContainText("2");
+
+  await awaitingReceiptsBtn.click();
+  await expect(ledgerSection.getByText(/2 matching requests/)).toBeVisible();
+});
+
 test("business-office Clinic filter scopes the budget view to the selected clinic only", async ({
   page,
   provisionUser,
