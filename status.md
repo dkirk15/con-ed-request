@@ -4,7 +4,7 @@ Last updated: 2026-07-26 by Replit Agent
 
 ## Current State
 
-GitHub `main` is the integrated source of truth. **All 52 E2E tests pass** in
+GitHub `main` is the integrated source of truth. **All 55 E2E tests pass** in
 Replit (1 worker, no retries). No database schema change is pending. CI
 validation pipeline is fully hardened.
 
@@ -28,18 +28,25 @@ Dependabot alerts #3 through #8 are patched on the local
 - Dependabot alerts #3 through #8 are patched on
   `codex/dependabot-july-2026`; GitHub will close them after that branch is
   merged into `main`.
-- **All 52 Playwright E2E tests pass** in Replit as of 2026-07-26.
+- **All 55 Playwright E2E tests pass** in Replit as of 2026-07-26.
 
 ---
 
 ## Recent Changes (2026-07-26 via Replit Agent — Reporting E2E Coverage)
 
-### Role-Based Tab Visibility Tests
+### Accounting Tab Visibility Test
 
 - Added accounting-role test: confirms accounting users land on the payroll tab
   by default and cannot navigate to the funding or clinic-comparison tabs.
-- Added manager-role test: confirms manager users cannot reach the payroll or
-  clinic-comparison tabs in the reports workspace.
+
+### Quick Views Badge and Ledger Consistency Test
+
+- Added an admin test confirming that the "Needs approval" Quick View badge
+  shows the correct count (2 pending\_manager + 1 pending\_bo = 3) and that
+  clicking it filters the ledger to exactly 3 matching requests. A second
+  assertion covers "Awaiting receipts" (2 awaiting\_receipt requests → badge
+  count 2 → ledger total 2). Verifies that badge counts and ledger totals stay
+  in sync, preventing phantom queue numbers that could misdirect staff.
 
 ### BO Clinic Filter Scoping Test
 
@@ -51,7 +58,7 @@ Dependabot alerts #3 through #8 are patched on the local
 
 ### Suite Size
 
-- **52 E2E tests** across 19 files. All pass in a single run with no retries.
+- **55 E2E tests** across 19 files. All pass in a single run with no retries.
 - No application code or database schema changes are required for these tests.
 
 ---
