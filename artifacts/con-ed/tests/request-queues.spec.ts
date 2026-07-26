@@ -6,19 +6,22 @@ test("employee request queue keeps status filters in the URL", async ({
   provisionUser,
   signInAs,
 }) => {
-  const clinicId = await createClinic(`E2E-Clinic-queue-employee`);
+  const ts = Date.now();
+  const clinicId = await createClinic(`E2E-Clinic-queue-employee-${ts}`);
   const manager = await provisionUser({ role: "manager", clinicId });
   const employee = await provisionUser({
     role: "employee",
     clinicId,
     managerId: manager.dbId,
   });
+  const draftCourse = `E2E Queue Draft Course ${ts}`;
+  const completedCourse = `E2E Queue Completed Course ${ts}`;
 
   await insertRequest({
     employeeId: employee.dbId,
     managerId: manager.dbId,
     status: "draft",
-    courseNames: "E2E Queue Draft Course",
+    courseNames: draftCourse,
     tuition: 125,
     totalRequested: 125,
   });
@@ -26,7 +29,7 @@ test("employee request queue keeps status filters in the URL", async ({
     employeeId: employee.dbId,
     managerId: manager.dbId,
     status: "reimbursed",
-    courseNames: "E2E Queue Completed Course",
+    courseNames: completedCourse,
     tuition: 250,
     totalRequested: 250,
     approvedTuition: 250,
@@ -38,13 +41,13 @@ test("employee request queue keeps status filters in the URL", async ({
 
   await expect(page).toHaveURL(/status=draft/);
   await expect(page.getByRole("heading", { name: "My Requests" })).toBeVisible();
-  await expect(page.getByText("E2E Queue Draft Course")).toBeVisible();
-  await expect(page.getByText("E2E Queue Completed Course")).toHaveCount(0);
+  await expect(page.getByText(draftCourse)).toBeVisible();
+  await expect(page.getByText(completedCourse)).toHaveCount(0);
 
   await page.getByRole("link", { name: "Completed" }).click();
   await expect(page).toHaveURL(/status=reimbursed/);
-  await expect(page.getByText("E2E Queue Completed Course")).toBeVisible();
-  await expect(page.getByText("E2E Queue Draft Course")).toHaveCount(0);
+  await expect(page.getByText(completedCourse)).toBeVisible();
+  await expect(page.getByText(draftCourse)).toHaveCount(0);
 });
 
 test("manager can switch between approval work and personal drafts", async ({
@@ -52,7 +55,8 @@ test("manager can switch between approval work and personal drafts", async ({
   provisionUser,
   signInAs,
 }) => {
-  const clinicId = await createClinic(`E2E-Clinic-queue-manager`);
+  const ts = Date.now();
+  const clinicId = await createClinic(`E2E-Clinic-queue-manager-${ts}`);
   const seniorManager = await provisionUser({ role: "manager", clinicId });
   const manager = await provisionUser({
     role: "manager",
@@ -64,12 +68,14 @@ test("manager can switch between approval work and personal drafts", async ({
     clinicId,
     managerId: manager.dbId,
   });
+  const approvalCourse = `E2E Queue Approval Course ${ts}`;
+  const draftCourse = `E2E Manager Personal Draft ${ts}`;
 
   await insertRequest({
     employeeId: employee.dbId,
     managerId: manager.dbId,
     status: "pending_manager",
-    courseNames: "E2E Queue Approval Course",
+    courseNames: approvalCourse,
     tuition: 400,
     totalRequested: 400,
   });
@@ -77,7 +83,7 @@ test("manager can switch between approval work and personal drafts", async ({
     employeeId: manager.dbId,
     managerId: seniorManager.dbId,
     status: "draft",
-    courseNames: "E2E Manager Personal Draft",
+    courseNames: draftCourse,
     tuition: 175,
     totalRequested: 175,
   });
@@ -86,11 +92,11 @@ test("manager can switch between approval work and personal drafts", async ({
   await page.goto("/requests?status=pending_manager");
 
   await expect(page.getByRole("heading", { name: "Approval Queue" })).toBeVisible();
-  await expect(page.getByText("E2E Queue Approval Course")).toBeVisible();
-  await expect(page.getByText("E2E Manager Personal Draft")).toHaveCount(0);
+  await expect(page.getByText(approvalCourse)).toBeVisible();
+  await expect(page.getByText(draftCourse)).toHaveCount(0);
 
   await page.getByRole("link", { name: "My Requests" }).first().click();
   await expect(page).toHaveURL(/scope=mine/);
-  await expect(page.getByText("E2E Manager Personal Draft")).toBeVisible();
-  await expect(page.getByText("E2E Queue Approval Course")).toHaveCount(0);
+  await expect(page.getByText(draftCourse)).toBeVisible();
+  await expect(page.getByText(approvalCourse)).toHaveCount(0);
 });

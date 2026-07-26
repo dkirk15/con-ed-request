@@ -13,20 +13,24 @@ test.describe("Reimbursement workspace", () => {
     provisionUser,
     signInAs,
   }) => {
-    const firstClinicId = await createClinic("E2E-Clinic-reimbursement-first");
-    const secondClinicId = await createClinic("E2E-Clinic-reimbursement-second");
+    // Both employees share one unique clinic so the clinicId filter scopes the
+    // reimbursement queue to only this run's requests (avoids stale-data ordering).
+    const ts = Date.now();
+    const clinicId = await createClinic(`E2E-Clinic-reimbursement-${ts}`);
     const accounting = await provisionUser({ role: "accounting" });
     const firstEmployee = await provisionUser({
       role: "employee",
-      clinicId: firstClinicId,
+      clinicId,
       hireDate: "2020-01-01",
     });
-    const secondEmployee = await provisionUser({ role: "employee", clinicId: secondClinicId });
+    const secondEmployee = await provisionUser({ role: "employee", clinicId });
+    const firstCourse = `E2E Reduced Reimbursement Course ${ts}`;
+    const secondCourse = `E2E Next Reimbursement Course ${ts}`;
 
     const firstRequestId = await insertRequest({
       employeeId: firstEmployee.dbId,
       status: "receipt_submitted",
-      courseNames: "E2E Reduced Reimbursement Course",
+      courseNames: firstCourse,
       tuition: 500,
       totalRequested: 500,
       approvedTuition: 500,
@@ -39,7 +43,7 @@ test.describe("Reimbursement workspace", () => {
     const secondRequestId = await insertRequest({
       employeeId: secondEmployee.dbId,
       status: "receipt_submitted",
-      courseNames: "E2E Next Reimbursement Course",
+      courseNames: secondCourse,
       tuition: 300,
       totalRequested: 300,
       approvedTuition: 300,
@@ -50,10 +54,11 @@ test.describe("Reimbursement workspace", () => {
     await insertReceipt(secondRequestId, "next-reimbursement.pdf");
 
     await signInAs(accounting);
-    await page.goto(`/reimbursements?selected=${firstRequestId}`);
+    // Use clinicId filter so the queue is scoped to this run's requests only.
+    await page.goto(`/reimbursements?selected=${firstRequestId}&clinicId=${clinicId}`);
 
     await expect(page.getByRole("heading", { name: "Reimbursement Queue" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "E2E Reduced Reimbursement Course" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: firstCourse })).toBeVisible();
     await expect(page.getByText("reduced-reimbursement.pdf").first()).toBeVisible();
 
     await page.getByLabel("Actual amount").fill("400");
@@ -65,7 +70,7 @@ test.describe("Reimbursement workspace", () => {
     await page.getByRole("button", { name: "Confirm reimbursement" }).click();
 
     await expect(page).toHaveURL(new RegExp(`selected=${secondRequestId}`));
-    await expect(page.getByRole("heading", { name: "E2E Next Reimbursement Course" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: secondCourse })).toBeVisible();
     expect((await getRequest(firstRequestId))?.status).toBe("reimbursed");
     expect(Number((await getReimbursement(firstRequestId))?.amount)).toBe(400);
 
@@ -80,13 +85,13 @@ test.describe("Reimbursement workspace", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic("E2E-Clinic-reimbursement-cap");
+    const clinicId = await createClinic(`E2E-Clinic-reimbursement-cap-${Date.now()}`);
     const accounting = await provisionUser({ role: "accounting" });
     const employee = await provisionUser({ role: "employee", clinicId });
     const requestId = await insertRequest({
       employeeId: employee.dbId,
       status: "receipt_submitted",
-      courseNames: "E2E Reimbursement Cap Course",
+      courseNames: `E2E Reimbursement Cap Course ${Date.now()}`,
       tuition: 300,
       totalRequested: 300,
       approvedTuition: 300,
@@ -126,14 +131,17 @@ test.describe("Reimbursement workspace", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic("E2E-Clinic-reimbursement-boundary");
+    const ts = Date.now();
+    const clinicId = await createClinic(`E2E-Clinic-reimbursement-boundary-${ts}`);
     const accounting = await provisionUser({ role: "accounting" });
     const employee = await provisionUser({ role: "employee", clinicId });
+    const readyCourse = `E2E Ready for Accounting ${ts}`;
+    const awaitingCourse = `E2E Still Awaiting Receipt ${ts}`;
 
     const readyId = await insertRequest({
       employeeId: employee.dbId,
       status: "receipt_submitted",
-      courseNames: "E2E Ready for Accounting",
+      courseNames: readyCourse,
       tuition: 200,
       totalRequested: 200,
       approvedTuition: 200,
@@ -143,7 +151,7 @@ test.describe("Reimbursement workspace", () => {
     await insertRequest({
       employeeId: employee.dbId,
       status: "awaiting_receipt",
-      courseNames: "E2E Still Awaiting Receipt",
+      courseNames: awaitingCourse,
       tuition: 250,
       totalRequested: 250,
       approvedTuition: 250,
@@ -151,10 +159,11 @@ test.describe("Reimbursement workspace", () => {
     });
 
     await signInAs(accounting);
-    await page.goto("/reimbursements");
+    // Filter by clinic so only this run's request appears in the queue.
+    await page.goto(`/reimbursements?clinicId=${clinicId}`);
 
     const queue = page.getByRole("list", { name: "Requests awaiting reimbursement" });
-    await expect(queue.getByText("E2E Ready for Accounting")).toBeVisible();
-    await expect(queue.getByText("E2E Still Awaiting Receipt")).toHaveCount(0);
+    await expect(queue.getByText(readyCourse)).toBeVisible();
+    await expect(queue.getByText(awaitingCourse)).toHaveCount(0);
   });
 });

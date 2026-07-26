@@ -78,11 +78,14 @@ test.describe("Role-based dashboards and navigation", () => {
 
     await page.goto("/dashboard");
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Awaiting Business Office Approval" }),
+    ).toBeVisible();
+    await expect(page.getByText("Total Funding Approved YTD")).toBeVisible();
     await expect(page.getByRole("link", { name: "Team" })).toHaveCount(0);
-    // Use .first() to target the sidebar nav link — leftover pending_bo requests
-    // from prior test runs cause the TaskCenterPanel to render a second
-    // "CE Approvals" link, which would otherwise trigger a strict-mode violation.
-    await expect(page.getByRole("link", { name: /CE Approvals/ }).first()).toBeVisible();
+    // /^CE Approvals/ anchors to the start so the "Pending CE Approvals" dashboard
+    // card link (which has a different accessible name prefix) is not matched.
+    await expect(page.getByRole("link", { name: /^CE Approvals/ })).toBeVisible();
     await expect(page.getByRole("link", { name: "Reports" })).toBeVisible();
 
     await page.goto("/requests");
@@ -101,6 +104,10 @@ test.describe("Role-based dashboards and navigation", () => {
 
     await page.goto("/dashboard");
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ready for Reimbursement" })).toBeVisible();
+    await expect(
+      page.getByText("Pending Reimbursement Processing"),
+    ).toBeVisible();
     await expect(page.getByRole("link", { name: "Team" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Reimbursements" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Reports" })).toBeVisible();
