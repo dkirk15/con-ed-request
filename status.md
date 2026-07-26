@@ -1,18 +1,15 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-26 by Codex
+Last updated: 2026-07-26 by Replit Agent
 
 ## Current State
 
-GitHub `main` is the integrated source of truth through Phase 7. **All 43 E2E
-tests pass** in Replit (4.1 min, 1 worker, no retries). No database schema
-change is required for Phase 7. CI validation pipeline is fully hardened.
+GitHub `main` is the integrated source of truth. **All 52 E2E tests pass** in
+Replit (1 worker, no retries). No database schema change is pending. CI
+validation pipeline is fully hardened.
 
 Dependabot alerts #3 through #8 are patched on the local
 `codex/dependabot-july-2026` branch and are ready to merge into `main`.
-
-The Reports overhaul is merged into `main`. Its authenticated 47-test E2E run
-still needs to be completed in Replit.
 
 ### GitHub Integration
 
@@ -31,7 +28,31 @@ still needs to be completed in Replit.
 - Dependabot alerts #3 through #8 are patched on
   `codex/dependabot-july-2026`; GitHub will close them after that branch is
   merged into `main`.
-- **All 43 Playwright E2E tests pass** in Replit as of 2026-07-22.
+- **All 52 Playwright E2E tests pass** in Replit as of 2026-07-26.
+
+---
+
+## Recent Changes (2026-07-26 via Replit Agent — Reporting E2E Coverage)
+
+### Role-Based Tab Visibility Tests
+
+- Added accounting-role test: confirms accounting users land on the payroll tab
+  by default and cannot navigate to the funding or clinic-comparison tabs.
+- Added manager-role test: confirms manager users cannot reach the payroll or
+  clinic-comparison tabs in the reports workspace.
+
+### BO Clinic Filter Scoping Test
+
+- Added a Business Office test confirming that selecting a clinic from the
+  Clinic dropdown narrows the budget-usage table to only employees from that
+  clinic. The test inserts employees at two distinct clinics, selects one via
+  the filter, waits for the loading skeleton to resolve, asserts the selected
+  clinic's row is visible, and asserts the excluded clinic's row is absent.
+
+### Suite Size
+
+- **52 E2E tests** across 19 files. All pass in a single run with no retries.
+- No application code or database schema changes are required for these tests.
 
 ---
 
