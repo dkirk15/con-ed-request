@@ -1,6 +1,6 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-25 by Replit Agent
+Last updated: 2026-07-26 by Codex
 
 ## Current State
 
@@ -8,9 +8,11 @@ GitHub `main` is the integrated source of truth through Phase 7. **All 43 E2E
 tests pass** in Replit (4.1 min, 1 worker, no retries). No database schema
 change is required for Phase 7. CI validation pipeline is fully hardened.
 
-The Reports overhaul is implemented on the local `codex/reports-overhaul`
-branch and is ready for authenticated Replit validation. It has not yet been
-merged into `main`.
+Dependabot alerts #3 through #8 are patched on the local
+`codex/dependabot-july-2026` branch and are ready to merge into `main`.
+
+The Reports overhaul is merged into `main`. Its authenticated 47-test E2E run
+still needs to be completed in Replit.
 
 ### GitHub Integration
 
@@ -22,9 +24,29 @@ merged into `main`.
 - PR #8 (`Add structured course data per request`) merged Phase 5.
 - PR #9 (`Add operational reporting workspace`) merged Phase 6.
 - PR #10 (`Add role-based task center`) merged Phase 7.
+- PR #11 (`Overhaul operational reports`) merged the role-specific reporting,
+  advanced-funding, exception, and payroll improvements.
 - Dependabot alert #1 is marked **fixed** as of 2026-07-20.
 - Dependabot alert #2 (`body-parser`, CVE-2026-12590) patched in Phase 7.
+- Dependabot alerts #3 through #8 are patched on
+  `codex/dependabot-july-2026`; GitHub will close them after that branch is
+  merged into `main`.
 - **All 43 Playwright E2E tests pass** in Replit as of 2026-07-22.
+
+---
+
+## Recent Changes (2026-07-26 via Codex - Dependabot Alerts #3-#8)
+
+- Patched `brace-expansion` from 5.0.7 to 5.0.8.
+- Patched `postcss` from 8.5.14 to 8.5.23.
+- Patched `fast-uri` from 3.1.2 to 3.1.4, resolving both associated advisories.
+- Patched `fast-xml-parser` from 5.9.3 to 5.10.1.
+- Patched `linkify-it` from 5.0.1 to 5.0.2.
+- Added compatible workspace security overrides so future dependency installs
+  cannot restore the vulnerable versions or jump across incompatible major
+  versions.
+- `pnpm audit --audit-level low` reports **no known vulnerabilities**.
+- No application code or database schema changes are required for these fixes.
 
 ---
 
