@@ -8,6 +8,21 @@ import { createClinic } from "./helpers/db";
  *  - "New Request" is available only to employee and manager.
  */
 test.describe("Role-based dashboards and navigation", () => {
+  // Each test needs a fresh browser context so that @clerk/testing's
+  // context.route() interceptors (added by setupClerkTestingToken inside
+  // clerk.signIn) don't accumulate across sign-in/sign-out cycles.
+  // Without isolation, by the 3rd test there are 3+ stacked FAPI interceptors;
+  // when one fulfills a request the others attempt to re-fulfill an already-
+  // settled route, causing the Clerk session to be invalidated on the next
+  // full-page navigation (page.goto("/dashboard") redirects to /sign-in).
+  test.use({
+    context: async ({ browser }, use) => {
+      const ctx = await browser.newContext();
+      await use(ctx);
+      await ctx.close();
+    },
+  });
+
   test("employee: allocation dashboard, can create requests, no Users nav", async ({
     page,
     provisionUser,
@@ -64,7 +79,10 @@ test.describe("Role-based dashboards and navigation", () => {
     await page.goto("/dashboard");
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Team" })).toHaveCount(0);
-    await expect(page.getByRole("link", { name: "CE Approvals", exact: true })).toBeVisible();
+    // Use .first() to target the sidebar nav link — leftover pending_bo requests
+    // from prior test runs cause the TaskCenterPanel to render a second
+    // "CE Approvals" link, which would otherwise trigger a strict-mode violation.
+    await expect(page.getByRole("link", { name: /CE Approvals/ }).first()).toBeVisible();
     await expect(page.getByRole("link", { name: "Reports" })).toBeVisible();
 
     await page.goto("/requests");

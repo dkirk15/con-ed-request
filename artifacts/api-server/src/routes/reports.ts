@@ -438,13 +438,18 @@ router.get(
       const employeeConditions = [inArray(users.role, ["employee", "manager"] as const)];
       if (roleCondition) employeeConditions.push(roleCondition);
 
+      // NOTE: groupBy (not selectDistinct) is required here because PostgreSQL
+      // rejects "SELECT DISTINCT … ORDER BY expr" when the ORDER BY expression
+      // is not in the select list.  The year column is in our SELECT, so
+      // GROUP BY + ORDER BY works correctly and avoids the SQL error.
       const [yearRows, clinicRows, employeeRows] = await Promise.all([
         db
           .select({ year: sql<number>`extract(year from ${conEdRequests.createdAt})::int` })
           .from(conEdRequests)
           .innerJoin(users, eq(conEdRequests.employeeId, users.id))
           .where(roleCondition)
-          .groupBy(sql`extract(year from ${conEdRequests.createdAt})::int`),
+          .groupBy(sql`extract(year from ${conEdRequests.createdAt})::int`)
+          .orderBy(desc(sql`extract(year from ${conEdRequests.createdAt})::int`)),
         user.role === "manager"
           ? user.clinicId
             ? db.select().from(clinics).where(eq(clinics.id, user.clinicId)).orderBy(asc(clinics.name))

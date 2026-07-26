@@ -71,7 +71,19 @@ test("admin reviews financial totals and exports the filtered ledger", async ({
 
   const admin = await provisionUser({ role: "admin" });
   await signInAs(admin);
+
+  // Regression check: /reports/options must return HTTP 200 with valid filter data.
+  // The endpoint previously crashed with "SELECT DISTINCT … ORDER BY" when the
+  // ORDER BY expression was not in the select list; it now uses GROUP BY instead.
+  const optionsRespPromise = page.waitForResponse(
+    (resp) => resp.url().includes("/api/reports/options") && resp.status() === 200,
+    { timeout: 15_000 },
+  );
   await page.goto(`/reports?year=${year}&clinicId=${clinicId}`);
+  const optionsResp = await optionsRespPromise;
+  const optionsBody = await optionsResp.json() as { years: number[]; employees: unknown[] };
+  expect(optionsBody.years).toContain(year);
+  expect(optionsBody.employees.length).toBeGreaterThan(0);
 
   const summary = page.getByRole("region", { name: "Financial summary" });
   await expect(summary).toContainText("$900.00");
