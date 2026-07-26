@@ -1,6 +1,6 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-26 by Replit Agent
+Last updated: 2026-07-26 by Codex and Replit Agent
 
 ## Current State
 
@@ -8,8 +8,8 @@ GitHub `main` is the integrated source of truth. **All 55 E2E tests pass** in
 Replit (1 worker, no retries). No database schema change is pending. CI
 validation pipeline is fully hardened.
 
-Dependabot alerts #3 through #8 are patched on the local
-`codex/dependabot-july-2026` branch and are ready to merge into `main`.
+Dependabot alerts #3 through #8 are patched and merged into `main` through
+PR #12.
 
 ### GitHub Integration
 
@@ -23,11 +23,11 @@ Dependabot alerts #3 through #8 are patched on the local
 - PR #10 (`Add role-based task center`) merged Phase 7.
 - PR #11 (`Overhaul operational reports`) merged the role-specific reporting,
   advanced-funding, exception, and payroll improvements.
+- PR #12 (`Patch July Dependabot alerts`) merged the six high-severity
+  dependency fixes.
 - Dependabot alert #1 is marked **fixed** as of 2026-07-20.
 - Dependabot alert #2 (`body-parser`, CVE-2026-12590) patched in Phase 7.
-- Dependabot alerts #3 through #8 are patched on
-  `codex/dependabot-july-2026`; GitHub will close them after that branch is
-  merged into `main`.
+- Dependabot alerts #3 through #8 are patched in `main` through PR #12.
 - **All 55 Playwright E2E tests pass** in Replit as of 2026-07-26.
 
 ---
