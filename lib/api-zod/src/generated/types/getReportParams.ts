@@ -8,6 +8,9 @@
 import type { ReportClinicIdParameter } from './reportClinicIdParameter';
 import type { ReportCourseFromParameter } from './reportCourseFromParameter';
 import type { ReportCourseToParameter } from './reportCourseToParameter';
+import type { ReportDateBasisParameter } from './reportDateBasisParameter';
+import type { ReportDateFromParameter } from './reportDateFromParameter';
+import type { ReportDateToParameter } from './reportDateToParameter';
 import type { ReportDeliveryMethodParameter } from './reportDeliveryMethodParameter';
 import type { ReportEmployeeIdParameter } from './reportEmployeeIdParameter';
 import type { ReportOrderParameter } from './reportOrderParameter';
@@ -16,6 +19,7 @@ import type { ReportPageSizeParameter } from './reportPageSizeParameter';
 import type { ReportSearchParameter } from './reportSearchParameter';
 import type { ReportSortParameter } from './reportSortParameter';
 import type { ReportStatusParameter } from './reportStatusParameter';
+import type { ReportViewParameter } from './reportViewParameter';
 import type { ReportYearParameter } from './reportYearParameter';
 
 export type GetReportParams = {
@@ -33,6 +37,16 @@ clinicId?: ReportClinicIdParameter;
  */
 employeeId?: ReportEmployeeIdParameter;
 status?: ReportStatusParameter;
+view?: ReportViewParameter;
+dateBasis?: ReportDateBasisParameter;
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+dateFrom?: ReportDateFromParameter;
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+dateTo?: ReportDateToParameter;
 deliveryMethod?: ReportDeliveryMethodParameter;
 /**
  * @maxLength 120

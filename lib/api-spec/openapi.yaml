@@ -709,6 +709,10 @@ paths:
         - $ref: "#/components/parameters/ReportClinicId"
         - $ref: "#/components/parameters/ReportEmployeeId"
         - $ref: "#/components/parameters/ReportStatus"
+        - $ref: "#/components/parameters/ReportView"
+        - $ref: "#/components/parameters/ReportDateBasis"
+        - $ref: "#/components/parameters/ReportDateFrom"
+        - $ref: "#/components/parameters/ReportDateTo"
         - $ref: "#/components/parameters/ReportDeliveryMethod"
         - $ref: "#/components/parameters/ReportSearch"
         - $ref: "#/components/parameters/ReportCourseFrom"
@@ -754,6 +758,10 @@ paths:
         - $ref: "#/components/parameters/ReportClinicId"
         - $ref: "#/components/parameters/ReportEmployeeId"
         - $ref: "#/components/parameters/ReportStatus"
+        - $ref: "#/components/parameters/ReportView"
+        - $ref: "#/components/parameters/ReportDateBasis"
+        - $ref: "#/components/parameters/ReportDateFrom"
+        - $ref: "#/components/parameters/ReportDateTo"
         - $ref: "#/components/parameters/ReportDeliveryMethod"
         - $ref: "#/components/parameters/ReportSearch"
         - $ref: "#/components/parameters/ReportCourseFrom"
@@ -904,6 +912,32 @@ components:
       schema:
         type: string
         enum: [draft, pending_manager, manager_approved, manager_denied, pending_bo, bo_approved, bo_denied, awaiting_receipt, receipt_submitted, reimbursed, cancelled]
+    ReportView:
+      name: view
+      in: query
+      schema:
+        type: string
+        enum: [all, needs_attention, needs_approval, awaiting_receipts, ready_to_pay, advanced_funding, paycheck_history]
+        default: all
+    ReportDateBasis:
+      name: dateBasis
+      in: query
+      schema:
+        type: string
+        enum: [request, course, approval, reimbursement]
+        default: request
+    ReportDateFrom:
+      name: dateFrom
+      in: query
+      schema:
+        type: string
+        pattern: '^\d{4}-\d{2}-\d{2}$'
+    ReportDateTo:
+      name: dateTo
+      in: query
+      schema:
+        type: string
+        pattern: '^\d{4}-\d{2}-\d{2}$'
     ReportDeliveryMethod:
       name: deliveryMethod
       in: query
@@ -1715,7 +1749,7 @@ components:
 
     ReportSummary:
       type: object
-      required: [totalRequests, totalRequested, totalApproved, totalReimbursed, outstandingApproved]
+      required: [totalRequests, totalRequested, totalApproved, totalReimbursed, outstandingApproved, totalPending, totalAvailableAllocation, totalCarryoverDebt, advancedExposure]
       properties:
         totalRequests:
           type: integer
@@ -1729,6 +1763,193 @@ components:
           type: number
           format: float
         outstandingApproved:
+          type: number
+          format: float
+        totalPending:
+          type: number
+          format: float
+          description: Requested funding currently awaiting approval.
+        totalAvailableAllocation:
+          type: number
+          format: float
+          description: Employee allocations available after carry-forward debt.
+        totalCarryoverDebt:
+          type: number
+          format: float
+        advancedExposure:
+          type: number
+          format: float
+          description: Current approved and pending funding above available allocation.
+
+    ReportQuickView:
+      type: object
+      required: [id, label, description, count]
+      properties:
+        id:
+          type: string
+          enum: [all, needs_attention, needs_approval, awaiting_receipts, ready_to_pay, advanced_funding, paycheck_history]
+        label:
+          type: string
+        description:
+          type: string
+        count:
+          type: integer
+
+    ReportException:
+      type: object
+      required: [id, label, description, count, severity, view]
+      properties:
+        id:
+          type: string
+          enum: [stale_approvals, overdue_receipts, stale_reimbursements, missing_guarantees, missing_clinics, legacy_reimbursements]
+        label:
+          type: string
+        description:
+          type: string
+        count:
+          type: integer
+        severity:
+          type: string
+          enum: [attention, follow_up]
+        view:
+          type: string
+          enum: [needs_attention, awaiting_receipts, ready_to_pay, advanced_funding, paycheck_history]
+
+    ReportMonthlyTrend:
+      type: object
+      required: [month, label, requested, approved, reimbursed]
+      properties:
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+        label:
+          type: string
+        requested:
+          type: number
+          format: float
+        approved:
+          type: number
+          format: float
+        reimbursed:
+          type: number
+          format: float
+
+    ReportTurnaround:
+      type: object
+      required: [stage, label, medianDays, p90Days, sampleSize]
+      properties:
+        stage:
+          type: string
+          enum: [manager_approval, business_office, reimbursement]
+        label:
+          type: string
+        medianDays:
+          type: ["number", "null"]
+          format: float
+        p90Days:
+          type: ["number", "null"]
+          format: float
+        sampleSize:
+          type: integer
+
+    ReportBudgetRow:
+      type: object
+      required: [employeeId, employeeName, annualAllocation, availableAllocation, carryoverDebt, usedAmount, pendingAmount, remainingAmount, advancedExposure, guaranteeRequestCount, unsignedGuaranteeCount]
+      properties:
+        employeeId:
+          type: integer
+        employeeName:
+          type: string
+        clinicId:
+          type: ["integer", "null"]
+        clinicName:
+          type: ["string", "null"]
+        annualAllocation:
+          type: number
+          format: float
+        availableAllocation:
+          type: number
+          format: float
+        carryoverDebt:
+          type: number
+          format: float
+        usedAmount:
+          type: number
+          format: float
+        pendingAmount:
+          type: number
+          format: float
+        remainingAmount:
+          type: number
+          format: float
+        advancedExposure:
+          type: number
+          format: float
+        guaranteeRequestCount:
+          type: integer
+        unsignedGuaranteeCount:
+          type: integer
+
+    ReportAdvancedRequest:
+      type: object
+      required: [requestId, employeeId, employeeName, status, requestedAmount, guaranteeSigned]
+      properties:
+        requestId:
+          type: integer
+        employeeId:
+          type: integer
+        employeeName:
+          type: string
+        clinicName:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [draft, pending_manager, manager_approved, manager_denied, pending_bo, bo_approved, bo_denied, awaiting_receipt, receipt_submitted, reimbursed, cancelled]
+        requestedAmount:
+          type: number
+          format: float
+        guaranteeSigned:
+          type: boolean
+        guaranteeSignedAt:
+          type: ["string", "null"]
+          format: date-time
+
+    ReportPaycheckBatch:
+      type: object
+      required: [paycheckDate, reimbursementCount, totalAmount]
+      properties:
+        paycheckDate:
+          type: string
+          format: date
+        reimbursementCount:
+          type: integer
+        totalAmount:
+          type: number
+          format: float
+
+    ReportClinicComparison:
+      type: object
+      required: [clinicId, clinicName, requestCount, requested, approved, reimbursed, denialCount, denialRate]
+      properties:
+        clinicId:
+          type: ["integer", "null"]
+        clinicName:
+          type: string
+        requestCount:
+          type: integer
+        requested:
+          type: number
+          format: float
+        approved:
+          type: number
+          format: float
+        reimbursed:
+          type: number
+          format: float
+        denialCount:
+          type: integer
+        denialRate:
           type: number
           format: float
 
@@ -1812,7 +2033,7 @@ components:
 
     ReportResponse:
       type: object
-      required: [summary, workflow, items, total, page, pageSize, totalPages]
+      required: [summary, workflow, quickViews, exceptions, monthlyTrend, turnaround, budgetUsage, advancedRequests, paycheckLedger, clinicComparison, items, total, page, pageSize, totalPages]
       properties:
         summary:
           $ref: "#/components/schemas/ReportSummary"
@@ -1820,6 +2041,38 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ReportWorkflowStage"
+        quickViews:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportQuickView"
+        exceptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportException"
+        monthlyTrend:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportMonthlyTrend"
+        turnaround:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportTurnaround"
+        budgetUsage:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportBudgetRow"
+        advancedRequests:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportAdvancedRequest"
+        paycheckLedger:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportPaycheckBatch"
+        clinicComparison:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportClinicComparison"
         items:
           type: array
           items:

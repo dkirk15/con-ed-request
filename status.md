@@ -8,6 +8,10 @@ GitHub `main` is the integrated source of truth through Phase 7. **All 43 E2E
 tests pass** in Replit (4.1 min, 1 worker, no retries). No database schema
 change is required for Phase 7. CI validation pipeline is fully hardened.
 
+The Reports overhaul is implemented on the local `codex/reports-overhaul`
+branch and is ready for authenticated Replit validation. It has not yet been
+merged into `main`.
+
 ### GitHub Integration
 
 - PR #3 (`Improve draft request workflow`) merged Phase 2.
@@ -21,6 +25,68 @@ change is required for Phase 7. CI validation pipeline is fully hardened.
 - Dependabot alert #1 is marked **fixed** as of 2026-07-20.
 - Dependabot alert #2 (`body-parser`, CVE-2026-12590) patched in Phase 7.
 - **All 43 Playwright E2E tests pass** in Replit as of 2026-07-22.
+
+---
+
+## Recent Changes (2026-07-25 via Codex - Reports Overhaul)
+
+### Role-Specific Reporting
+
+- Reorganized Reports into role-relevant sections. Managers and the Business
+  Office default to funding, Accounting defaults to payroll, and Admin defaults
+  to an organization overview with additional clinic comparison access.
+- Added role-specific quick views for aging work, approvals, missing receipts,
+  ready-to-pay reimbursements, advanced funding, and paycheck history.
+- Quick views, exceptions, workflow queues, and advanced-funding records drill
+  into the matching request ledger while existing server-side clinic isolation
+  remains enforced for managers.
+
+### Reliable Filters And Date Definitions
+
+- Fixed the clinic and employee filter experience and replaced the long employee
+  select with a searchable picker. Employee choices remain dependent on the
+  selected clinic.
+- Removed delivery method from the visible report filters and CSV export.
+- Added explicit reporting date bases for request submission, course dates,
+  approval decisions, and paycheck dates, plus optional from/through dates.
+  This prevents cross-year approvals and reimbursements from being attributed
+  only to the original request year.
+- Report tabs, quick views, filters, sorting, and pagination remain URL-backed
+  for refreshes and shareable report links.
+
+### Funding, Advances, And Guarantees
+
+- Added employee-level annual allocation, available benefit after carry-forward
+  debt, used, pending, remaining, and potential advanced-funding exposure.
+- Added an advanced-funding and repayment-guarantee ledger showing each affected
+  request, amount, status, and whether the required guarantee is signed.
+- Added clear definitions for requested, approved, committed/outstanding, and
+  actually paid amounts.
+
+### Operational And Financial Insight
+
+- Added an exception report for aging approvals, overdue receipts, payments
+  waiting on Accounting, missing guarantees, missing clinic assignments, and
+  legacy reimbursements without recorded actual amounts.
+- Added monthly requested/approved/paid trends using the correct event date for
+  each series.
+- Added median and 90th-percentile turnaround for manager decisions, Business
+  Office decisions, and receipt-to-paycheck processing.
+- Added a paycheck-date reimbursement ledger for Accounting and an Admin-only
+  clinic comparison with request volume shown beside denial rates.
+
+### Validation And Replit Handoff
+
+- OpenAPI React clients and Zod validators were regenerated successfully.
+- Full workspace TypeScript checks pass.
+- API and frontend production builds pass locally. Existing source-map and
+  large-chunk warnings remain non-blocking.
+- Playwright discovers **47 tests in 18 files**. Four reporting tests now cover
+  financial reconciliation and export, manager clinic isolation, working
+  clinic/employee selection with repayment guarantees, and cross-year paycheck
+  reporting.
+- The authenticated 47-test E2E run still needs to be completed in Replit.
+- **No database schema push or migration is required for this Reports overhaul.**
 
 ---
 

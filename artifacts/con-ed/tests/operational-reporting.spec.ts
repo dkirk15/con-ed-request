@@ -75,9 +75,9 @@ test("admin reviews financial totals and exports the filtered ledger", async ({
 
   const summary = page.getByRole("region", { name: "Financial summary" });
   await expect(summary).toContainText("$900.00");
+  await expect(summary).toContainText("$100.00");
   await expect(summary).toContainText("$650.00");
   await expect(summary).toContainText("$350.00");
-  await expect(summary).toContainText("$250.00");
   await expect(page.getByText(reimbursedCourse)).toBeVisible();
 
   const downloadPromise = page.waitForEvent("download");
@@ -125,6 +125,101 @@ test("manager report remains limited to the assigned clinic", async ({
 
   await expect(page.getByText(ownCourse)).toBeVisible();
   await expect(page.getByText(otherCourse)).toHaveCount(0);
+  await page.getByRole("tab", { name: "Overview" }).click();
   await expect(page.getByRole("region", { name: "Financial summary" }).getByText("$275.00")).toBeVisible();
   await expect(page.getByLabel("Clinic")).toHaveCount(0);
+});
+
+test("admin filters employees and reviews advanced funding guarantees", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const includedClinic = `E2E-Advance-Included-${unique()}`;
+  const excludedClinic = `E2E-Advance-Excluded-${unique()}`;
+  const includedClinicId = await createClinic(includedClinic);
+  const excludedClinicId = await createClinic(excludedClinic);
+  const includedEmployeeId = await dataUser(includedClinicId, "Advance Employee");
+  const excludedEmployeeId = await dataUser(excludedClinicId, "Other Advance Employee");
+  const includedCourse = `Advanced Funding ${unique()}`;
+  const excludedCourse = `Excluded Funding ${unique()}`;
+  const advancedRequestId = await insertRequest({
+    employeeId: includedEmployeeId,
+    status: "draft",
+    courseNames: includedCourse,
+    totalRequested: 2600,
+    requiresRepaymentGuarantee: true,
+    createdAt: new Date(`${year}-07-01T12:00:00Z`),
+  });
+  await insertRequest({
+    employeeId: excludedEmployeeId,
+    status: "draft",
+    courseNames: excludedCourse,
+    totalRequested: 2800,
+    requiresRepaymentGuarantee: true,
+    createdAt: new Date(`${year}-07-01T12:00:00Z`),
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  await page.goto(`/reports?year=${year}`);
+
+  await page.getByRole("combobox", { name: "Clinic" }).click();
+  await page.getByRole("option", { name: includedClinic }).click();
+  await page.getByRole("combobox", { name: "Employee" }).click();
+  await page.getByPlaceholder("Search employees…").fill("Advance Employee");
+  await page.getByRole("option", { name: /Advance Employee/ }).click();
+
+  await page.getByRole("tab", { name: "Funding & advances" }).click();
+  await expect(page.getByRole("heading", { name: "Advanced funding and repayment guarantees" })).toBeVisible();
+  await expect(page.getByRole("link", { name: `Request #${advancedRequestId}` })).toBeVisible();
+  await expect(page.getByText("Missing", { exact: true })).toBeVisible();
+  await expect(page.getByText(excludedCourse)).toHaveCount(0);
+  await expect(page.getByLabel("Delivery method")).toHaveCount(0);
+
+  await page.getByRole("button", { name: /Advanced funding/ }).click();
+  await expect(page.getByRole("heading", { name: "Request ledger" })).toBeVisible();
+  await expect(page.getByText(includedCourse)).toBeVisible();
+  await expect(page.getByText(excludedCourse)).toHaveCount(0);
+});
+
+test("paycheck-date reporting includes reimbursements for requests from an earlier year", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-Paycheck-Date-${unique()}`);
+  const employeeId = await dataUser(clinicId, "Paycheck Date Employee");
+  const accountingId = await insertUser({
+    clerkId: `paycheck-date-accounting-${unique()}`,
+    name: "Paycheck Date Accounting",
+    email: `paycheck.date.${unique()}@example.test`,
+    role: "accounting",
+  });
+  const course = `Prior Year Request ${unique()}`;
+  const requestId = await insertRequest({
+    employeeId,
+    status: "reimbursed",
+    courseNames: course,
+    totalRequested: 450,
+    totalApproved: 400,
+    createdAt: new Date(`${year - 1}-12-15T12:00:00Z`),
+  });
+  await insertReimbursement({
+    requestId,
+    amount: 375,
+    paycheckDate: `${year}-01-15`,
+    markedById: accountingId,
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  await page.goto(`/reports?year=${year}&clinicId=${clinicId}`);
+  await expect(page.getByText(course)).toHaveCount(0);
+
+  await page.getByRole("combobox", { name: "Measure dates by" }).click();
+  await page.getByRole("option", { name: "Paycheck date" }).click();
+  await expect(page.getByText(course)).toBeVisible();
+  await page.getByRole("tab", { name: "Payroll" }).click();
+  await expect(page.getByText("$375.00")).toBeVisible();
 });

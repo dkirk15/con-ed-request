@@ -5,13 +5,29 @@
  * OSS Continuing Education Portal API
  * OpenAPI spec version: 0.1.0
  */
+import type { ReportAdvancedRequest } from './reportAdvancedRequest';
+import type { ReportBudgetRow } from './reportBudgetRow';
+import type { ReportClinicComparison } from './reportClinicComparison';
+import type { ReportException } from './reportException';
+import type { ReportMonthlyTrend } from './reportMonthlyTrend';
+import type { ReportPaycheckBatch } from './reportPaycheckBatch';
+import type { ReportQuickView } from './reportQuickView';
 import type { ReportRow } from './reportRow';
 import type { ReportSummary } from './reportSummary';
+import type { ReportTurnaround } from './reportTurnaround';
 import type { ReportWorkflowStage } from './reportWorkflowStage';
 
 export interface ReportResponse {
   summary: ReportSummary;
   workflow: ReportWorkflowStage[];
+  quickViews: ReportQuickView[];
+  exceptions: ReportException[];
+  monthlyTrend: ReportMonthlyTrend[];
+  turnaround: ReportTurnaround[];
+  budgetUsage: ReportBudgetRow[];
+  advancedRequests: ReportAdvancedRequest[];
+  paycheckLedger: ReportPaycheckBatch[];
+  clinicComparison: ReportClinicComparison[];
   items: ReportRow[];
   total: number;
   page: number;

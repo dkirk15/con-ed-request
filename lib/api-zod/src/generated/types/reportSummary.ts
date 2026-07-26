@@ -12,4 +12,11 @@ export interface ReportSummary {
   totalApproved: number;
   totalReimbursed: number;
   outstandingApproved: number;
+  /** Requested funding currently awaiting approval. */
+  totalPending: number;
+  /** Employee allocations available after carry-forward debt. */
+  totalAvailableAllocation: number;
+  totalCarryoverDebt: number;
+  /** Current approved and pending funding above available allocation. */
+  advancedExposure: number;
 }
