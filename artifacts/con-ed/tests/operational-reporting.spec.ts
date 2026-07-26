@@ -624,3 +624,25 @@ test("business-office Clinic filter scopes the budget view to the selected clini
   // Now that the filtered data is confirmed loaded, clinicBeta must be absent.
   await expect(budgetSection.getByRole("row").filter({ hasText: clinicBetaName })).toHaveCount(0);
 });
+
+test("accounting user lands on payroll tab by default and cannot reach funding or clinic tabs", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const accounting = await provisionUser({ role: "accounting" });
+  await signInAs(accounting);
+  await page.goto(`/reports?year=${year}`);
+
+  // accounting defaultSection = "payroll" → Payroll tab must be selected on load
+  await expect(page.getByRole("tab", { name: "Payroll" })).toHaveAttribute("aria-selected", "true");
+
+  // Funding & advances and Clinics tabs must not exist in the tab list
+  await expect(page.getByRole("tab", { name: "Funding & advances" })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Clinics" })).toHaveCount(0);
+
+  // PaycheckLedger section must be visible as the active tab content
+  await expect(
+    page.getByRole("region", { name: "Paycheck reimbursement ledger" }),
+  ).toBeVisible();
+});
