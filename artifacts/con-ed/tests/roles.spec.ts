@@ -64,7 +64,7 @@ test.describe("Role-based dashboards and navigation", () => {
     await page.goto("/dashboard");
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
     await expect(
-      page.getByText("Awaiting Business Office Approval"),
+      page.getByRole("heading", { name: "Awaiting Business Office Approval" }),
     ).toBeVisible();
     await expect(page.getByText("Total Funding Approved YTD")).toBeVisible();
     await expect(page.getByRole("link", { name: "Team" })).toHaveCount(0);
@@ -87,7 +87,7 @@ test.describe("Role-based dashboards and navigation", () => {
 
     await page.goto("/dashboard");
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
-    await expect(page.getByText("Ready for Reimbursement")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ready for Reimbursement" })).toBeVisible();
     await expect(
       page.getByText("Pending Reimbursement Processing"),
     ).toBeVisible();

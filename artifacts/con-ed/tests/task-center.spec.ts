@@ -109,7 +109,7 @@ test("manager task center and approval badge stay limited to the assigned clinic
   const taskCenter = page.getByRole("region", { name: "Needs attention" });
   await expect(taskCenter.getByText(ownCourse)).toBeVisible();
   await expect(taskCenter.getByText(otherCourse)).toHaveCount(0);
-  await expect(taskCenter.getByText("Needs follow-up")).toBeVisible();
+  await expect(taskCenter.getByText("Needs follow-up", { exact: true }).first()).toBeVisible();
   await expect(taskCenter.getByRole("link", { name: "Review" })).toHaveAttribute(
     "href",
     /selected=/,

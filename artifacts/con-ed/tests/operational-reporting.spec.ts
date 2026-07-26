@@ -81,7 +81,7 @@ test("admin reviews financial totals and exports the filtered ledger", async ({
   await expect(page.getByText(reimbursedCourse)).toBeVisible();
 
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export CSV" }).click();
+  await page.getByRole("button", { name: "Export current view" }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe(`oss-ce-report-${year}.csv`);
   const path = await download.path();
@@ -126,7 +126,7 @@ test("manager report remains limited to the assigned clinic", async ({
   await expect(page.getByText(ownCourse)).toBeVisible();
   await expect(page.getByText(otherCourse)).toHaveCount(0);
   await page.getByRole("tab", { name: "Overview" }).click();
-  await expect(page.getByRole("region", { name: "Financial summary" }).getByText("$275.00")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Financial summary" }).getByText("$275.00").first()).toBeVisible();
   await expect(page.getByLabel("Clinic")).toHaveCount(0);
 });
 
@@ -221,5 +221,5 @@ test("paycheck-date reporting includes reimbursements for requests from an earli
   await page.getByRole("option", { name: "Paycheck date" }).click();
   await expect(page.getByText(course)).toBeVisible();
   await page.getByRole("tab", { name: "Payroll" }).click();
-  await expect(page.getByText("$375.00")).toBeVisible();
+  await expect(page.getByText("$375.00").first()).toBeVisible();
 });

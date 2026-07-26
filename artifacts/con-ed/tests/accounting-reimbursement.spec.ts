@@ -31,7 +31,7 @@ test("accounting marks a request reimbursed -> reimbursed", async ({
   // Accounting dashboard shows the request in the "Ready for Reimbursement" queue.
   // CardTitle renders as a <div>, not a heading element, so use getByText.
   await page.goto("/dashboard");
-  await expect(page.getByText("Ready for Reimbursement")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ready for Reimbursement" })).toBeVisible();
   // The accounting queue card lists the course name of the seeded request.
   await expect(page.getByText(courseName)).toBeVisible();
 
