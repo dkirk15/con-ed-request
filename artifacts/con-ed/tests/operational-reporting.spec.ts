@@ -499,3 +499,43 @@ test("business-office user sees employees from all clinics in the budget-usage v
   // BO does not see the "Clinics" comparison tab (that view is admin-only).
   await expect(page.getByRole("tab", { name: "Clinics" })).toHaveCount(0);
 });
+
+test("business-office Clinic filter scopes the budget view to the selected clinic only", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  // Unique clinic names prevent cross-test row collisions in the shared DB.
+  const clinicAlphaName = `E2E-BOFilt-Alpha-${unique()}`;
+  const clinicBetaName = `E2E-BOFilt-Beta-${unique()}`;
+  const clinicAlphaId = await createClinic(clinicAlphaName);
+  const clinicBetaId = await createClinic(clinicBetaName);
+  // Data-only employees — no requests needed; buildBudgetUsage includes every
+  // employee matching the clinic filter, even those with zero activity.
+  await dataUser(clinicAlphaId, "BO Filt Alpha Emp");
+  await dataUser(clinicBetaId, "BO Filt Beta Emp");
+
+  const bo = await provisionUser({ role: "business_office" });
+  await signInAs(bo);
+  // No clinicId param — start in the all-clinic unfiltered view.
+  await page.goto(`/reports?year=${year}&section=funding`);
+
+  const budgetSection = page.getByRole("region", { name: "Employee budget usage" });
+
+  // Confirm the starting (unfiltered) state: both clinics' employees are present.
+  await expect(budgetSection.getByRole("row").filter({ hasText: clinicAlphaName })).toBeVisible();
+  await expect(budgetSection.getByRole("row").filter({ hasText: clinicBetaName })).toBeVisible();
+
+  // Apply the Clinic filter — select clinicAlpha.
+  await page.getByRole("combobox", { name: "Clinic" }).click();
+  await page.getByRole("option", { name: clinicAlphaName }).click();
+
+  // Wait for the filtered view to finish loading. budgetSection enters a loading
+  // skeleton when the query key changes (new clinicId), so toBeVisible() on the
+  // clinicAlpha row waits through that skeleton and succeeds only once the
+  // re-fetch completes with the narrowed data.
+  await expect(budgetSection.getByRole("row").filter({ hasText: clinicAlphaName })).toBeVisible();
+
+  // Now that the filtered data is confirmed loaded, clinicBeta must be absent.
+  await expect(budgetSection.getByRole("row").filter({ hasText: clinicBetaName })).toHaveCount(0);
+});
