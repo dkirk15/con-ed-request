@@ -440,11 +440,11 @@ router.get(
 
       const [yearRows, clinicRows, employeeRows] = await Promise.all([
         db
-          .selectDistinct({ year: sql<number>`extract(year from ${conEdRequests.createdAt})::int` })
+          .select({ year: sql<number>`extract(year from ${conEdRequests.createdAt})::int` })
           .from(conEdRequests)
           .innerJoin(users, eq(conEdRequests.employeeId, users.id))
           .where(roleCondition)
-          .orderBy(desc(sql`extract(year from ${conEdRequests.createdAt})`)),
+          .groupBy(sql`extract(year from ${conEdRequests.createdAt})::int`),
         user.role === "manager"
           ? user.clinicId
             ? db.select().from(clinics).where(eq(clinics.id, user.clinicId)).orderBy(asc(clinics.name))
