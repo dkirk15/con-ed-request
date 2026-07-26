@@ -603,6 +603,170 @@ export interface ReportSummary {
   totalApproved: number;
   totalReimbursed: number;
   outstandingApproved: number;
+  /** Requested funding currently awaiting approval. */
+  totalPending: number;
+  /** Employee allocations available after carry-forward debt. */
+  totalAvailableAllocation: number;
+  totalCarryoverDebt: number;
+  /** Current approved and pending funding above available allocation. */
+  advancedExposure: number;
+}
+
+export type ReportQuickViewId = typeof ReportQuickViewId[keyof typeof ReportQuickViewId];
+
+
+export const ReportQuickViewId = {
+  all: 'all',
+  needs_attention: 'needs_attention',
+  needs_approval: 'needs_approval',
+  awaiting_receipts: 'awaiting_receipts',
+  ready_to_pay: 'ready_to_pay',
+  advanced_funding: 'advanced_funding',
+  paycheck_history: 'paycheck_history',
+} as const;
+
+export interface ReportQuickView {
+  id: ReportQuickViewId;
+  label: string;
+  description: string;
+  count: number;
+}
+
+export type ReportExceptionId = typeof ReportExceptionId[keyof typeof ReportExceptionId];
+
+
+export const ReportExceptionId = {
+  stale_approvals: 'stale_approvals',
+  overdue_receipts: 'overdue_receipts',
+  stale_reimbursements: 'stale_reimbursements',
+  missing_guarantees: 'missing_guarantees',
+  missing_clinics: 'missing_clinics',
+  legacy_reimbursements: 'legacy_reimbursements',
+} as const;
+
+export type ReportExceptionSeverity = typeof ReportExceptionSeverity[keyof typeof ReportExceptionSeverity];
+
+
+export const ReportExceptionSeverity = {
+  attention: 'attention',
+  follow_up: 'follow_up',
+} as const;
+
+export type ReportExceptionView = typeof ReportExceptionView[keyof typeof ReportExceptionView];
+
+
+export const ReportExceptionView = {
+  needs_attention: 'needs_attention',
+  awaiting_receipts: 'awaiting_receipts',
+  ready_to_pay: 'ready_to_pay',
+  advanced_funding: 'advanced_funding',
+  paycheck_history: 'paycheck_history',
+} as const;
+
+export interface ReportException {
+  id: ReportExceptionId;
+  label: string;
+  description: string;
+  count: number;
+  severity: ReportExceptionSeverity;
+  view: ReportExceptionView;
+}
+
+export interface ReportMonthlyTrend {
+  /**
+     * @minimum 1
+     * @maximum 12
+     */
+  month: number;
+  label: string;
+  requested: number;
+  approved: number;
+  reimbursed: number;
+}
+
+export type ReportTurnaroundStage = typeof ReportTurnaroundStage[keyof typeof ReportTurnaroundStage];
+
+
+export const ReportTurnaroundStage = {
+  manager_approval: 'manager_approval',
+  business_office: 'business_office',
+  reimbursement: 'reimbursement',
+} as const;
+
+export interface ReportTurnaround {
+  stage: ReportTurnaroundStage;
+  label: string;
+  /** @nullable */
+  medianDays: number | null;
+  /** @nullable */
+  p90Days: number | null;
+  sampleSize: number;
+}
+
+export interface ReportBudgetRow {
+  employeeId: number;
+  employeeName: string;
+  /** @nullable */
+  clinicId?: number | null;
+  /** @nullable */
+  clinicName?: string | null;
+  annualAllocation: number;
+  availableAllocation: number;
+  carryoverDebt: number;
+  usedAmount: number;
+  pendingAmount: number;
+  remainingAmount: number;
+  advancedExposure: number;
+  guaranteeRequestCount: number;
+  unsignedGuaranteeCount: number;
+}
+
+export type ReportAdvancedRequestStatus = typeof ReportAdvancedRequestStatus[keyof typeof ReportAdvancedRequestStatus];
+
+
+export const ReportAdvancedRequestStatus = {
+  draft: 'draft',
+  pending_manager: 'pending_manager',
+  manager_approved: 'manager_approved',
+  manager_denied: 'manager_denied',
+  pending_bo: 'pending_bo',
+  bo_approved: 'bo_approved',
+  bo_denied: 'bo_denied',
+  awaiting_receipt: 'awaiting_receipt',
+  receipt_submitted: 'receipt_submitted',
+  reimbursed: 'reimbursed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface ReportAdvancedRequest {
+  requestId: number;
+  employeeId: number;
+  employeeName: string;
+  /** @nullable */
+  clinicName?: string | null;
+  status: ReportAdvancedRequestStatus;
+  requestedAmount: number;
+  guaranteeSigned: boolean;
+  /** @nullable */
+  guaranteeSignedAt?: string | null;
+}
+
+export interface ReportPaycheckBatch {
+  paycheckDate: string;
+  reimbursementCount: number;
+  totalAmount: number;
+}
+
+export interface ReportClinicComparison {
+  /** @nullable */
+  clinicId: number | null;
+  clinicName: string;
+  requestCount: number;
+  requested: number;
+  approved: number;
+  reimbursed: number;
+  denialCount: number;
+  denialRate: number;
 }
 
 export type ReportWorkflowStageStatus = typeof ReportWorkflowStageStatus[keyof typeof ReportWorkflowStageStatus];
@@ -695,6 +859,14 @@ export interface ReportRow {
 export interface ReportResponse {
   summary: ReportSummary;
   workflow: ReportWorkflowStage[];
+  quickViews: ReportQuickView[];
+  exceptions: ReportException[];
+  monthlyTrend: ReportMonthlyTrend[];
+  turnaround: ReportTurnaround[];
+  budgetUsage: ReportBudgetRow[];
+  advancedRequests: ReportAdvancedRequest[];
+  paycheckLedger: ReportPaycheckBatch[];
+  clinicComparison: ReportClinicComparison[];
   items: ReportRow[];
   total: number;
   page: number;
@@ -756,6 +928,33 @@ export const ReportStatusParameter = {
   reimbursed: 'reimbursed',
   cancelled: 'cancelled',
 } as const;
+
+export type ReportViewParameter = typeof ReportViewParameter[keyof typeof ReportViewParameter];
+
+
+export const ReportViewParameter = {
+  all: 'all',
+  needs_attention: 'needs_attention',
+  needs_approval: 'needs_approval',
+  awaiting_receipts: 'awaiting_receipts',
+  ready_to_pay: 'ready_to_pay',
+  advanced_funding: 'advanced_funding',
+  paycheck_history: 'paycheck_history',
+} as const;
+
+export type ReportDateBasisParameter = typeof ReportDateBasisParameter[keyof typeof ReportDateBasisParameter];
+
+
+export const ReportDateBasisParameter = {
+  request: 'request',
+  course: 'course',
+  approval: 'approval',
+  reimbursement: 'reimbursement',
+} as const;
+
+export type ReportDateFromParameter = string;
+
+export type ReportDateToParameter = string;
 
 export type ReportDeliveryMethodParameter = typeof ReportDeliveryMethodParameter[keyof typeof ReportDeliveryMethodParameter];
 
@@ -909,6 +1108,16 @@ clinicId?: ReportClinicIdParameter;
  */
 employeeId?: ReportEmployeeIdParameter;
 status?: ReportStatusParameter;
+view?: ReportViewParameter;
+dateBasis?: ReportDateBasisParameter;
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+dateFrom?: ReportDateFromParameter;
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+dateTo?: ReportDateToParameter;
 deliveryMethod?: ReportDeliveryMethodParameter;
 /**
  * @maxLength 120
@@ -950,6 +1159,16 @@ clinicId?: ReportClinicIdParameter;
  */
 employeeId?: ReportEmployeeIdParameter;
 status?: ReportStatusParameter;
+view?: ReportViewParameter;
+dateBasis?: ReportDateBasisParameter;
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+dateFrom?: ReportDateFromParameter;
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+dateTo?: ReportDateToParameter;
 deliveryMethod?: ReportDeliveryMethodParameter;
 /**
  * @maxLength 120

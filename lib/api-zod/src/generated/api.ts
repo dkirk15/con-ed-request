@@ -1945,6 +1945,10 @@ export const GetTaskCenterResponse = zod.object({
 export const getReportQueryYearMin = 2000;
 export const getReportQueryYearMax = 2100;
 
+export const getReportQueryViewDefault = `all`;
+export const getReportQueryDateBasisDefault = `request`;
+export const getReportQueryDateFromRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const getReportQueryDateToRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 export const getReportQuerySearchMax = 120;
 
 export const getReportQueryCourseFromRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
@@ -1964,6 +1968,10 @@ export const GetReportQueryParams = zod.object({
   "clinicId": zod.coerce.number().nullish(),
   "employeeId": zod.coerce.number().nullish(),
   "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']).optional(),
+  "view": zod.enum(['all', 'needs_attention', 'needs_approval', 'awaiting_receipts', 'ready_to_pay', 'advanced_funding', 'paycheck_history']).default(getReportQueryViewDefault),
+  "dateBasis": zod.enum(['request', 'course', 'approval', 'reimbursement']).default(getReportQueryDateBasisDefault),
+  "dateFrom": zod.coerce.string().regex(getReportQueryDateFromRegExp).optional(),
+  "dateTo": zod.coerce.string().regex(getReportQueryDateToRegExp).optional(),
   "deliveryMethod": zod.enum(['in_person', 'virtual', 'hybrid']).optional(),
   "search": zod.coerce.string().max(getReportQuerySearchMax).optional(),
   "courseFrom": zod.coerce.string().regex(getReportQueryCourseFromRegExp).optional(),
@@ -1974,19 +1982,95 @@ export const GetReportQueryParams = zod.object({
   "pageSize": zod.coerce.number().min(getReportQueryPageSizeMin).max(getReportQueryPageSizeMax).default(getReportQueryPageSizeDefault)
 })
 
+export const getReportResponseMonthlyTrendItemMonthMax = 12;
+
+
+
 export const GetReportResponse = zod.object({
   "summary": zod.object({
   "totalRequests": zod.number(),
   "totalRequested": zod.number(),
   "totalApproved": zod.number(),
   "totalReimbursed": zod.number(),
-  "outstandingApproved": zod.number()
+  "outstandingApproved": zod.number(),
+  "totalPending": zod.number().describe('Requested funding currently awaiting approval.'),
+  "totalAvailableAllocation": zod.number().describe('Employee allocations available after carry-forward debt.'),
+  "totalCarryoverDebt": zod.number(),
+  "advancedExposure": zod.number().describe('Current approved and pending funding above available allocation.')
 }),
   "workflow": zod.array(zod.object({
   "status": zod.enum(['pending_manager', 'pending_bo', 'awaiting_receipt', 'receipt_submitted']),
   "label": zod.string(),
   "count": zod.number(),
   "oldestDays": zod.number().nullish()
+})),
+  "quickViews": zod.array(zod.object({
+  "id": zod.enum(['all', 'needs_attention', 'needs_approval', 'awaiting_receipts', 'ready_to_pay', 'advanced_funding', 'paycheck_history']),
+  "label": zod.string(),
+  "description": zod.string(),
+  "count": zod.number()
+})),
+  "exceptions": zod.array(zod.object({
+  "id": zod.enum(['stale_approvals', 'overdue_receipts', 'stale_reimbursements', 'missing_guarantees', 'missing_clinics', 'legacy_reimbursements']),
+  "label": zod.string(),
+  "description": zod.string(),
+  "count": zod.number(),
+  "severity": zod.enum(['attention', 'follow_up']),
+  "view": zod.enum(['needs_attention', 'awaiting_receipts', 'ready_to_pay', 'advanced_funding', 'paycheck_history'])
+})),
+  "monthlyTrend": zod.array(zod.object({
+  "month": zod.number().min(1).max(getReportResponseMonthlyTrendItemMonthMax),
+  "label": zod.string(),
+  "requested": zod.number(),
+  "approved": zod.number(),
+  "reimbursed": zod.number()
+})),
+  "turnaround": zod.array(zod.object({
+  "stage": zod.enum(['manager_approval', 'business_office', 'reimbursement']),
+  "label": zod.string(),
+  "medianDays": zod.number().nullable(),
+  "p90Days": zod.number().nullable(),
+  "sampleSize": zod.number()
+})),
+  "budgetUsage": zod.array(zod.object({
+  "employeeId": zod.number(),
+  "employeeName": zod.string(),
+  "clinicId": zod.number().nullish(),
+  "clinicName": zod.string().nullish(),
+  "annualAllocation": zod.number(),
+  "availableAllocation": zod.number(),
+  "carryoverDebt": zod.number(),
+  "usedAmount": zod.number(),
+  "pendingAmount": zod.number(),
+  "remainingAmount": zod.number(),
+  "advancedExposure": zod.number(),
+  "guaranteeRequestCount": zod.number(),
+  "unsignedGuaranteeCount": zod.number()
+})),
+  "advancedRequests": zod.array(zod.object({
+  "requestId": zod.number(),
+  "employeeId": zod.number(),
+  "employeeName": zod.string(),
+  "clinicName": zod.string().nullish(),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "requestedAmount": zod.number(),
+  "guaranteeSigned": zod.boolean(),
+  "guaranteeSignedAt": zod.coerce.date().nullish()
+})),
+  "paycheckLedger": zod.array(zod.object({
+  "paycheckDate": zod.coerce.date(),
+  "reimbursementCount": zod.number(),
+  "totalAmount": zod.number()
+})),
+  "clinicComparison": zod.array(zod.object({
+  "clinicId": zod.number().nullable(),
+  "clinicName": zod.string(),
+  "requestCount": zod.number(),
+  "requested": zod.number(),
+  "approved": zod.number(),
+  "reimbursed": zod.number(),
+  "denialCount": zod.number(),
+  "denialRate": zod.number()
 })),
   "items": zod.array(zod.object({
   "id": zod.number(),
@@ -2044,6 +2128,10 @@ export const GetReportOptionsResponse = zod.object({
 export const exportReportQueryYearMin = 2000;
 export const exportReportQueryYearMax = 2100;
 
+export const exportReportQueryViewDefault = `all`;
+export const exportReportQueryDateBasisDefault = `request`;
+export const exportReportQueryDateFromRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const exportReportQueryDateToRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 export const exportReportQuerySearchMax = 120;
 
 export const exportReportQueryCourseFromRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
@@ -2056,6 +2144,10 @@ export const ExportReportQueryParams = zod.object({
   "clinicId": zod.coerce.number().nullish(),
   "employeeId": zod.coerce.number().nullish(),
   "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']).optional(),
+  "view": zod.enum(['all', 'needs_attention', 'needs_approval', 'awaiting_receipts', 'ready_to_pay', 'advanced_funding', 'paycheck_history']).default(exportReportQueryViewDefault),
+  "dateBasis": zod.enum(['request', 'course', 'approval', 'reimbursement']).default(exportReportQueryDateBasisDefault),
+  "dateFrom": zod.coerce.string().regex(exportReportQueryDateFromRegExp).optional(),
+  "dateTo": zod.coerce.string().regex(exportReportQueryDateToRegExp).optional(),
   "deliveryMethod": zod.enum(['in_person', 'virtual', 'hybrid']).optional(),
   "search": zod.coerce.string().max(exportReportQuerySearchMax).optional(),
   "courseFrom": zod.coerce.string().regex(exportReportQueryCourseFromRegExp).optional(),

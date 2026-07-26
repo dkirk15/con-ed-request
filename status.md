@@ -11,6 +11,9 @@ change is required for Phase 7. CI validation pipeline is fully hardened.
 Dependabot alerts #3 through #8 are patched on the local
 `codex/dependabot-july-2026` branch and are ready to merge into `main`.
 
+The Reports overhaul is merged into `main`. Its authenticated 47-test E2E run
+still needs to be completed in Replit.
+
 ### GitHub Integration
 
 - PR #3 (`Improve draft request workflow`) merged Phase 2.
@@ -21,6 +24,8 @@ Dependabot alerts #3 through #8 are patched on the local
 - PR #8 (`Add structured course data per request`) merged Phase 5.
 - PR #9 (`Add operational reporting workspace`) merged Phase 6.
 - PR #10 (`Add role-based task center`) merged Phase 7.
+- PR #11 (`Overhaul operational reports`) merged the role-specific reporting,
+  advanced-funding, exception, and payroll improvements.
 - Dependabot alert #1 is marked **fixed** as of 2026-07-20.
 - Dependabot alert #2 (`body-parser`, CVE-2026-12590) patched in Phase 7.
 - Dependabot alerts #3 through #8 are patched on
@@ -42,6 +47,68 @@ Dependabot alerts #3 through #8 are patched on the local
   versions.
 - `pnpm audit --audit-level low` reports **no known vulnerabilities**.
 - No application code or database schema changes are required for these fixes.
+
+---
+
+## Recent Changes (2026-07-25 via Codex - Reports Overhaul)
+
+### Role-Specific Reporting
+
+- Reorganized Reports into role-relevant sections. Managers and the Business
+  Office default to funding, Accounting defaults to payroll, and Admin defaults
+  to an organization overview with additional clinic comparison access.
+- Added role-specific quick views for aging work, approvals, missing receipts,
+  ready-to-pay reimbursements, advanced funding, and paycheck history.
+- Quick views, exceptions, workflow queues, and advanced-funding records drill
+  into the matching request ledger while existing server-side clinic isolation
+  remains enforced for managers.
+
+### Reliable Filters And Date Definitions
+
+- Fixed the clinic and employee filter experience and replaced the long employee
+  select with a searchable picker. Employee choices remain dependent on the
+  selected clinic.
+- Removed delivery method from the visible report filters and CSV export.
+- Added explicit reporting date bases for request submission, course dates,
+  approval decisions, and paycheck dates, plus optional from/through dates.
+  This prevents cross-year approvals and reimbursements from being attributed
+  only to the original request year.
+- Report tabs, quick views, filters, sorting, and pagination remain URL-backed
+  for refreshes and shareable report links.
+
+### Funding, Advances, And Guarantees
+
+- Added employee-level annual allocation, available benefit after carry-forward
+  debt, used, pending, remaining, and potential advanced-funding exposure.
+- Added an advanced-funding and repayment-guarantee ledger showing each affected
+  request, amount, status, and whether the required guarantee is signed.
+- Added clear definitions for requested, approved, committed/outstanding, and
+  actually paid amounts.
+
+### Operational And Financial Insight
+
+- Added an exception report for aging approvals, overdue receipts, payments
+  waiting on Accounting, missing guarantees, missing clinic assignments, and
+  legacy reimbursements without recorded actual amounts.
+- Added monthly requested/approved/paid trends using the correct event date for
+  each series.
+- Added median and 90th-percentile turnaround for manager decisions, Business
+  Office decisions, and receipt-to-paycheck processing.
+- Added a paycheck-date reimbursement ledger for Accounting and an Admin-only
+  clinic comparison with request volume shown beside denial rates.
+
+### Validation And Replit Handoff
+
+- OpenAPI React clients and Zod validators were regenerated successfully.
+- Full workspace TypeScript checks pass.
+- API and frontend production builds pass locally. Existing source-map and
+  large-chunk warnings remain non-blocking.
+- Playwright discovers **47 tests in 18 files**. Four reporting tests now cover
+  financial reconciliation and export, manager clinic isolation, working
+  clinic/employee selection with repayment guarantees, and cross-year paycheck
+  reporting.
+- The authenticated 47-test E2E run still needs to be completed in Replit.
+- **No database schema push or migration is required for this Reports overhaul.**
 
 ---
 
