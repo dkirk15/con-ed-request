@@ -349,6 +349,64 @@ test("clinic-comparison tab shows correct totals and denial rate per clinic", as
   await expect(rowY.getByText("0%")).toBeVisible();
 });
 
+test("carry-forward debt from a prior year reduces the employee's available allocation", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  // Employee has no hireDate → full $2,000 allocation every year.
+  // Prior year: reimbursed request for $2,500 (over allocation by $500).
+  //   carryoverDebt = max(0, $2,500 - $2,000) = $500
+  // Current year: awaiting_receipt with totalApproved = $300.
+  //   availableAllocation = max(0, $2,000 - $500) = $1,500
+  //   usedAmount         = $300
+  //   remainingAmount    = max(0, $1,500 - $300) = $1,200
+  //   Future debt column = carryoverDebt + advancedExposure = $500 + 0 = $500
+
+  const clinicId = await createClinic(`E2E-Carryover-${unique()}`);
+  const empId = await dataUser(clinicId, "Carryover Employee");
+
+  // Prior-year reimbursed request — exceeds the $2,000 allocation by $500.
+  // buildBudgetUsage uses `reimbursementAmount ?? totalApproved ?? totalRequested`;
+  // setting totalApproved=2500 is sufficient (no reimbursement row needed).
+  await insertRequest({
+    employeeId: empId,
+    status: "reimbursed",
+    courseNames: `Prior Year Over-Budget ${unique()}`,
+    totalRequested: 2500,
+    totalApproved: 2500,
+    createdAt: new Date(`${year - 1}-06-15T12:00:00Z`),
+  });
+
+  // Current-year request — partially uses the reduced $1,500 available allocation.
+  await insertRequest({
+    employeeId: empId,
+    status: "awaiting_receipt",
+    courseNames: `Current Year Course ${unique()}`,
+    totalRequested: 400,
+    totalApproved: 300,
+    createdAt: new Date(`${year}-03-01T12:00:00Z`),
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  await page.goto(`/reports?year=${year}&clinicId=${clinicId}&section=funding`);
+
+  const budgetSection = page.getByRole("region", { name: "Employee budget usage" });
+  await expect(budgetSection).toBeVisible();
+
+  const row = budgetSection.getByRole("row").filter({ hasText: "Carryover Employee" });
+
+  // Available = annual allocation ($2,000) minus carry-forward debt ($500) = $1,500
+  await expect(row.getByText("$1,500.00")).toBeVisible();
+  // Used = current-year approved amount
+  await expect(row.getByText("$300.00")).toBeVisible();
+  // Remaining = available − used = $1,200
+  await expect(row.getByText("$1,200.00")).toBeVisible();
+  // Future debt column = carryoverDebt ($500) + advancedExposure ($0)
+  await expect(row.getByText("$500.00")).toBeVisible();
+});
+
 test("exception strip flags a stale pending request with the correct count", async ({
   page,
   provisionUser,
