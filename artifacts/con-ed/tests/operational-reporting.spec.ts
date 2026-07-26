@@ -385,3 +385,59 @@ test("exception strip flags a stale pending request with the correct count", asy
   await expect(approvalFlag).toBeVisible();
   await expect(approvalFlag).toContainText("1");
 });
+
+test("business-office user sees employees from all clinics in the budget-usage view", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  // Two distinct clinics — unique names prevent row collisions with other test runs.
+  // We filter budget rows by clinic name (not employee name) because BO sees ALL
+  // employees in the DB and prior runs also created "BO Alpha/Beta Employee" rows.
+  const clinicAlphaName = `E2E-BO-Alpha-${unique()}`;
+  const clinicBetaName = `E2E-BO-Beta-${unique()}`;
+  const clinicAlphaId = await createClinic(clinicAlphaName);
+  const clinicBetaId = await createClinic(clinicBetaName);
+  const empAlphaId = await dataUser(clinicAlphaId, "BO Alpha Employee");
+  const empBetaId = await dataUser(clinicBetaId, "BO Beta Employee");
+
+  // Give each employee an approved request so their rows carry real numbers.
+  await insertRequest({
+    employeeId: empAlphaId,
+    status: "awaiting_receipt",
+    courseNames: `Alpha Course ${unique()}`,
+    totalRequested: 400,
+    totalApproved: 400,
+    createdAt: new Date(`${year}-03-01T12:00:00Z`),
+  });
+  await insertRequest({
+    employeeId: empBetaId,
+    status: "awaiting_receipt",
+    courseNames: `Beta Course ${unique()}`,
+    totalRequested: 600,
+    totalApproved: 600,
+    createdAt: new Date(`${year}-04-01T12:00:00Z`),
+  });
+
+  const bo = await provisionUser({ role: "business_office" });
+  await signInAs(bo);
+  // No clinicId param — BO must see all clinics without any restriction.
+  // The default section for BO is "funding" (Funding & advances).
+  await page.goto(`/reports?year=${year}&section=funding`);
+
+  const budgetSection = page.getByRole("region", { name: "Employee budget usage" });
+  await expect(budgetSection).toBeVisible();
+
+  // Both clinics must appear — confirming cross-clinic scope for BO.
+  // Filtered by unique clinic name (not employee label) so prior test runs' rows
+  // don't cause a strict-mode violation in the all-employee BO view.
+  await expect(budgetSection.getByRole("row").filter({ hasText: clinicAlphaName })).toBeVisible();
+  await expect(budgetSection.getByRole("row").filter({ hasText: clinicBetaName })).toBeVisible();
+
+  // BO has the Clinic dropdown available (can optionally narrow scope, but is not
+  // locked to one clinic the way a manager is).
+  await expect(page.getByLabel("Clinic")).toBeVisible();
+
+  // BO does not see the "Clinics" comparison tab (that view is admin-only).
+  await expect(page.getByRole("tab", { name: "Clinics" })).toHaveCount(0);
+});
