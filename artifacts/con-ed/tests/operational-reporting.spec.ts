@@ -235,3 +235,153 @@ test("paycheck-date reporting includes reimbursements for requests from an earli
   await page.getByRole("tab", { name: "Payroll" }).click();
   await expect(page.getByText("$375.00").first()).toBeVisible();
 });
+
+test("budget-usage view shows correct allocation, used, and remaining amounts per employee", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-Budget-${unique()}`);
+
+  // Two data-only employees — no Clerk account needed; budget queries the DB directly.
+  // calcAnnualAllocationForYear(null, year) → $2,000 (full allocation, no hire-date prorate).
+  const empAId = await dataUser(clinicId, "Budget Emp A");
+  const empBId = await dataUser(clinicId, "Budget Emp B");
+
+  // Employee A: awaiting_receipt, totalApproved=600 → usedAmount=600, remaining=1400
+  await insertRequest({
+    employeeId: empAId,
+    status: "awaiting_receipt",
+    courseNames: `Budget Course A ${unique()}`,
+    totalRequested: 700,
+    totalApproved: 600,
+    createdAt: new Date(`${year}-03-01T12:00:00Z`),
+  });
+
+  // Employee B: awaiting_receipt, totalApproved=900 → usedAmount=900, remaining=1100
+  await insertRequest({
+    employeeId: empBId,
+    status: "awaiting_receipt",
+    courseNames: `Budget Course B ${unique()}`,
+    totalRequested: 1000,
+    totalApproved: 900,
+    createdAt: new Date(`${year}-04-01T12:00:00Z`),
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  // clinicId scopes budget to only these two employees; section=funding loads the tab directly.
+  await page.goto(`/reports?year=${year}&clinicId=${clinicId}&section=funding`);
+
+  const budgetSection = page.getByRole("region", { name: "Employee budget usage" });
+  await expect(budgetSection).toBeVisible();
+
+  // Employee A — Available: $2,000.00 | Used: $600.00 | Remaining: $1,400.00
+  const rowA = budgetSection.getByRole("row").filter({ hasText: "Budget Emp A" });
+  await expect(rowA.getByText("$2,000.00")).toBeVisible();
+  await expect(rowA.getByText("$600.00")).toBeVisible();
+  await expect(rowA.getByText("$1,400.00")).toBeVisible();
+
+  // Employee B — Available: $2,000.00 | Used: $900.00 | Remaining: $1,100.00
+  const rowB = budgetSection.getByRole("row").filter({ hasText: "Budget Emp B" });
+  await expect(rowB.getByText("$2,000.00")).toBeVisible();
+  await expect(rowB.getByText("$900.00")).toBeVisible();
+  await expect(rowB.getByText("$1,100.00")).toBeVisible();
+});
+
+test("clinic-comparison tab shows correct totals and denial rate per clinic", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  // Unique names prevent interference from prior test runs in the shared database.
+  const clinicXName = `E2E-ClinComp-X-${unique()}`;
+  const clinicYName = `E2E-ClinComp-Y-${unique()}`;
+  const clinicXId = await createClinic(clinicXName);
+  const clinicYId = await createClinic(clinicYName);
+  const empXId = await dataUser(clinicXId, "Clinic X Employee");
+  const empYId = await dataUser(clinicYId, "Clinic Y Employee");
+
+  // Clinic X: 1 pending + 1 manager-denied → 2 submitted, 1 denied → 50% denial rate
+  // requested = 150 + 250 = $400.00
+  await insertRequest({
+    employeeId: empXId,
+    status: "pending_manager",
+    courseNames: `Clinic X Pending ${unique()}`,
+    totalRequested: 150,
+    createdAt: new Date(`${year}-03-01T12:00:00Z`),
+  });
+  await insertRequest({
+    employeeId: empXId,
+    status: "manager_denied",
+    courseNames: `Clinic X Denied ${unique()}`,
+    totalRequested: 250,
+    createdAt: new Date(`${year}-04-01T12:00:00Z`),
+  });
+
+  // Clinic Y: 1 awaiting_receipt, totalApproved=300 → 1 submitted, 0 denied → 0% denial rate
+  await insertRequest({
+    employeeId: empYId,
+    status: "awaiting_receipt",
+    courseNames: `Clinic Y Approved ${unique()}`,
+    totalRequested: 350,
+    totalApproved: 300,
+    createdAt: new Date(`${year}-05-01T12:00:00Z`),
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  // No clinicId filter — clinic comparison needs all-clinic scope to build per-clinic rows.
+  await page.goto(`/reports?year=${year}&section=clinics`);
+
+  const clinicSection = page.getByRole("region", { name: "Clinic comparison" });
+  await expect(clinicSection).toBeVisible();
+
+  // Clinic X row: $400.00 requested, 50% denial rate
+  const rowX = clinicSection.getByRole("row").filter({ hasText: clinicXName });
+  await expect(rowX.getByText("$400.00")).toBeVisible();
+  await expect(rowX.getByText("50%")).toBeVisible();
+
+  // Clinic Y row: $350.00 requested, $300.00 approved, 0% denial rate
+  const rowY = clinicSection.getByRole("row").filter({ hasText: clinicYName });
+  await expect(rowY.getByText("$350.00")).toBeVisible();
+  await expect(rowY.getByText("$300.00")).toBeVisible();
+  await expect(rowY.getByText("0%")).toBeVisible();
+});
+
+test("exception strip flags a stale pending request with the correct count", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-Exception-${unique()}`);
+  const empId = await dataUser(clinicId, "Exception Employee");
+
+  // pending_manager updated 8 days ago:
+  //   ageDays >= 3 → exception triggered ("stale_approvals")
+  //   ageDays >= 7 → severity = "follow_up" (red icon)
+  await insertRequest({
+    employeeId: empId,
+    status: "pending_manager",
+    courseNames: `Stale Approval ${unique()}`,
+    totalRequested: 500,
+    createdAt: new Date(`${year}-01-15T12:00:00Z`),
+    updatedAt: new Date(Date.now() - 8 * 86_400_000),
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  // clinicId scope ensures only this test's request appears in the exception count.
+  // Overview is admin's default section so no section param is needed.
+  await page.goto(`/reports?year=${year}&clinicId=${clinicId}`);
+
+  // ExceptionStrip renders in both "overview" and "workflow" tab panels; .first() targets
+  // the overview panel, which is the active (visible) tab.
+  const exceptionRegion = page.getByRole("region", { name: "Needs attention" }).first();
+  await expect(exceptionRegion).toBeVisible();
+
+  // "Approval follow-up" button should be present with count = 1
+  const approvalFlag = exceptionRegion.getByRole("button", { name: /Approval follow-up/ });
+  await expect(approvalFlag).toBeVisible();
+  await expect(approvalFlag).toContainText("1");
+});
