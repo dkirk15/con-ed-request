@@ -11,7 +11,6 @@ import type { ReportCourseToParameter } from './reportCourseToParameter';
 import type { ReportDateBasisParameter } from './reportDateBasisParameter';
 import type { ReportDateFromParameter } from './reportDateFromParameter';
 import type { ReportDateToParameter } from './reportDateToParameter';
-import type { ReportDeliveryMethodParameter } from './reportDeliveryMethodParameter';
 import type { ReportEmployeeIdParameter } from './reportEmployeeIdParameter';
 import type { ReportOrderParameter } from './reportOrderParameter';
 import type { ReportPageParameter } from './reportPageParameter';
@@ -47,7 +46,6 @@ dateFrom?: ReportDateFromParameter;
  * @pattern ^\d{4}-\d{2}-\d{2}$
  */
 dateTo?: ReportDateToParameter;
-deliveryMethod?: ReportDeliveryMethodParameter;
 /**
  * @maxLength 120
  */

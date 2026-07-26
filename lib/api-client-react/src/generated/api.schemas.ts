@@ -956,15 +956,6 @@ export type ReportDateFromParameter = string;
 
 export type ReportDateToParameter = string;
 
-export type ReportDeliveryMethodParameter = typeof ReportDeliveryMethodParameter[keyof typeof ReportDeliveryMethodParameter];
-
-
-export const ReportDeliveryMethodParameter = {
-  in_person: 'in_person',
-  virtual: 'virtual',
-  hybrid: 'hybrid',
-} as const;
-
 export type ReportSearchParameter = string;
 
 export type ReportCourseFromParameter = string;
@@ -1118,7 +1109,6 @@ dateFrom?: ReportDateFromParameter;
  * @pattern ^\d{4}-\d{2}-\d{2}$
  */
 dateTo?: ReportDateToParameter;
-deliveryMethod?: ReportDeliveryMethodParameter;
 /**
  * @maxLength 120
  */
@@ -1169,7 +1159,6 @@ dateFrom?: ReportDateFromParameter;
  * @pattern ^\d{4}-\d{2}-\d{2}$
  */
 dateTo?: ReportDateToParameter;
-deliveryMethod?: ReportDeliveryMethodParameter;
 /**
  * @maxLength 120
  */

@@ -53,7 +53,6 @@ export * from './reportCourseToParameter';
 export * from './reportDateBasisParameter';
 export * from './reportDateFromParameter';
 export * from './reportDateToParameter';
-export * from './reportDeliveryMethodParameter';
 export * from './reportEmployeeIdParameter';
 export * from './reportEmployeeOption';
 export * from './reportException';

@@ -88,7 +88,6 @@ function scopeConditions(user: ReportUser, filters: ReportFilters): SQL[] {
 function detailConditions(filters: ReportFilters): SQL[] {
   const conditions: SQL[] = [];
   if (filters.status) conditions.push(eq(conEdRequests.status, filters.status));
-  if (filters.deliveryMethod) conditions.push(eq(conEdRequests.deliveryMethod, filters.deliveryMethod));
   if (filters.courseFrom) conditions.push(gte(conEdRequests.courseEndDate, filters.courseFrom));
   if (filters.courseTo) conditions.push(lte(conEdRequests.courseStartDate, filters.courseTo));
   if (filters.search?.trim()) {
