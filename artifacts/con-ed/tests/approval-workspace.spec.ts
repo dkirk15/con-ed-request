@@ -7,7 +7,7 @@ test.describe("Approval workspace", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-workspace-manager`);
+    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-workspace-manager`);
     const manager = await provisionUser({ role: "manager", clinicId });
     const firstEmployee = await provisionUser({
       role: "employee",
