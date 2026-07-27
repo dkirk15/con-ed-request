@@ -76,7 +76,7 @@ async function main() {
         email: adminEmail,
         role: "admin",
       });
-      console.log(`Admin user created: ${adminName} <${adminEmail}>`);
+      console.log(`Admin user created (id: ${adminClerkId})`);
     } else {
       await db
         .update(users)
