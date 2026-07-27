@@ -38,6 +38,7 @@ export function ImpersonationProvider({ children }: { children: ReactNode }) {
       // a fresh request without If-None-Match, guaranteeing the server
       // returns the impersonated role instead of a 304 Not Modified.
       queryClient.clear();
+      window.location.reload();
     },
     [queryClient],
   );

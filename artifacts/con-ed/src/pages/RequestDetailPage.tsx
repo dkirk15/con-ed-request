@@ -495,47 +495,6 @@ export default function RequestDetailPage() {
             </>
           )}
 
-          {isMyRequest && request.status === "awaiting_receipt" && (user.role === "employee" || user.role === "manager") && (
-            <>
-              <input
-                id="receipt-upload"
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={handleFileSelect}
-                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-              />
-              {pendingReceiptFile ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-600 truncate max-w-[200px]" title={pendingReceiptFile.name}>
-                    {pendingReceiptFile.name}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setPendingReceiptFile(null);
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                  >
-                    Change
-                  </Button>
-                  <Button
-                    onClick={handleReceiptSubmit}
-                    disabled={submitReceiptMutation.isPending}
-                  >
-                    <Upload className="mr-2 h-4 w-4" />
-                    {submitReceiptMutation.isPending ? "Submitting…" : "Submit Receipt"}
-                  </Button>
-                </div>
-              ) : (
-                <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                  <Upload className="mr-2 h-4 w-4" /> Upload receipt
-                </Button>
-              )}
-            </>
-          )}
-
           {isAccounting && request.status === "receipt_submitted" && (
             <Dialog onOpenChange={(open) => {
               if (open) {
@@ -594,6 +553,83 @@ export default function RequestDetailPage() {
       </div>
 
       <WorkflowSteps current={workflowStepForStatus(request.status)} />
+
+      {isMyRequest && request.status === "awaiting_receipt" && (user.role === "employee" || user.role === "manager") && (
+        <section
+          className="flex flex-col gap-5 rounded-md border border-orange-200 bg-orange-50 px-5 py-4 shadow-sm md:flex-row md:items-center md:justify-between"
+          aria-labelledby="receipt-next-step-heading"
+        >
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="mt-0.5 rounded-md bg-orange-100 p-2 text-primary">
+              <Upload className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <div>
+              <h2 id="receipt-next-step-heading" className="font-serif text-lg font-semibold text-slate-950">
+                Ready for your receipt
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-600">
+                Your course is approved. After making the purchase, upload the itemized receipt to begin reimbursement.
+              </p>
+            </div>
+          </div>
+          <input
+            id="receipt-upload"
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            onChange={handleFileSelect}
+            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+          />
+          {pendingReceiptFile ? (
+            <div className="flex shrink-0 flex-wrap items-center gap-2 md:justify-end">
+              <span className="max-w-[220px] truncate text-sm font-medium text-slate-700" title={pendingReceiptFile.name}>
+                {pendingReceiptFile.name}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setPendingReceiptFile(null);
+                  if (fileInputRef.current) fileInputRef.current.value = "";
+                }}
+              >
+                Change
+              </Button>
+              <Button
+                onClick={handleReceiptSubmit}
+                disabled={submitReceiptMutation.isPending}
+              >
+                <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
+                {submitReceiptMutation.isPending ? "Submitting…" : "Submit receipt"}
+              </Button>
+            </div>
+          ) : (
+            <Button className="shrink-0 md:self-center" onClick={() => fileInputRef.current?.click()}>
+              <Upload className="mr-2 h-4 w-4" aria-hidden="true" />
+              Upload receipt
+            </Button>
+          )}
+        </section>
+      )}
+
+      {isMyRequest && request.status === "receipt_submitted" && (
+        <section
+          className="flex items-start gap-3 rounded-md border border-emerald-200 bg-emerald-50 px-5 py-4"
+          aria-labelledby="receipt-submitted-heading"
+        >
+          <div className="mt-0.5 rounded-md bg-emerald-100 p-2 text-emerald-700">
+            <Check className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div>
+            <h2 id="receipt-submitted-heading" className="font-serif text-lg font-semibold text-emerald-950">
+              Receipt submitted
+            </h2>
+            <p className="mt-1 text-sm text-emerald-800">
+              Accounting will review the receipt and record the reimbursement on an upcoming paycheck.
+            </p>
+          </div>
+        </section>
+      )}
 
       {isMyRequest && request.requiresRepaymentGuarantee && !request.repaymentGuarantee && request.status !== 'cancelled' && request.status !== 'manager_denied' && request.status !== 'bo_denied' && (
         <Card className="border-amber-200 bg-amber-50 shadow-sm">
