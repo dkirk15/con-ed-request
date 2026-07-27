@@ -49,8 +49,9 @@ PR #12.
 
 ### Secure Receipt Preview
 
-- Added `View receipt` as the primary action for submitted receipts while
-  retaining a separate authenticated `Download` action.
+- Added `View receipt` as the primary action for submitted receipts on both the
+  request-detail page and Accounting reimbursement workspace while retaining a
+  separate authenticated `Download` action.
 - PDFs open in a large in-app preview dialog using the browser PDF viewer; JPG
   and PNG receipts display as fitted images.
 - The viewer includes `Open in new tab` and `Download` fallbacks and shows
@@ -62,7 +63,8 @@ PR #12.
   supports an explicit inline disposition while keeping downloads as the
   default, with `nosniff` and private no-store caching unchanged.
 - Expanded receipt E2E coverage to upload a PDF, verify inline and attachment
-  response headers, and confirm the preview and fallback controls.
+  response headers, confirm the preview and fallback controls, and verify the
+  Accounting workspace exposes the shared viewer.
 
 ### Live Desktop Review
 
