@@ -40,7 +40,29 @@ app.use(
 // Clerk proxy MUST come before express.json()
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
-app.use(cors({ credentials: true, origin: true }));
+// Build an explicit CORS allowlist from environment variables.
+// ALLOWED_ORIGINS: comma-separated list of trusted origins (e.g. production URL).
+// REPLIT_DOMAINS: injected by the Replit runtime; covers the dev/preview domain.
+const allowedOrigins: string[] = [];
+
+if (process.env.ALLOWED_ORIGINS) {
+  allowedOrigins.push(
+    ...process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean),
+  );
+}
+
+if (process.env.REPLIT_DOMAINS) {
+  for (const domain of process.env.REPLIT_DOMAINS.split(",").map((d) => d.trim()).filter(Boolean)) {
+    allowedOrigins.push(`https://${domain}`);
+  }
+}
+
+app.use(
+  cors({
+    credentials: true,
+    origin: allowedOrigins.length > 0 ? allowedOrigins : false,
+  }),
+);
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
