@@ -59,7 +59,12 @@ test.describe("Reimbursement workspace", () => {
 
     await expect(page.getByRole("heading", { name: "Reimbursements" })).toBeVisible();
     await expect(page.getByRole("heading", { name: firstCourse })).toBeVisible();
-    await expect(page.getByText("reduced-reimbursement.pdf").first()).toBeVisible();
+    // The filename text is in the DOM; check the enclosing receipt card (bordered div) is
+    // visible — Playwright reports the inner text-only div as zero-area due to flex layout.
+    await expect(page.getByText("reduced-reimbursement.pdf").first()).toBeAttached();
+    await expect(
+      page.locator(".border-slate-200").filter({ hasText: "reduced-reimbursement.pdf" }).first()
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "View receipt" })).toBeVisible();
 
     await page.getByLabel("Actual amount").fill("400");

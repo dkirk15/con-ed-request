@@ -395,18 +395,6 @@ function ReimbursementPane({
             </div>
           </section>
 
-          <section className="p-6">
-            <h3 className="text-lg font-serif font-bold text-slate-950">Funding reconciliation</h3>
-            <p className="mt-1 text-sm text-slate-500">Record what OSS will actually reimburse from the approved funding.</p>
-            <div className="mt-5 grid overflow-hidden rounded-md border border-slate-200 sm:grid-cols-[1fr_auto_1fr_auto_1fr]">
-              <AmountStep label="Requested" amount={request.totalRequested} />
-              <div className="hidden items-center justify-center bg-slate-50 px-2 sm:flex"><ArrowRight aria-hidden="true" className="h-4 w-4 text-slate-300" /></div>
-              <AmountStep label="BO approved" amount={approved} />
-              <div className="hidden items-center justify-center bg-slate-50 px-2 sm:flex"><ArrowRight aria-hidden="true" className="h-4 w-4 text-slate-300" /></div>
-              <AmountStep label="Actual reimbursement" amount={amount} emphasis />
-            </div>
-          </section>
-
           <section className="grid gap-6 p-6 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div>
               <div className="flex items-center gap-2">
@@ -422,10 +410,10 @@ function ReimbursementPane({
                   </Alert>
                 ) : request.receipts!.map((receipt, index) => (
                   <div key={receipt.id} className="flex items-center justify-between gap-4 rounded-md border border-slate-200 p-4">
-                    <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
                       <div className="rounded bg-slate-100 p-2"><FileCheck2 aria-hidden="true" className="h-5 w-5 text-slate-600" /></div>
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-slate-900">{receipt.fileName || `Receipt ${index + 1}`}</div>
+                      <div className="min-w-0 flex-1 overflow-hidden">
+                        <div className="whitespace-nowrap text-sm font-semibold text-slate-900">{receipt.fileName || `Receipt ${index + 1}`}</div>
                         <div className="mt-0.5 text-xs text-slate-500">Uploaded {formatDateTime(receipt.uploadedAt)}</div>
                       </div>
                     </div>
@@ -473,6 +461,18 @@ function ReimbursementPane({
                   <AlertDescription>Unused approved funding will return to the employee&apos;s CE balance.</AlertDescription>
                 </Alert>
               )}
+            </div>
+          </section>
+
+          <section className="p-6">
+            <h3 className="text-lg font-serif font-bold text-slate-950">Funding reconciliation</h3>
+            <p className="mt-1 text-sm text-slate-500">Record what OSS will actually reimburse from the approved funding.</p>
+            <div className="mt-5 grid overflow-hidden rounded-md border border-slate-200 sm:grid-cols-[1fr_auto_1fr_auto_1fr]">
+              <AmountStep label="Requested" amount={request.totalRequested} />
+              <div className="hidden items-center justify-center bg-slate-50 px-2 sm:flex"><ArrowRight aria-hidden="true" className="h-4 w-4 text-slate-300" /></div>
+              <AmountStep label="BO approved" amount={approved} />
+              <div className="hidden items-center justify-center bg-slate-50 px-2 sm:flex"><ArrowRight aria-hidden="true" className="h-4 w-4 text-slate-300" /></div>
+              <AmountStep label="Actual reimbursement" amount={amount} emphasis />
             </div>
           </section>
 
