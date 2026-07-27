@@ -494,7 +494,7 @@ test("business-office user sees employees from all clinics in the budget-usage v
 
   // BO has the Clinic dropdown available (can optionally narrow scope, but is not
   // locked to one clinic the way a manager is).
-  await expect(page.getByLabel("Clinic")).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Clinic" })).toBeVisible();
 
   // BO does not see the "Clinics" comparison tab (that view is admin-only).
   await expect(page.getByRole("tab", { name: "Clinics" })).toHaveCount(0);

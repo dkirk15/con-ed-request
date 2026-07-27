@@ -1,6 +1,6 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-26 by Codex and Replit Agent
+Last updated: 2026-07-27 by Replit Agent
 
 ## Current State
 
@@ -29,6 +29,23 @@ PR #12.
 - Dependabot alert #2 (`body-parser`, CVE-2026-12590) patched in Phase 7.
 - Dependabot alerts #3 through #8 are patched in `main` through PR #12.
 - **All 55 Playwright E2E tests pass** in Replit as of 2026-07-26.
+
+---
+
+## Recent Changes (2026-07-27 via Replit Agent — Post-Polish E2E Fix)
+
+### Clinic Combobox Selector Tightened
+
+The Codex UX polish added `aria-label="Clinic X Employee … funding committed"`
+to every progress bar in the budget-usage table for screen-reader accessibility.
+This caused `page.getByLabel("Clinic")` in the BO budget-usage test to resolve
+to 71 elements (the combobox **plus** all progress bars), triggering a
+Playwright strict-mode violation.
+
+- Changed the selector in `operational-reporting.spec.ts` from
+  `page.getByLabel("Clinic")` to `page.getByRole("combobox", { name: "Clinic" })`
+  so it targets only the filter dropdown.
+- **55/55 tests pass** with no retries after the fix.
 
 ---
 
