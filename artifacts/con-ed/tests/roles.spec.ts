@@ -128,6 +128,17 @@ test.describe("Role-based dashboards and navigation", () => {
     await expect(page.getByRole("heading", { name: "Operations" })).toBeVisible();
     await expect(page.getByRole("link", { name: "People" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Reports" })).toBeVisible();
+    const roleSelector = page.getByRole("combobox", { name: "View app as" });
+    await expect(roleSelector).toBeVisible();
+
+    await roleSelector.click();
+    await page.getByRole("option", { name: "Employee" }).click();
+    await expect(page.getByRole("link", { name: "My Requests" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "People" })).toHaveCount(0);
+
+    await page.getByRole("button", { name: "Exit" }).click();
+    await expect(page.getByRole("heading", { name: "Operations" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "People" })).toBeVisible();
 
     await page.goto("/requests");
     await expect(

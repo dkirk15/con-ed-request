@@ -337,7 +337,7 @@ export default function ReportsPage() {
                 autoComplete="off"
                 value={searchValue}
                 onChange={(event) => updateFilters({ search: event.target.value })}
-                placeholder="Search course, provider, or employee…"
+                placeholder="Course, provider, or employee"
                 className="bg-white pl-9"
               />
             </div>

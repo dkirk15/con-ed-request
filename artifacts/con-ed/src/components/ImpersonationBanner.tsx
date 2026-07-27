@@ -36,7 +36,10 @@ export default function ImpersonationBanner() {
           setImpersonatedRole(val === "admin" ? null : (val as ImpersonableRole))
         }
       >
-        <SelectTrigger className="h-7 w-44 bg-amber-900 border-amber-700 text-amber-100 text-xs focus:ring-amber-600">
+        <SelectTrigger
+          aria-label="View app as"
+          className="h-7 w-44 bg-amber-900 border-amber-700 text-amber-100 text-xs focus:ring-amber-600"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

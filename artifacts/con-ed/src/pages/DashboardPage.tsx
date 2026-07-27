@@ -62,6 +62,7 @@ function EmployeeDashboard() {
 
   const { balance, requestCounts, recentRequests } = data;
   const availableAllocation = balance.availableAllocation ?? balance.annualAllocation;
+  const approvedAdvance = Math.max(0, balance.usedAmount - availableAllocation);
   const percentUsed =
     availableAllocation > 0
       ? Math.min(100, Math.round((balance.usedAmount / availableAllocation) * 100))
@@ -86,6 +87,11 @@ function EmployeeDashboard() {
             {balance.carryoverDebt ? (
               <p className="text-sm text-amber-600 mt-2 flex items-center gap-1">
                 <Clock className="h-3 w-3" /> {formatCurrency(balance.carryoverDebt)} carry-forward advance applied
+              </p>
+            ) : null}
+            {approvedAdvance > 0 ? (
+              <p className="text-sm text-amber-700 mt-2 flex items-center gap-1">
+                <Clock className="h-3 w-3" /> {formatCurrency(approvedAdvance)} approved as advanced funding; this reduces a future year's CE benefit
               </p>
             ) : null}
             {balance.pendingAmount ? (
@@ -172,6 +178,7 @@ function ManagerDashboard() {
 
   const { myBalance, myRecentRequests = [], requestCounts, clinicEmployeeCount } = data;
   const availableAllocation = myBalance.availableAllocation ?? myBalance.annualAllocation;
+  const approvedAdvance = Math.max(0, myBalance.usedAmount - availableAllocation);
   const percentUsed =
     availableAllocation > 0
       ? Math.min(100, Math.round((myBalance.usedAmount / availableAllocation) * 100))
@@ -234,6 +241,11 @@ function ManagerDashboard() {
             {myBalance.carryoverDebt ? (
               <div className="mt-2 text-xs text-amber-700">
                 {formatCurrency(myBalance.carryoverDebt)} carry-forward advance applied
+              </div>
+            ) : null}
+            {approvedAdvance > 0 ? (
+              <div className="mt-2 text-xs text-amber-700">
+                {formatCurrency(approvedAdvance)} approved as advanced funding; this reduces a future year's CE benefit
               </div>
             ) : null}
           </div>

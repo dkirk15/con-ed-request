@@ -37,6 +37,14 @@ test("employee uploads a receipt -> receipt_submitted", async ({
   await expect(
     page.getByRole("heading", { name: /Request #\d+/ }).getByText("Awaiting Receipt"),
   ).toBeVisible();
+  const receiptNextStep = page.getByRole("region", { name: "Ready for your receipt" });
+  await expect(receiptNextStep).toBeVisible();
+  await expect(
+    receiptNextStep.getByText(
+      "Your course is approved. After making the purchase, upload the itemized receipt to begin reimbursement.",
+    ),
+  ).toBeVisible();
+  await expect(receiptNextStep.getByRole("button", { name: "Upload receipt" })).toBeVisible();
 
   const pngBuffer = Buffer.from(
     "89504e470d0a1a0a0000000d4948445200000001000000010806000000" +
@@ -51,11 +59,12 @@ test("employee uploads a receipt -> receipt_submitted", async ({
   });
 
   // File is staged but not yet submitted — click the explicit Submit button.
-  await page.getByRole("button", { name: "Submit Receipt" }).click();
+  await receiptNextStep.getByRole("button", { name: "Submit receipt" }).click();
 
   await expect(
     page.getByRole("heading", { name: /Request #\d+/ }).getByText("Receipt Submitted"),
   ).toBeVisible();
+  await expect(page.getByRole("region", { name: "Receipt submitted" })).toBeVisible();
 
   const row = await getRequest(requestId);
   expect(row?.status).toBe("receipt_submitted");

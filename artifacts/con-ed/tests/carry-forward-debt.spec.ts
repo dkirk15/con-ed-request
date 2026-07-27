@@ -50,3 +50,36 @@ test("prior-year overspend shows as carry-forward debt", async ({
       .locator("xpath=following-sibling::dd[1]"),
   ).toHaveText("$1,000.00");
 });
+
+test("current-year approved overspend is explained as advanced funding", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const year = new Date().getFullYear();
+  const clinicId = await createClinic(`E2E-Clinic-current-advance`);
+  const employee = await provisionUser({
+    role: "employee",
+    clinicId,
+    hireDate: `${year - 1}-01-01`,
+  });
+
+  await insertRequest({
+    employeeId: employee.dbId,
+    status: "awaiting_receipt",
+    courseNames: "E2E Current-Year Advanced Funding",
+    tuition: 2500,
+    totalRequested: 2500,
+    totalApproved: 2500,
+    createdAt: new Date(year, 5, 15),
+  });
+
+  await signInAs(employee);
+  await page.goto("/dashboard");
+
+  await expect(
+    page.getByText(
+      "$500.00 approved as advanced funding; this reduces a future year's CE benefit",
+    ),
+  ).toBeVisible();
+});

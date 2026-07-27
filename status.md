@@ -1,6 +1,6 @@
 # OSS Con-Ed Portal - Status Report
 
-Last updated: 2026-07-27 by Replit Agent
+Last updated: 2026-07-27 by Codex
 
 ## Current State
 
@@ -29,6 +29,62 @@ PR #12.
 - Dependabot alert #2 (`body-parser`, CVE-2026-12590) patched in Phase 7.
 - Dependabot alerts #3 through #8 are patched in `main` through PR #12.
 - **All 55 Playwright E2E tests pass** in Replit as of 2026-07-26.
+
+---
+
+## Recent Changes (2026-07-27 via Codex - Final Presentation Review)
+
+### Receipt Action Placement
+
+- Moved the employee and manager `Upload receipt` action from the detached
+  request-header controls into a full-width `Ready for your receipt` next-step
+  band directly beneath the request workflow indicator.
+- The action band explains that the course must be purchased before uploading
+  the itemized receipt and uses the standard primary-button treatment.
+- After upload, the band becomes a `Receipt submitted` confirmation that tells
+  the employee Accounting will record the reimbursement on an upcoming
+  paycheck.
+- Updated the receipt-submission E2E scenario to verify the contextual action,
+  guidance, submit control, and post-upload confirmation.
+
+### Live Desktop Review
+
+- Reviewed the authenticated deployed app at a 1419-by-717 desktop viewport as
+  Admin, Employee, Manager, Business Office, and Accounting.
+- Reviewed the role dashboards, employee request form, manager approval
+  workspace, Admin People page, and operational Reports workspace.
+- Confirmed there is no horizontal overflow on the reviewed screens.
+- Confirmed keyboard focus is visible and the `Skip to Main Content` link moves
+  focus to the main workspace.
+- Confirmed the browser console has no application errors. The deployment emits
+  only Clerk's expected warning that development credentials are in use.
+
+### Final Polish Fixes
+
+- Employee and manager allocation cards now explain current-year approved
+  spending above the available benefit as advanced funding and state that it
+  reduces a future year's CE benefit.
+- Added the accessible name `View app as` to the Admin test-mode role selector.
+- Admin role changes and `Exit` now reload the active workspace immediately, so
+  navigation and permissions cannot remain visually stuck on the previous role.
+- Shortened the Reports search hint to `Course, provider, or employee` so it
+  remains fully visible at the standard desktop width.
+- Added E2E coverage for the current-year advanced-funding explanation and the
+  accessible Admin role selector. Playwright now discovers **56 tests in 18
+  files**.
+
+### Validation And Handoff
+
+- Full workspace TypeScript checks pass.
+- Playwright successfully discovers all 56 tests with the new presentation
+  readiness coverage.
+- Restored all 23 locally missing tracked image assets from the current Git
+  version, including `attached_assets/pt-login-bg.png`.
+- The frontend production build passes after restoring the assets.
+- Run the authenticated 56-test suite in Replit.
+- Before a permanent production launch, replace Clerk development credentials
+  with production credentials. No database migration, API regeneration, or new
+  application environment variable is required for these UI changes.
 
 ---
 
@@ -1111,7 +1167,9 @@ Not OSS clinics for this app: Renton, Enumclaw, Issaquah, Lacey, Monroe, Mukilte
 
 - PTO/request-for-leave workflow is out of scope.
 - Email notifications are intentionally held pending IT permissions.
-- In-app task center (Phase 7) merged into main; full Replit E2E validation pending.
+- The new 56-test suite requires its authenticated Replit validation run.
+- The current Replit deployment uses Clerk development credentials; production
+  credentials are required before permanent production launch.
 
 ## Key Files
 
