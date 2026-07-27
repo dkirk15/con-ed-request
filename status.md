@@ -4,12 +4,33 @@ Last updated: 2026-07-27 by Replit Agent
 
 ## Current State
 
-GitHub `main` is the integrated source of truth. **All 56 E2E tests pass** in
-Replit (1 worker, no retries). No database schema change is pending. CI
-validation pipeline is fully hardened.
+GitHub `main` is the integrated source of truth. **All 61 E2E tests pass** in
+Replit (1 worker, no retries). The schema change for the re-open feature has
+been applied. CI validation pipeline is fully hardened.
 
 Dependabot alerts #3 through #8 are patched and merged into `main` through
 PR #12.
+
+### Recent Closeouts (2026-07-27 — Re-open denied request for revision)
+
+- Implemented the re-open feature, giving employees a way to recover a
+  `manager_denied` or `bo_denied` request by returning it to `draft` for editing
+  and resubmission. Denial history is preserved in the timeline instead of being
+  erased.
+- Database: added `reopened_at` and `reopener_id` columns to `con_ed_requests`
+  and applied the schema push.
+- API: added `POST /api/requests/:requestId/reopen` (employee-only, denied
+  statuses only). Modified `POST /api/requests/:requestId/submit` so a
+  previously BO-denied request (where `managerApprovedAt` is already set)
+  re-enters at `pending_bo` instead of `pending_manager`.
+- Frontend: added the "Re-open for revision" button with a confirmation dialog,
+  plus a timeline event showing who re-opened the request and when.
+- OpenAPI spec regenerated; React client and Zod validators updated. Full
+  workspace TypeScript checks pass.
+- E2E coverage: added 5 new Playwright tests verifying the feature: owner
+  visibility, non-owner invisibility, BO-denied path routing, post-re-open
+  draft state, and API access-control (non-owner → 404, non-denied → 400).
+- Commits: `65bd059`, `923b08d`, `1073ced`, `ec31eb2`.
 
 ### GitHub Integration
 
