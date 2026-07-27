@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PageHeader } from "@/components/PageHeader";
 import { formatCourseDateRange, formatCurrency, formatDate } from "@/lib/constants";
 import {
   ArrowUpDown,
@@ -44,8 +45,8 @@ const STATUS_OPTIONS = [
   ["draft", "Draft"],
   ["pending_manager", "Pending Manager Approval"],
   ["manager_denied", "Manager Denied"],
-  ["pending_bo", "Pending CE Approval"],
-  ["bo_denied", "CE Denied"],
+  ["pending_bo", "Pending Business Office Approval"],
+  ["bo_denied", "Business Office Denied"],
   ["awaiting_receipt", "Awaiting Receipt"],
   ["receipt_submitted", "Receipt Submitted"],
   ["reimbursed", "Reimbursed"],
@@ -57,7 +58,7 @@ const QUEUES: Record<Role, QueueLink[]> = {
     { label: "All Requests", href: "/requests", matches: {} },
     { label: "Drafts", href: "/requests?status=draft", matches: { status: "draft" } },
     {
-      label: "Upload Receipts",
+      label: "Upload receipts",
       href: "/requests?status=awaiting_receipt",
       matches: { status: "awaiting_receipt" },
     },
@@ -119,7 +120,7 @@ const QUEUES: Record<Role, QueueLink[]> = {
       matches: { status: "pending_bo" },
     },
     {
-      label: "Reimbursement Queue",
+      label: "Reimbursement queue",
       href: "/requests?status=receipt_submitted",
       matches: { status: "receipt_submitted" },
     },
@@ -275,23 +276,21 @@ export default function RequestsPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-end justify-between gap-6">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-            Continuing Education
-          </p>
-          <h1 className="mt-1 text-3xl font-serif font-bold text-slate-950">{copy.title}</h1>
-          <p className="mt-1 text-slate-500">{copy.description}</p>
-        </div>
-        {(role === "employee" || role === "manager") && (
-          <Button asChild>
-            <Link href="/requests/new">
-              <Plus aria-hidden="true" />
-              New Request
-            </Link>
-          </Button>
-        )}
-      </header>
+      <PageHeader
+        eyebrow="Continuing Education"
+        title={copy.title}
+        description={copy.description}
+        actions={
+          role === "employee" || role === "manager" ? (
+            <Button asChild>
+              <Link href="/requests/new">
+                <Plus aria-hidden="true" />
+                New request
+              </Link>
+            </Button>
+          ) : null
+        }
+      />
 
       <nav aria-label="Request queues" className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
         {QUEUES[role].map((queue) => (

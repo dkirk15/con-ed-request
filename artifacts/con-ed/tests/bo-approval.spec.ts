@@ -75,7 +75,7 @@ test.describe("Business Office review", () => {
       .fill("Outside policy for this category.");
     await page.getByRole("button", { name: "Confirm Denial" }).click();
 
-    await expect(page.getByText("CE Denied").first()).toBeVisible();
+    await expect(page.getByText("Business Office Denied").first()).toBeVisible();
 
     const row = await getRequest(requestId);
     expect(row?.status).toBe("bo_denied");

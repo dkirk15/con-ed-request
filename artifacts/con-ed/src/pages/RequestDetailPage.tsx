@@ -16,6 +16,7 @@ import { DELIVERY_METHOD_LABELS, formatCourseDateRange, formatCurrency, formatDa
 import { StatusBadge } from "@/components/StatusBadge";
 import { RepaymentGuaranteeDialog } from "@/components/RepaymentGuaranteeDialog";
 import { RequestTimeline } from "@/components/RequestTimeline";
+import { WorkflowSteps } from "@/components/WorkflowSteps";
 import { useToast } from "@/hooks/use-toast";
 import { customFetch } from "@workspace/api-client-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -40,6 +41,19 @@ const ALLOWED_RECEIPT_TYPES = new Set([
   "image/jpeg",
   "image/png",
 ]);
+
+function workflowStepForStatus(
+  status: string,
+): "request" | "manager" | "business_office" | "purchase" | "reimbursement" | "complete" {
+  if (status === "pending_manager" || status === "manager_denied") return "manager";
+  if (status === "manager_approved" || status === "pending_bo" || status === "bo_denied") {
+    return "business_office";
+  }
+  if (status === "bo_approved" || status === "awaiting_receipt") return "purchase";
+  if (status === "receipt_submitted") return "reimbursement";
+  if (status === "reimbursed") return "complete";
+  return "request";
+}
 
 // Adding local mutation definitions since they aren't fully typed out or readily available in our minimal check
 const useCancelRequest = () => {
@@ -336,7 +350,7 @@ export default function RequestDetailPage() {
           {isMyRequest && request.status === "pending_manager" && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive">Cancel Request</Button>
+                <Button variant="destructive">Cancel request</Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
@@ -351,7 +365,7 @@ export default function RequestDetailPage() {
                     onClick={() => handleAction(cancelMutation, id, "Request cancelled")}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
-                    Cancel Request
+                    Cancel request
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -516,7 +530,7 @@ export default function RequestDetailPage() {
                 </div>
               ) : (
                 <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
-                  <Upload className="mr-2 h-4 w-4" /> Upload Receipt
+                  <Upload className="mr-2 h-4 w-4" /> Upload receipt
                 </Button>
               )}
             </>
@@ -578,6 +592,8 @@ export default function RequestDetailPage() {
           )}
         </div>
       </div>
+
+      <WorkflowSteps current={workflowStepForStatus(request.status)} />
 
       {isMyRequest && request.requiresRepaymentGuarantee && !request.repaymentGuarantee && request.status !== 'cancelled' && request.status !== 'manager_denied' && request.status !== 'bo_denied' && (
         <Card className="border-amber-200 bg-amber-50 shadow-sm">

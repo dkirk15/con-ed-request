@@ -55,6 +55,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequestTimeline } from "@/components/RequestTimeline";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PageHeader } from "@/components/PageHeader";
+import { WorkflowSteps } from "@/components/WorkflowSteps";
 import { useToast } from "@/hooks/use-toast";
 import { DELIVERY_METHOD_LABELS, formatCourseDateRange, formatCurrency, formatDateTime } from "@/lib/constants";
 
@@ -209,13 +211,12 @@ export default function ReimbursementWorkspacePage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-end justify-between gap-6">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">Continuing Education</p>
-          <h1 className="mt-1 text-3xl font-serif font-bold text-slate-950">Reimbursement Queue</h1>
-          <p className="mt-1 text-slate-500">Reconcile approved funding with receipts and record the paycheck reimbursement.</p>
-        </div>
-        <div className="flex items-center gap-5 rounded-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <PageHeader
+        eyebrow="Continuing Education"
+        title="Reimbursements"
+        description="Reconcile approved funding with the receipt, then record the paycheck reimbursement."
+        actions={
+          <div className="flex items-center gap-5 rounded-md border border-slate-200 bg-white px-4 py-2.5">
           <div>
             <div className="text-xs font-medium uppercase text-slate-500">Waiting</div>
             <div className="mt-0.5 text-xl font-bold tabular-nums text-slate-950">{queueQuery.data?.total ?? 0}</div>
@@ -233,8 +234,11 @@ export default function ReimbursementWorkspacePage() {
               {requests[0] ? requestAge(requests[0].updatedAt) : "Queue clear"}
             </div>
           </div>
-        </div>
-      </header>
+          </div>
+        }
+      />
+
+      <WorkflowSteps current="reimbursement" />
 
       <section className="grid min-h-[680px] overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm lg:h-[calc(100vh-13rem)] lg:grid-cols-[340px_minmax(0,1fr)]">
         <aside className="flex min-h-0 flex-col border-b border-slate-200 bg-slate-50/70 lg:border-b-0 lg:border-r">

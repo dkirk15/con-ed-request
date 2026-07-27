@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, Plus, Clock, CheckCircle2, XCircle, CreditCard } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import TaskCenterPanel from "@/components/TaskCenterPanel";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function DashboardPage() {
   const { data: user, isLoading: isUserLoading } = useGetMe();
@@ -27,25 +28,21 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-            Continuing Education
-          </p>
-          <h1 className="mt-1 text-3xl font-serif font-bold text-slate-950">{title}</h1>
-          <p className="mt-1 text-slate-500">
-            {descriptions[user.role]} Welcome back, {user.name}.
-          </p>
-        </div>
-        
-        {user.role === "employee" || user.role === "manager" ? (
-          <Link href="/requests/new">
-            <Button className="bg-primary text-white hover:bg-primary/90">
-              <Plus className="mr-2 h-4 w-4" /> New Request
+      <PageHeader
+        eyebrow="Continuing Education"
+        title={title}
+        description={`${descriptions[user.role]} Welcome back, ${user.name}.`}
+        actions={
+          user.role === "employee" || user.role === "manager" ? (
+            <Button asChild>
+              <Link href="/requests/new">
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                New request
+              </Link>
             </Button>
-          </Link>
-        ) : null}
-      </div>
+          ) : null
+        }
+      />
 
       <TaskCenterPanel role={user.role} />
 
@@ -127,7 +124,7 @@ function EmployeeDashboard() {
             <CardDescription>Your most recently updated funding requests</CardDescription>
           </div>
           <Link href="/requests">
-            <Button variant="outline" size="sm">View All</Button>
+            <Button variant="outline" size="sm">View all</Button>
           </Link>
         </CardHeader>
         <CardContent>
@@ -257,7 +254,7 @@ function ManagerDashboard() {
             <CardDescription>Your most recently updated CE funding requests</CardDescription>
           </div>
           <Link href="/requests">
-            <Button variant="outline" size="sm">View All</Button>
+            <Button variant="outline" size="sm">View all</Button>
           </Link>
         </CardHeader>
         <CardContent>
@@ -322,7 +319,7 @@ function BODashboard() {
             <CardContent className="p-6">
               <div className="flex flex-col">
                 <span className="text-amber-800 text-sm font-medium mb-1 flex items-center gap-1">
-                  <Clock className="h-4 w-4" /> Pending CE Approvals
+                  <Clock className="h-4 w-4" /> Pending Business Office approvals
                 </span>
                 <span className="text-3xl font-bold text-amber-900">{formatCurrency(totalPendingAmount || 0)}</span>
                 <span className="text-amber-700/80 text-xs mt-1">Across {pendingApproval.length} requests</span>

@@ -57,7 +57,7 @@ test.describe("Reimbursement workspace", () => {
     // Use clinicId filter so the queue is scoped to this run's requests only.
     await page.goto(`/reimbursements?selected=${firstRequestId}&clinicId=${clinicId}`);
 
-    await expect(page.getByRole("heading", { name: "Reimbursement Queue" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Reimbursements" })).toBeVisible();
     await expect(page.getByRole("heading", { name: firstCourse })).toBeVisible();
     await expect(page.getByText("reduced-reimbursement.pdf").first()).toBeVisible();
 

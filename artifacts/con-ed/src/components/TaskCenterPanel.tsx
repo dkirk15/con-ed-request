@@ -10,6 +10,7 @@ import {
   Clock3,
   Eye,
   FilePenLine,
+  RefreshCw,
   ReceiptText,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -126,11 +127,26 @@ function priorityLabel(item: TaskItem) {
 }
 
 export default function TaskCenterPanel({ role }: { role: Role }) {
-  const { data, isLoading, isError } = useGetTaskCenter();
+  const { data, isLoading, isError, refetch } = useGetTaskCenter();
   const heading = HEADINGS[role];
 
   if (isLoading) return <Skeleton className="h-56 w-full rounded-md" />;
-  if (isError || !data) return null;
+  if (isError || !data) {
+    return (
+      <section className="rounded-md border border-slate-200 bg-white px-5 py-5" aria-live="polite">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="font-serif text-lg font-bold text-slate-950">Next steps could not be loaded</h2>
+            <p className="mt-1 text-sm text-slate-500">Check your connection and try again.</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
+            Try again
+          </Button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section

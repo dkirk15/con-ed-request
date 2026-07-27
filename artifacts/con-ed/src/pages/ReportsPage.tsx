@@ -85,6 +85,7 @@ import {
   formatDate,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/PageHeader";
 
 const REPORT_ROLES = new Set(["manager", "business_office", "accounting", "admin"]);
 const STATUS_OPTIONS = Object.entries(STATUS_LABELS);
@@ -262,19 +263,22 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-5 pb-10">
-      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-5">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase text-primary">
-            <BarChart3 className="h-4 w-4" aria-hidden="true" /> {roleContent.eyebrow}
-          </div>
-          <h1 className="mt-1 font-serif text-3xl font-bold text-slate-950">CE operations reports</h1>
-          <p className="mt-1 max-w-2xl text-slate-500">{roleContent.description}</p>
-        </div>
-        <Button onClick={exportCsv} disabled={exporting || reportQuery.isLoading}>
-          <Download className="h-4 w-4" aria-hidden="true" />
-          {exporting ? "Exporting…" : "Export current view"}
-        </Button>
-      </header>
+      <PageHeader
+        eyebrow={
+          <>
+            <BarChart3 className="h-4 w-4" aria-hidden="true" />
+            {roleContent.eyebrow}
+          </>
+        }
+        title="CE operations reports"
+        description={roleContent.description}
+        actions={
+          <Button onClick={exportCsv} disabled={exporting || reportQuery.isLoading}>
+            <Download className="h-4 w-4" aria-hidden="true" />
+            {exporting ? "Exporting…" : "Export current view"}
+          </Button>
+        }
+      />
 
       <section className="rounded-md border border-slate-200 bg-slate-50/70 p-4" aria-labelledby="report-filters-heading">
         <div className="mb-4 flex items-center justify-between gap-4">
@@ -544,6 +548,15 @@ function ExceptionStrip({
 }
 
 function TrendChart({ data, year }: { data: Array<{ month: number; label: string; requested: number; approved: number; reimbursed: number }>; year: number }) {
+  const totals = data.reduce(
+    (summary, month) => ({
+      requested: summary.requested + month.requested,
+      approved: summary.approved + month.approved,
+      reimbursed: summary.reimbursed + month.reimbursed,
+    }),
+    { requested: 0, approved: 0, reimbursed: 0 },
+  );
+
   return (
     <section className="rounded-md border border-slate-200 bg-white p-5" aria-labelledby="trend-heading">
       <div>
@@ -566,6 +579,10 @@ function TrendChart({ data, year }: { data: Array<{ month: number; label: string
           <Line type="monotone" dataKey="reimbursed" stroke="var(--color-reimbursed)" strokeWidth={2.5} dot={false} />
         </LineChart>
       </ChartContainer>
+      <p className="sr-only">
+        {year} totals: {formatCurrency(totals.requested)} requested, {formatCurrency(totals.approved)} approved,
+        and {formatCurrency(totals.reimbursed)} paid.
+      </p>
       <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-600">
         {Object.entries(TREND_CONFIG).map(([key, item]) => (
           <span key={key} className="flex items-center gap-2"><span className="h-0.5 w-5" style={{ backgroundColor: item.color }} />{item.label}</span>
@@ -632,7 +649,7 @@ function BudgetUsageTable({ rows }: { rows: ReportBudgetRow[] }) {
               return (
                 <TableRow key={row.employeeId}>
                   <TableCell><Link href={`/users/${row.employeeId}`} className="font-medium text-slate-900 hover:text-primary hover:underline">{row.employeeName}</Link><div className="text-xs text-slate-500">{row.clinicName || "No clinic"}</div></TableCell>
-                  <TableCell className="min-w-40"><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className={cn("h-full", row.advancedExposure > 0 ? "bg-amber-600" : "bg-primary")} style={{ width: `${percentage}%` }} /></div><div className="mt-1 text-xs text-slate-500">{Math.round(percentage)}% committed</div></TableCell>
+                  <TableCell className="min-w-40"><div className="h-2 overflow-hidden rounded-full bg-slate-100" role="progressbar" aria-label={`${row.employeeName} funding committed`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(percentage)}><div className={cn("h-full", row.advancedExposure > 0 ? "bg-amber-600" : "bg-primary")} style={{ width: `${percentage}%` }} /></div><div className="mt-1 text-xs text-slate-500">{Math.round(percentage)}% committed</div></TableCell>
                   <TableCell className="text-right tabular-nums">{formatCurrency(row.availableAllocation)}</TableCell>
                   <TableCell className="text-right tabular-nums">{formatCurrency(row.usedAmount)}</TableCell>
                   <TableCell className="text-right tabular-nums">{formatCurrency(row.pendingAmount)}</TableCell>

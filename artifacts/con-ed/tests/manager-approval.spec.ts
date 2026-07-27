@@ -50,7 +50,7 @@ test.describe("Manager review", () => {
 
     await page.getByRole("button", { name: "Approve" }).click();
     await page.getByRole("button", { name: "Confirm Approval" }).click();
-    await expect(page.getByText("Pending CE Approval")).toBeVisible();
+    await expect(page.getByText("Pending Business Office Approval")).toBeVisible();
 
     const row = await getRequest(requestId);
     expect(row?.status).toBe("pending_bo");
@@ -130,7 +130,7 @@ test.describe("Manager review", () => {
 
     await page.getByRole("button", { name: "Approve" }).click();
     await page.getByRole("button", { name: "Confirm Approval" }).click();
-    await expect(page.getByText("Pending CE Approval")).toBeVisible();
+    await expect(page.getByText("Pending Business Office Approval")).toBeVisible();
 
     const approvedRow = await getRequest(id);
     expect(approvedRow?.status).toBe("pending_bo");

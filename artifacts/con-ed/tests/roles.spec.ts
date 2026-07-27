@@ -5,7 +5,7 @@ import { createClinic } from "./helpers/db";
  * Each of the five roles lands on its own dashboard variant and sees a
  * navigation surface scoped to its permissions:
  *  - Role-specific navigation exposes only the workspaces each role needs.
- *  - "New Request" is available only to employee and manager.
+ *  - "New request" is available only to employee and manager.
  */
 test.describe("Role-based dashboards and navigation", () => {
   // Each test needs a fresh browser context so that @clerk/testing's
@@ -43,7 +43,7 @@ test.describe("Role-based dashboards and navigation", () => {
 
     await page.goto("/requests");
     await expect(
-      page.locator("#main-content").getByRole("link", { name: "New Request" }),
+      page.locator("#main-content").getByRole("link", { name: "New request" }),
     ).toBeVisible();
   });
 
@@ -65,7 +65,7 @@ test.describe("Role-based dashboards and navigation", () => {
     await expect(page.getByRole("link", { name: "Reports" })).toBeVisible();
 
     await page.goto("/requests");
-    await expect(page.getByRole("link", { name: "New Request" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "New request" })).toBeVisible();
   });
 
   test("business_office: BO approval dashboard, no Users nav, no New Request", async ({
@@ -83,14 +83,12 @@ test.describe("Role-based dashboards and navigation", () => {
     ).toBeVisible();
     await expect(page.getByText("Total Funding Approved YTD")).toBeVisible();
     await expect(page.getByRole("link", { name: "Team" })).toHaveCount(0);
-    // /^CE Approvals/ anchors to the start so the "Pending CE Approvals" dashboard
-    // card link (which has a different accessible name prefix) is not matched.
-    await expect(page.getByRole("link", { name: /^CE Approvals/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Business Office approvals/ })).toBeVisible();
     await expect(page.getByRole("link", { name: "Reports" })).toBeVisible();
 
     await page.goto("/requests");
     await expect(
-      page.getByRole("link", { name: "New Request" }),
+      page.getByRole("link", { name: "New request" }),
     ).toHaveCount(0);
   });
 
@@ -114,7 +112,7 @@ test.describe("Role-based dashboards and navigation", () => {
 
     await page.goto("/requests");
     await expect(
-      page.getByRole("link", { name: "New Request" }),
+      page.getByRole("link", { name: "New request" }),
     ).toHaveCount(0);
   });
 
@@ -133,7 +131,7 @@ test.describe("Role-based dashboards and navigation", () => {
 
     await page.goto("/requests");
     await expect(
-      page.getByRole("link", { name: "New Request" }),
+      page.getByRole("link", { name: "New request" }),
     ).toHaveCount(0);
   });
 });

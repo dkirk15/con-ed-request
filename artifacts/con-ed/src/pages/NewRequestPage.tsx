@@ -49,6 +49,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { PageHeader } from "@/components/PageHeader";
+import { WorkflowSteps } from "@/components/WorkflowSteps";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -185,7 +187,16 @@ function requestToFormValues(request: {
   };
 }
 
-function useUnsavedChanges(enabled: boolean) {
+function useUnsavedChanges(
+  enabled: boolean,
+  onBlockedNavigation: (href: string) => void,
+) {
+  const onBlockedNavigationRef = useRef(onBlockedNavigation);
+
+  useEffect(() => {
+    onBlockedNavigationRef.current = onBlockedNavigation;
+  }, [onBlockedNavigation]);
+
   useEffect(() => {
     if (!enabled) return;
 
@@ -202,10 +213,11 @@ function useUnsavedChanges(enabled: boolean) {
       if (!(target instanceof Element)) return;
       const anchor = target.closest("a[href]");
       if (!anchor || anchor.hasAttribute("download") || anchor.getAttribute("target") === "_blank") return;
-      if (!window.confirm(message)) {
-        event.preventDefault();
-        event.stopPropagation();
-      }
+      const href = anchor.getAttribute("href");
+      if (!href) return;
+      event.preventDefault();
+      event.stopPropagation();
+      onBlockedNavigationRef.current(href);
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
@@ -252,6 +264,7 @@ export default function NewRequestPage() {
   const [guaranteeName, setGuaranteeName] = useState("");
   const [guaranteeDate, setGuaranteeDate] = useState(today);
   const [guaranteeAcknowledged, setGuaranteeAcknowledged] = useState(false);
+  const [pendingLocation, setPendingLocation] = useState<string | null>(null);
 
   const requestQuery = useGetRequest(requestId ?? 0, {
     query: {
@@ -304,7 +317,7 @@ export default function NewRequestPage() {
   const hasUnsavedChanges = form.formState.isDirty || guaranteeChanged;
   const isBusy = createRequest.isPending || updateRequest.isPending || submitRequest.isPending || deleteRequest.isPending;
 
-  useUnsavedChanges(hasUnsavedChanges);
+  useUnsavedChanges(hasUnsavedChanges, setPendingLocation);
 
   const requestPayload = (data: FormValues) => ({
     ...data,
@@ -422,10 +435,22 @@ export default function NewRequestPage() {
   };
 
   const leaveForm = () => {
-    if (hasUnsavedChanges && !window.confirm("You have unsaved changes. Leave this request without saving?")) {
+    if (hasUnsavedChanges) {
+      setPendingLocation("/requests");
       return;
     }
     setLocation("/requests");
+  };
+
+  const discardAndLeave = () => {
+    if (!pendingLocation) return;
+    const destination = new URL(pendingLocation, window.location.origin);
+    setPendingLocation(null);
+    if (destination.origin === window.location.origin) {
+      setLocation(`${destination.pathname}${destination.search}${destination.hash}`);
+      return;
+    }
+    window.location.assign(destination.href);
   };
 
   const removeDraft = async () => {
@@ -474,23 +499,26 @@ export default function NewRequestPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 pb-12">
-      <header className="flex items-start gap-4">
-        <Button variant="outline" size="icon" className="mt-1 h-9 w-9 shrink-0" onClick={leaveForm} aria-label="Back to requests">
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        </Button>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">Request planning</p>
+      <PageHeader
+        eyebrow={
+          <>
+            Request planning
             <span className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-600">
               {activeDraftId ? `Draft #${activeDraftId}` : "Not saved"}
             </span>
-          </div>
-          <h1 className="mt-1 text-3xl font-serif font-bold text-slate-950">
-            {isEditing ? "Continue your CE request" : "New CE request"}
-          </h1>
-          <p className="mt-1 text-slate-500">Plan the course and estimated costs before sending it for approval.</p>
-        </div>
-      </header>
+          </>
+        }
+        title={isEditing ? "Continue your CE request" : "New CE request"}
+        description="Plan one course and its estimated costs before sending it for approval."
+        actions={
+          <Button variant="outline" onClick={leaveForm}>
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            Back to requests
+          </Button>
+        }
+      />
+
+      <WorkflowSteps current="request" />
 
       <Alert className="border-amber-300 bg-amber-50 text-amber-950">
         <AlertTriangle className="h-4 w-4" aria-hidden="true" />
@@ -509,7 +537,7 @@ export default function NewRequestPage() {
                   <div className="rounded-md bg-primary/10 p-2 text-primary"><BookOpen className="h-5 w-5" aria-hidden="true" /></div>
                   <div>
                     <CardTitle className="font-serif">Course details</CardTitle>
-                    <CardDescription>Tell reviewers what you plan to attend.</CardDescription>
+                    <CardDescription>Fields marked * are required before submission.</CardDescription>
                   </div>
                 </div>
               </CardHeader>
@@ -542,7 +570,7 @@ export default function NewRequestPage() {
                   name="courseUrl"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Course webpage</FormLabel>
+                      <FormLabel>Course webpage <span className="font-normal text-slate-500">(optional)</span></FormLabel>
                       <FormControl><Input type="url" placeholder="https://provider.org/course" autoComplete="url" {...field} /></FormControl>
                       <FormDescription>Optional link reviewers can use to verify course details.</FormDescription>
                       <FormMessage />
@@ -605,7 +633,7 @@ export default function NewRequestPage() {
                   name="ceuCount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Expected CEUs</FormLabel>
+                      <FormLabel>Expected CEUs <span className="font-normal text-slate-500">(optional)</span></FormLabel>
                       <FormControl><Input type="number" min="0" step="0.5" placeholder="0" autoComplete="off" {...field} value={field.value ?? ""} /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -634,7 +662,7 @@ export default function NewRequestPage() {
                   <div className="rounded-md bg-primary/10 p-2 text-primary"><DollarSign className="h-5 w-5" aria-hidden="true" /></div>
                   <div>
                     <CardTitle className="font-serif">Estimated costs</CardTitle>
-                    <CardDescription>Enter the amount you expect OSS to fund in each category.</CardDescription>
+                    <CardDescription>Enter only the categories you expect OSS to fund.</CardDescription>
                   </div>
                 </div>
               </CardHeader>
@@ -776,6 +804,31 @@ export default function NewRequestPage() {
           </aside>
         </form>
       </Form>
+
+      <AlertDialog
+        open={pendingLocation !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingLocation(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Leave without saving?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Changes made since your last save will be lost. You can stay here and save the draft first.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={discardAndLeave}
+            >
+              Discard changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

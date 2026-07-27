@@ -32,6 +32,59 @@ PR #12.
 
 ---
 
+## Recent Changes (2026-07-26 via Codex - Presentation UX Polish)
+
+### Consistent Workspace Structure
+
+- Added one shared page-header pattern across dashboards, requests, reports,
+  approvals, reimbursements, people, clinics, and account settings.
+- Standardized page descriptions, primary-action placement, capitalization,
+  spacing, and administrative screen hierarchy.
+- Added a compact five-stage request lifecycle indicator to request creation,
+  request detail, manager review, Business Office review, and reimbursement:
+  Request, Manager, Business Office, Purchase & receipt, and Reimbursement.
+
+### Clearer Workflow Language
+
+- Replaced ambiguous `CE Approval` labels with `Business Office Approval`
+  throughout navigation, filters, status badges, dashboards, and tests.
+- Clarified the final Business Office decision message: employees may purchase
+  only after approval and upload the receipt afterward.
+- Kept manager self-approval, clinic scoping, repayment-guarantee rules, and all
+  existing role permissions unchanged.
+
+### Request And Feedback Polish
+
+- Replaced the browser-native unsaved-draft confirmation with an accessible
+  in-app dialog offering `Keep editing` and `Discard changes`.
+- Clarified which course fields are required for submission and which are
+  optional, while preserving the existing draft-saving rules.
+- Added a recoverable task-center error state with a visible retry action
+  instead of silently hiding the panel when loading fails.
+
+### Accessibility And Reporting Polish
+
+- Added reduced-motion support across the interface.
+- Added a screen-reader summary for the annual funding trend chart.
+- Added progress-bar semantics and employee-specific labels to report budget
+  usage indicators.
+- Preserved all existing role-specific report sections, filters, exports, and
+  financial definitions.
+
+### Validation And Replit Handoff
+
+- Full workspace TypeScript checks pass.
+- Frontend Vite production build passes.
+- Playwright discovers all **55 tests in 18 files** after updating the affected
+  terminology and unsaved-draft expectations.
+- Run the authenticated 55-test suite in Replit and visually review employee,
+  manager, Business Office, Accounting, and Admin screens at the standard
+  1280-by-720 desktop test viewport.
+- No database schema push, migration, API regeneration, or new environment
+  variable is required for this polish release.
+
+---
+
 ## Recent Changes (2026-07-26 via Replit Agent — Reporting E2E Coverage)
 
 ### Accounting Tab Visibility Test

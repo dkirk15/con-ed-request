@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Pencil } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function AccountPage() {
   const { data: user, isLoading } = useGetMe();
@@ -62,10 +63,11 @@ export default function AccountPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-serif font-bold text-slate-900 tracking-tight">My Account</h1>
-        <p className="text-slate-500 mt-1">Manage your profile and settings</p>
-      </div>
+      <PageHeader
+        eyebrow="Profile"
+        title="My account"
+        description="Manage your profile and continuing education details."
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>

@@ -182,11 +182,13 @@ test("employee is warned before leaving an unsaved draft", async ({
   await page.goto("/requests/new");
   await page.getByLabel("Course or event name *").fill("Unsaved E2E Course");
 
-  page.once("dialog", async (dialog) => {
-    expect(dialog.type()).toBe("confirm");
-    expect(dialog.message()).toContain("unsaved changes");
-    await dialog.dismiss();
-  });
   await page.getByRole("button", { name: "Back to requests" }).click();
+  const leaveDialog = page.getByRole("alertdialog");
+  await expect(leaveDialog.getByRole("heading", { name: "Leave without saving?" })).toBeVisible();
+  await leaveDialog.getByRole("button", { name: "Keep editing" }).click();
   await expect(page).toHaveURL(/\/requests\/new$/);
+
+  await page.getByRole("button", { name: "Back to requests" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Discard changes" }).click();
+  await expect(page).toHaveURL(/\/requests$/);
 });

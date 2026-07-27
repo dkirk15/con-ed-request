@@ -28,6 +28,7 @@ import { RepaymentGuaranteeDialog } from "@/components/RepaymentGuaranteeDialog"
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROLE_LABELS } from "@/lib/constants";
 import { FileSignature, Search, Users as UsersIcon, X } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function UsersPage() {
   const { data: me } = useGetMe();
@@ -75,19 +76,15 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-          {isAdmin ? "Administration" : "Clinic"}
-        </p>
-        <h1 className="mt-1 text-3xl font-serif font-bold text-slate-950">
-          {isAdmin ? "People" : "Team"}
-        </h1>
-        <p className="mt-1 text-slate-500">
-          {isAdmin
+      <PageHeader
+        eyebrow={isAdmin ? "Administration" : "Clinic"}
+        title={isAdmin ? "People" : "Team"}
+        description={
+          isAdmin
             ? "Manage staff access, assignments, and CE configuration."
-            : "View employees and managers assigned to your clinic."}
-        </p>
-      </header>
+            : "View employees and managers assigned to your clinic."
+        }
+      />
 
       <section
         aria-label="People filters"

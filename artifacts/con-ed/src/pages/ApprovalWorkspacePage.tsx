@@ -67,6 +67,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { RequestTimeline } from "@/components/RequestTimeline";
 import { StatusBadge } from "@/components/StatusBadge";
+import { PageHeader } from "@/components/PageHeader";
+import { WorkflowSteps } from "@/components/WorkflowSteps";
 import { useToast } from "@/hooks/use-toast";
 import { DELIVERY_METHOD_LABELS, formatCourseDateRange, formatCurrency, formatDate, formatDateTime } from "@/lib/constants";
 
@@ -324,29 +326,29 @@ export default function ApprovalWorkspacePage() {
 
   return (
     <div className="space-y-5">
-      <header className="flex items-end justify-between gap-6">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-primary">Continuing Education</p>
-          <h1 className="mt-1 text-3xl font-serif font-bold text-slate-950">
-            {reviewRole === "manager" ? "Manager Approvals" : "CE Approvals"}
-          </h1>
-          <p className="mt-1 text-slate-500">Review each request with its course, funding, and policy context in one place.</p>
-        </div>
-        <div className="flex items-center gap-5 rounded-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <div>
-            <div className="text-xs font-medium uppercase text-slate-500">Waiting</div>
-            <div className="mt-0.5 text-xl font-bold tabular-nums text-slate-950">{queueQuery.data?.total ?? 0}</div>
-          </div>
-          <div className="h-9 w-px bg-slate-200" />
-          <div>
-            <div className="text-xs font-medium uppercase text-slate-500">Oldest</div>
-            <div className="mt-0.5 flex items-center gap-1.5 text-sm font-semibold text-slate-800">
-              <Clock3 aria-hidden="true" className="h-4 w-4 text-amber-600" />
-              {oldestRequest ? requestAge(oldestRequest.createdAt) : "Queue clear"}
+      <PageHeader
+        eyebrow="Continuing Education"
+        title={reviewRole === "manager" ? "Manager approvals" : "Business Office approvals"}
+        description="Review the course, funding, and policy context, then record a clear decision."
+        actions={
+          <div className="flex items-center gap-5 rounded-md border border-slate-200 bg-white px-4 py-2.5">
+            <div>
+              <div className="text-xs font-medium uppercase text-slate-500">Waiting</div>
+              <div className="mt-0.5 text-xl font-bold tabular-nums text-slate-950">{queueQuery.data?.total ?? 0}</div>
+            </div>
+            <div className="h-9 w-px bg-slate-200" />
+            <div>
+              <div className="text-xs font-medium uppercase text-slate-500">Oldest</div>
+              <div className="mt-0.5 flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+                <Clock3 aria-hidden="true" className="h-4 w-4 text-amber-600" />
+                {oldestRequest ? requestAge(oldestRequest.createdAt) : "Queue clear"}
+              </div>
             </div>
           </div>
-        </div>
-      </header>
+        }
+      />
+
+      <WorkflowSteps current={reviewRole === "manager" ? "manager" : "business_office"} />
 
       <section className="grid min-h-[680px] overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm lg:h-[calc(100vh-13rem)] lg:grid-cols-[340px_minmax(0,1fr)]">
         <aside className="flex min-h-0 flex-col border-b border-slate-200 bg-slate-50/70 lg:border-b-0 lg:border-r">
@@ -729,7 +731,7 @@ function ReviewPane({
                 <AlertDialogDescription>
                   {reviewRole === "manager"
                     ? `${request.employeeName ?? "The employee"}'s ${formatCurrency(request.totalRequested)} request will move to the Business Office queue.`
-                    : `${formatCurrency(totalApproved)} will be approved and the employee can then submit a receipt.`}
+                    : `${formatCurrency(totalApproved)} will be approved. The employee may purchase the course and submit a receipt afterward.`}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm">

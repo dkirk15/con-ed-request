@@ -50,6 +50,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Building2, Plus, Trash2 } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 
 const formSchema = z.object({
   name: z
@@ -133,12 +134,12 @@ export default function ClinicsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-serif font-bold text-slate-900 tracking-tight">Clinics</h1>
-          <p className="text-slate-500 mt-1">Olympic Sports &amp; Spine clinic locations</p>
-        </div>
-        {isAdmin && (
+      <PageHeader
+        eyebrow="Administration"
+        title="Clinics"
+        description="Olympic Sports & Spine clinic locations and assignments."
+        actions={
+          isAdmin ? (
           <Dialog
             open={open}
             onOpenChange={(next) => {
@@ -149,12 +150,12 @@ export default function ClinicsPage() {
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Plus className="h-4 w-4" />
-                Add Clinic
+                Add clinic
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle className="font-serif">Add Clinic</DialogTitle>
+                <DialogTitle className="font-serif">Add clinic</DialogTitle>
                 <DialogDescription>
                   Add a new clinic location to the list. Names must be unique.
                 </DialogDescription>
@@ -188,15 +189,16 @@ export default function ClinicsPage() {
                       Cancel
                     </Button>
                     <Button type="submit" disabled={createClinic.isPending}>
-                      {createClinic.isPending ? "Adding…" : "Add Clinic"}
+                      {createClinic.isPending ? "Adding…" : "Add clinic"}
                     </Button>
                   </DialogFooter>
                 </form>
               </Form>
             </DialogContent>
           </Dialog>
-        )}
-      </div>
+          ) : null
+        }
+      />
 
       <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
         <Table>

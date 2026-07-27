@@ -51,7 +51,7 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
   employee: [
     { label: "Overview", href: "/dashboard", icon: Home, path: "/dashboard" },
     { label: "My Requests", href: "/requests", icon: Files, path: "/requests", exactQuery: true, badge: "myRequests" },
-    { label: "New Request", href: "/requests/new", icon: FilePlus2, path: "/requests/new" },
+    { label: "New request", href: "/requests/new", icon: FilePlus2, path: "/requests/new" },
   ],
   manager: [
     { label: "Overview", href: "/dashboard", icon: Home, path: "/dashboard" },
@@ -76,7 +76,7 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
   business_office: [
     { label: "Overview", href: "/dashboard", icon: Home, path: "/dashboard" },
     {
-      label: "CE Approvals",
+      label: "Business Office approvals",
       href: "/approvals",
       icon: ClipboardCheck,
       path: "/approvals",

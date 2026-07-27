@@ -41,7 +41,7 @@ test.describe("Approval workspace", () => {
     await signInAs(manager);
     await page.goto("/approvals");
 
-    await expect(page.getByRole("heading", { name: "Manager Approvals" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Manager approvals" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "E2E Workspace First Course" })).toBeVisible();
     await expect(page.getByText("2", { exact: true }).first()).toBeVisible();
 
@@ -101,7 +101,7 @@ test.describe("Approval workspace", () => {
     await signInAs(manager);
     await page.goto("/approvals");
 
-    await expect(page.getByRole("heading", { name: "Manager Approvals" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Manager approvals" })).toBeVisible();
     await expect(page.getByText("Queue is clear", { exact: true })).toBeVisible();
 
     const employee = await provisionUser({
@@ -146,7 +146,7 @@ test.describe("Approval workspace", () => {
     await signInAs(businessOffice);
     await page.goto(`/approvals?selected=${requestId}&clinicId=${clinicId}`);
 
-    await expect(page.getByRole("heading", { name: "CE Approvals" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Business Office approvals" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "E2E Workspace Funding Comparison" })).toBeVisible();
 
     await page.getByLabel("Approved Tuition / registration").fill("500");
