@@ -46,16 +46,18 @@ test("employee uploads a receipt -> receipt_submitted", async ({
   ).toBeVisible();
   await expect(receiptNextStep.getByRole("button", { name: "Upload receipt" })).toBeVisible();
 
-  const pngBuffer = Buffer.from(
-    "89504e470d0a1a0a0000000d4948445200000001000000010806000000" +
-      "1f15c4890000000d49444154789c63f8cfc0f01f0005000100ff0fd70a" +
-      "000000049454e44ae426082",
-    "hex",
+  const pdfBuffer = Buffer.from(
+    "%PDF-1.4\n" +
+      "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n" +
+      "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n" +
+      "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] >>\nendobj\n" +
+      "trailer\n<< /Root 1 0 R >>\n%%EOF",
+    "utf8",
   );
   await page.locator("#receipt-upload").setInputFiles({
-    name: "e2e-receipt.png",
-    mimeType: "image/png",
-    buffer: pngBuffer,
+    name: "e2e-receipt.pdf",
+    mimeType: "application/pdf",
+    buffer: pdfBuffer,
   });
 
   // File is staged but not yet submitted — click the explicit Submit button.
@@ -74,6 +76,39 @@ test("employee uploads a receipt -> receipt_submitted", async ({
     [requestId],
   );
   expect(receiptRows.length).toBe(1);
+
+  const receiptUrl = String(receiptRows[0].file_url);
+  const receiptHeaders = await page.evaluate(async (fileUrl) => {
+    const token = await (window as any).Clerk?.session?.getToken();
+    const load = (suffix = "") =>
+      fetch(`/api/storage${fileUrl}${suffix}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    const inlineResponse = await load("?disposition=inline");
+    const downloadResponse = await load();
+    return {
+      inlineStatus: inlineResponse.status,
+      inlineType: inlineResponse.headers.get("content-type"),
+      inlineDisposition: inlineResponse.headers.get("content-disposition"),
+      downloadDisposition: downloadResponse.headers.get("content-disposition"),
+    };
+  }, receiptUrl);
+  expect(receiptHeaders).toMatchObject({
+    inlineStatus: 200,
+    inlineType: "application/pdf",
+  });
+  expect(receiptHeaders.inlineDisposition).toMatch(/^inline;/);
+  expect(receiptHeaders.downloadDisposition).toMatch(/^attachment;/);
+
+  await page.getByRole("button", { name: "View receipt" }).click();
+  await expect(page.getByRole("dialog", { name: "Receipt preview" })).toBeVisible();
+  await expect(
+    page.getByTitle("Receipt preview: e2e-receipt.pdf"),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open in new tab" })).toBeEnabled();
+  await expect(
+    page.getByRole("dialog", { name: "Receipt preview" }).getByRole("button", { name: "Download" }),
+  ).toBeEnabled();
 });
 
 test("receipt upload URLs reject unsafe files and requests owned by someone else", async ({

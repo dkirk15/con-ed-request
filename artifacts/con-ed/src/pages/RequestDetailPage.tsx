@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation, useParams } from "wouter";
 import { 
   useDeleteRequest,
@@ -10,7 +10,7 @@ import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Upload, FileText, Check, X, CreditCard, ExternalLink, PenTool, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Upload, FileText, Check, X, CreditCard, Download, Eye, ExternalLink, Loader2, PenTool, Pencil, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { DELIVERY_METHOD_LABELS, formatCourseDateRange, formatCurrency, formatDate } from "@/lib/constants";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -41,6 +41,13 @@ const ALLOWED_RECEIPT_TYPES = new Set([
   "image/jpeg",
   "image/png",
 ]);
+
+type ReceiptFile = {
+  id: number;
+  fileUrl: string;
+  fileName?: string | null;
+  uploadedAt: string;
+};
 
 function workflowStepForStatus(
   status: string,
@@ -164,6 +171,8 @@ export default function RequestDetailPage() {
   const [paycheckDate, setPaycheckDate] = useState("");
   const [reimbursementAmount, setReimbursementAmount] = useState(0);
   const [pendingReceiptFile, setPendingReceiptFile] = useState<File | null>(null);
+  const [previewReceipt, setPreviewReceipt] = useState<ReceiptFile | null>(null);
+  const [downloadingReceiptId, setDownloadingReceiptId] = useState<number | null>(null);
   
   // BO Approval form state
   const [boApprovalData, setBoApprovalData] = useState({
@@ -248,6 +257,31 @@ export default function RequestDetailPage() {
       
     } catch (err: any) {
       toast({ title: "Upload Failed", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleReceiptDownload = async (receipt: ReceiptFile) => {
+    setDownloadingReceiptId(receipt.id);
+    try {
+      const blob = await customFetch<Blob>(`/api/storage${receipt.fileUrl}`, {
+        responseType: "blob",
+      });
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = receipt.fileName || `receipt-${receipt.id}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1_000);
+    } catch (error) {
+      toast({
+        title: "Receipt could not be downloaded",
+        description: error instanceof Error ? error.message : "Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingReceiptId(null);
     }
   };
 
@@ -797,9 +831,25 @@ export default function RequestDetailPage() {
                            <div className="text-xs text-slate-500">Uploaded {formatDate(receipt.uploadedAt)}</div>
                          </div>
                        </div>
-                       <Button variant="outline" size="sm" asChild>
-                         <a href={`/api/storage${receipt.fileUrl}`} download={receipt.fileName || `receipt-${i + 1}`}>Download</a>
-                       </Button>
+                       <div className="flex items-center gap-2">
+                         <Button size="sm" onClick={() => setPreviewReceipt(receipt)}>
+                           <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
+                           View receipt
+                         </Button>
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           disabled={downloadingReceiptId === receipt.id}
+                           onClick={() => handleReceiptDownload(receipt)}
+                         >
+                           {downloadingReceiptId === receipt.id ? (
+                             <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                           ) : (
+                             <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+                           )}
+                           Download
+                         </Button>
+                       </div>
                      </div>
                    ))}
                  </div>
@@ -843,6 +893,120 @@ export default function RequestDetailPage() {
 
         </div>
       </div>
+
+      <ReceiptPreviewDialog
+        receipt={previewReceipt}
+        open={previewReceipt !== null}
+        onOpenChange={(open) => {
+          if (!open) setPreviewReceipt(null);
+        }}
+      />
     </div>
+  );
+}
+
+function ReceiptPreviewDialog({
+  receipt,
+  open,
+  onOpenChange,
+}: {
+  receipt: ReceiptFile | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || !receipt) return;
+
+    let cancelled = false;
+    let createdUrl: string | null = null;
+    setObjectUrl(null);
+    setLoadError(null);
+
+    customFetch<Blob>(`/api/storage${receipt.fileUrl}?disposition=inline`, {
+      responseType: "blob",
+    })
+      .then((blob) => {
+        if (cancelled) return;
+        createdUrl = URL.createObjectURL(blob);
+        setObjectUrl(createdUrl);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setLoadError(error instanceof Error ? error.message : "The receipt could not be loaded.");
+      });
+
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [open, receipt]);
+
+  const fileName = receipt?.fileName || "Receipt";
+  const isPdf = fileName.toLowerCase().endsWith(".pdf");
+
+  const downloadLoadedReceipt = () => {
+    if (!objectUrl || !receipt) return;
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="flex h-[85vh] max-w-5xl flex-col overflow-hidden p-0">
+        <DialogHeader className="border-b border-slate-200 px-6 py-4">
+          <DialogTitle>Receipt preview</DialogTitle>
+          <DialogDescription className="truncate">{fileName}</DialogDescription>
+        </DialogHeader>
+        <div className="min-h-0 flex-1 bg-slate-100 p-4">
+          {!objectUrl && !loadError ? (
+            <div className="flex h-full items-center justify-center text-slate-600" role="status">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" />
+              Loading receipt…
+            </div>
+          ) : loadError ? (
+            <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+              <FileText className="h-10 w-10 text-slate-400" aria-hidden="true" />
+              <p className="font-medium text-slate-900">Receipt preview unavailable</p>
+              <p className="max-w-md text-sm text-slate-600">{loadError}</p>
+            </div>
+          ) : isPdf ? (
+            <iframe
+              src={objectUrl ?? undefined}
+              title={`Receipt preview: ${fileName}`}
+              className="h-full w-full rounded-md border border-slate-200 bg-white"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center overflow-auto">
+              <img
+                src={objectUrl ?? undefined}
+                alt={`Receipt preview: ${fileName}`}
+                className="max-h-full max-w-full rounded-md bg-white object-contain shadow-sm"
+              />
+            </div>
+          )}
+        </div>
+        <DialogFooter className="border-t border-slate-200 px-6 py-4">
+          <Button
+            variant="outline"
+            disabled={!objectUrl}
+            onClick={() => objectUrl && window.open(objectUrl, "_blank", "noopener,noreferrer")}
+          >
+            <ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" />
+            Open in new tab
+          </Button>
+          <Button disabled={!objectUrl} onClick={downloadLoadedReceipt}>
+            <Download className="mr-2 h-4 w-4" aria-hidden="true" />
+            Download
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
