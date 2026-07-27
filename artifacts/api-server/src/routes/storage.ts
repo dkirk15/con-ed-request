@@ -22,6 +22,14 @@ function safeDownloadName(fileName: string | null): string {
   );
 }
 
+function receiptContentType(fileName: string | null): string {
+  const normalized = (fileName ?? "").trim().toLowerCase();
+  if (normalized.endsWith(".pdf")) return "application/pdf";
+  if (normalized.endsWith(".png")) return "image/png";
+  if (normalized.endsWith(".jpg") || normalized.endsWith(".jpeg")) return "image/jpeg";
+  return "application/octet-stream";
+}
+
 router.post("/storage/uploads/request-url", requireAuth, async (req: Request, res: Response) => {
   const parsed = RequestUploadUrlBody.safeParse(req.body);
   if (!parsed.success) {
@@ -156,8 +164,13 @@ router.get("/storage/objects/*path", requireAuth, async (req: Request, res: Resp
 
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
-    res.setHeader("Content-Type", "application/octet-stream");
-    res.setHeader("Content-Disposition", `attachment; filename="${safeDownloadName(receipt.fileName)}"`);
+    const contentType = receiptContentType(receipt.fileName);
+    const disposition =
+      req.query.disposition === "inline" && contentType !== "application/octet-stream"
+        ? "inline"
+        : "attachment";
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", `${disposition}; filename="${safeDownloadName(receipt.fileName)}"`);
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Cache-Control", "private, no-store");
     if (response.body) {
