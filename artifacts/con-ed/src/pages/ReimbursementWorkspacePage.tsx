@@ -21,7 +21,6 @@ import {
   ChevronRight,
   CircleDollarSign,
   Clock3,
-  Download,
   FileCheck2,
   History,
   ReceiptText,
@@ -57,6 +56,7 @@ import { RequestTimeline } from "@/components/RequestTimeline";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PageHeader } from "@/components/PageHeader";
 import { WorkflowSteps } from "@/components/WorkflowSteps";
+import { ReceiptFileActions } from "@/components/ReceiptFileActions";
 import { useToast } from "@/hooks/use-toast";
 import { DELIVERY_METHOD_LABELS, formatCourseDateRange, formatCurrency, formatDateTime } from "@/lib/constants";
 
@@ -429,11 +429,7 @@ function ReimbursementPane({
                         <div className="mt-0.5 text-xs text-slate-500">Uploaded {formatDateTime(receipt.uploadedAt)}</div>
                       </div>
                     </div>
-                    <Button asChild variant="outline" size="sm">
-                      <a href={`/api/storage${receipt.fileUrl}`} download={receipt.fileName || `receipt-${index + 1}`}>
-                        <Download aria-hidden="true" /> Download
-                      </a>
-                    </Button>
+                    <ReceiptFileActions receipt={receipt} />
                   </div>
                 ))}
               </div>

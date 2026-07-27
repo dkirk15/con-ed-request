@@ -60,6 +60,7 @@ test.describe("Reimbursement workspace", () => {
     await expect(page.getByRole("heading", { name: "Reimbursements" })).toBeVisible();
     await expect(page.getByRole("heading", { name: firstCourse })).toBeVisible();
     await expect(page.getByText("reduced-reimbursement.pdf").first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "View receipt" })).toBeVisible();
 
     await page.getByLabel("Actual amount").fill("400");
     await page.getByLabel("Paycheck date").fill("2026-07-31");
