@@ -5,6 +5,7 @@ import {
   FilePenLine,
   FilePlus2,
   ReceiptText,
+  RotateCcw,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -86,6 +87,16 @@ function buildEvents(request: ConEdRequest): TimelineEvent[] {
       icon: X,
       tone: "danger",
       note: request.boDenialReason,
+    });
+  }
+
+  if (request.reopenedAt) {
+    events.push({
+      title: "Re-opened for revision",
+      detail: `Re-opened by ${request.reopenerName ?? "employee"}`,
+      timestamp: request.reopenedAt,
+      icon: RotateCcw,
+      tone: "info",
     });
   }
 

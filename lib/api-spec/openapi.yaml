@@ -583,6 +583,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/ConEdRequest"
 
+  /requests/{requestId}/reopen:
+    post:
+      operationId: reopenRequest
+      tags: [requests]
+      summary: Re-open a denied request for revision (employee only)
+      description: Returns the request to draft status so the employee can edit and resubmit. Only the request owner may call this. Requests denied by the business office re-enter at the BO review stage on resubmission (manager approval is preserved).
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reopened request (now in draft)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConEdRequest"
+        "400":
+          description: Request is not in a denied state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Request not found or not owned by caller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
   /requests/{requestId}/repayment-guarantee:
     post:
       operationId: signRepaymentGuarantee
@@ -1323,6 +1355,13 @@ components:
           format: date-time
         boDenialReason:
           type: ["string", "null"]
+        reopenedAt:
+          type: ["string", "null"]
+          format: date-time
+          description: When the request was re-opened for revision.
+        reopenerName:
+          type: ["string", "null"]
+          description: Name of the employee who re-opened the request.
         remainingBalanceAfter:
           type: ["number", "null"]
           format: float

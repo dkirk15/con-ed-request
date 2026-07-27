@@ -1716,6 +1716,78 @@ export const useBoDenyRequest = <TError = ErrorType<unknown>,
       return useMutation(getBoDenyRequestMutationOptions(options));
     }
 
+export const getReopenRequestUrl = (requestId: number,) => {
+
+
+
+
+  return `/api/requests/${requestId}/reopen`
+}
+
+/**
+ * Returns the request to draft status so the employee can edit and resubmit. Only the request owner may call this. Requests denied by the business office re-enter at the BO review stage on resubmission (manager approval is preserved).
+ * @summary Re-open a denied request for revision (employee only)
+ */
+export const reopenRequest = async (requestId: number, options?: RequestInit): Promise<ConEdRequest> => {
+
+  return customFetch<ConEdRequest>(getReopenRequestUrl(requestId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getReopenRequestMutationOptions = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reopenRequest>>, TError,{requestId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reopenRequest>>, TError,{requestId: number}, TContext> => {
+
+const mutationKey = ['reopenRequest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reopenRequest>>, {requestId: number}> = (props) => {
+          const {requestId} = props ?? {};
+
+          return  reopenRequest(requestId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReopenRequestMutationResult = NonNullable<Awaited<ReturnType<typeof reopenRequest>>>
+
+    export type ReopenRequestMutationError = ErrorType<ErrorEnvelope>
+
+    /**
+ * @summary Re-open a denied request for revision (employee only)
+ */
+export const useReopenRequest = <TError = ErrorType<ErrorEnvelope>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reopenRequest>>, TError,{requestId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reopenRequest>>,
+        TError,
+        {requestId: number},
+        TContext
+      > => {
+      return useMutation(getReopenRequestMutationOptions(options));
+    }
+
 export const getSignRepaymentGuaranteeUrl = (requestId: number,) => {
 
 

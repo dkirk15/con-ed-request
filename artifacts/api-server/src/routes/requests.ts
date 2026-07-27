@@ -91,6 +91,16 @@ async function formatRequest(req_row: typeof conEdRequests.$inferSelect) {
     boApproverName = bo?.name ?? null;
   }
 
+  let reopenerName: string | null = null;
+  if (req_row.reopenerId) {
+    const [reopener] = await db
+      .select({ name: users.name })
+      .from(users)
+      .where(eq(users.id, req_row.reopenerId))
+      .limit(1);
+    reopenerName = reopener?.name ?? null;
+  }
+
   const [guarantee] = await db
     .select()
     .from(repaymentGuarantees)
@@ -158,6 +168,8 @@ async function formatRequest(req_row: typeof conEdRequests.$inferSelect) {
     boApprovedAt: req_row.boApprovedAt?.toISOString() ?? null,
     boDeniedAt: req_row.boDeniedAt?.toISOString() ?? null,
     boDenialReason: req_row.boDenialReason ?? null,
+    reopenedAt: req_row.reopenedAt?.toISOString() ?? null,
+    reopenerName,
     remainingBalanceAfter: null,
     requiresRepaymentGuarantee: req_row.requiresRepaymentGuarantee,
     repaymentGuarantee: guarantee
@@ -428,8 +440,54 @@ router.post("/requests", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/requests/:requestId/reopen
+// Returns a denied request to draft so the employee can edit and resubmit.
+router.post(
+  "/requests/:requestId/reopen",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    try {
+      const requestId = parseInt(req.params.requestId as string);
+      const user = req.dbUser!;
+
+      const [existing] = await db
+        .select()
+        .from(conEdRequests)
+        .where(eq(conEdRequests.id, requestId))
+        .limit(1);
+
+      if (!existing || existing.employeeId !== user.id) {
+        res.status(404).json({ error: "Request not found" });
+        return;
+      }
+
+      if (existing.status !== "manager_denied" && existing.status !== "bo_denied") {
+        res.status(400).json({ error: "Only denied requests can be re-opened for revision" });
+        return;
+      }
+
+      const [updated] = await db
+        .update(conEdRequests)
+        .set({
+          status: "draft",
+          reopenedAt: new Date(),
+          reopenerId: user.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(conEdRequests.id, requestId))
+        .returning();
+
+      res.json(await formatRequest(updated));
+    } catch (err) {
+      req.log.error({ err }, "reopenRequest error");
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
 // POST /api/requests/:requestId/submit
-// Moves a draft request to pending_manager, validating guarantee for over-budget requests.
+// Moves a draft request to pending_manager (or pending_bo for previously BO-denied requests),
+// validating guarantee for over-budget requests.
 router.post(
   "/requests/:requestId/submit",
   requireAuth,
@@ -515,10 +573,14 @@ router.post(
         }
       }
 
+      // If the request was previously BO-denied and re-opened, manager approval
+      // already stands — skip back to pending_bo instead of going through manager again.
+      const targetStatus = existing.managerApprovedAt != null ? "pending_bo" : "pending_manager";
+
       const [updated] = await db
         .update(conEdRequests)
         .set({
-          status: "pending_manager",
+          status: targetStatus,
           requiresRepaymentGuarantee,
           updatedAt: new Date(),
         })

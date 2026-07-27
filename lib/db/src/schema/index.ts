@@ -57,6 +57,8 @@ export const conEdRequests = pgTable("con_ed_requests", {
     .notNull()
     .references(() => users.id),
   status: requestStatusEnum("status").notNull().default("draft"),
+  reopenedAt: timestamp("reopened_at"),
+  reopenerId: integer("reopener_id").references(() => users.id),
   courseNames: text("course_names").notNull(),
   courseProvider: text("course_provider"),
   courseUrl: text("course_url"),

@@ -289,6 +289,16 @@ export interface ConEdRequest {
   boDeniedAt?: string | null;
   /** @nullable */
   boDenialReason?: string | null;
+  /**
+     * When the request was re-opened for revision.
+     * @nullable
+     */
+  reopenedAt?: string | null;
+  /**
+     * Name of the employee who re-opened the request.
+     * @nullable
+     */
+  reopenerName?: string | null;
   /** @nullable */
   remainingBalanceAfter?: number | null;
   requiresRepaymentGuarantee?: boolean;

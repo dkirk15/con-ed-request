@@ -4,13 +4,14 @@ import {
   useDeleteRequest,
   useGetRequest, 
   useGetMe,
+  useReopenRequest,
   getGetRequestQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Upload, FileText, Check, X, CreditCard, ExternalLink, PenTool, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Upload, FileText, Check, X, CreditCard, ExternalLink, PenTool, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { DELIVERY_METHOD_LABELS, formatCourseDateRange, formatCurrency, formatDate } from "@/lib/constants";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -149,6 +150,7 @@ export default function RequestDetailPage() {
 
   const cancelMutation = useCancelRequest();
   const deleteMutation = useDeleteRequest();
+  const reopenMutation = useReopenRequest();
   const managerApproveMutation = useManagerApproveRequest();
   const managerDenyMutation = useManagerDenyRequest();
   const boApproveMutation = useBoApproveRequest();
@@ -346,6 +348,56 @@ export default function RequestDetailPage() {
                 </AlertDialogContent>
               </AlertDialog>
             </>
+          )}
+
+          {isMyRequest && (request.status === "manager_denied" || request.status === "bo_denied") && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button>
+                  <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Re-open for revision
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Re-open this request?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This returns the request to draft so you can edit and resubmit it.
+                    {request.status === "bo_denied"
+                      ? " Because the manager already approved it, resubmitting will go directly to CE review — no manager re-approval needed."
+                      : ""}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep as-is</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={reopenMutation.isPending}
+                    onClick={() =>
+                      reopenMutation.mutate(
+                        { requestId: id },
+                        {
+                          onSuccess: () => {
+                            queryClient.invalidateQueries({ queryKey: getGetRequestQueryKey(id) });
+                            queryClient.invalidateQueries({ queryKey: ["/api/requests"] });
+                            queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+                            toast({ title: "Request re-opened", description: "You can now edit and resubmit your request." });
+                            setLocation(`/requests/${id}/edit`);
+                          },
+                          onError: (err: unknown) =>
+                            toast({
+                              title: "Could not re-open",
+                              description: err instanceof Error ? err.message : "Please try again.",
+                              variant: "destructive",
+                            }),
+                        },
+                      )
+                    }
+                  >
+                    Re-open for revision
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
 
           {isMyRequest && request.status === "pending_manager" && (

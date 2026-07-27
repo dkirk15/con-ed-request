@@ -342,6 +342,8 @@ export const ListRequestsResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
@@ -448,6 +450,8 @@ export const CreateRequestResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
@@ -530,6 +534,8 @@ export const GetRequestResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
@@ -635,6 +641,8 @@ export const UpdateRequestResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
@@ -733,6 +741,8 @@ export const SubmitRequestResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
@@ -815,6 +825,8 @@ export const CancelRequestResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
@@ -897,6 +909,8 @@ export const ManagerApproveRequestResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
@@ -983,6 +997,8 @@ export const ManagerDenyRequestResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
@@ -1075,6 +1091,8 @@ export const BoApproveRequestResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
@@ -1161,6 +1179,93 @@ export const BoDenyRequestResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
+  "remainingBalanceAfter": zod.number().nullish(),
+  "requiresRepaymentGuarantee": zod.boolean().optional(),
+  "repaymentGuarantee": zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "employeeId": zod.number(),
+  "signedName": zod.string(),
+  "signedDate": zod.string().nullish(),
+  "signedAt": zod.coerce.date(),
+  "acknowledged": zod.boolean(),
+  "email": zod.string().nullish().describe('Signer\'s email captured at signing time (audit trail).'),
+  "ipAddress": zod.string().nullish().describe('Client IP captured at signing time (audit trail).'),
+  "sessionId": zod.string().nullish().describe('Clerk session id captured at signing time (audit trail).')
+}).nullish(),
+  "receipts": zod.array(zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "fileUrl": zod.string(),
+  "fileName": zod.string().nullish(),
+  "uploadedAt": zod.coerce.date()
+})).optional(),
+  "reimbursement": zod.object({
+  "id": zod.number(),
+  "requestId": zod.number(),
+  "paycheckDate": zod.coerce.date(),
+  "amount": zod.number().nullish().describe('Actual amount reimbursed. Legacy records may be null and use the approved total.'),
+  "markedById": zod.number().nullish(),
+  "markedByName": zod.string().nullish(),
+  "markedAt": zod.coerce.date()
+}).nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * Returns the request to draft status so the employee can edit and resubmit. Only the request owner may call this. Requests denied by the business office re-enter at the BO review stage on resubmission (manager approval is preserved).
+ * @summary Re-open a denied request for revision (employee only)
+ */
+export const ReopenRequestParams = zod.object({
+  "requestId": zod.coerce.number()
+})
+
+export const ReopenRequestResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "employeeName": zod.string().nullish(),
+  "employeeEmail": zod.string().nullish(),
+  "clinicName": zod.string().nullish(),
+  "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']),
+  "courseNames": zod.string(),
+  "courseProvider": zod.string().nullish(),
+  "courseUrl": zod.string().url().nullish(),
+  "courseStartDate": zod.coerce.date().nullish(),
+  "courseEndDate": zod.coerce.date().nullish(),
+  "deliveryMethod": zod.union([zod.literal('in_person'),zod.literal('virtual'),zod.literal('hybrid'),zod.literal(null)]).nullish(),
+  "courseDates": zod.string().nullish().describe('Legacy free-text course dates retained for existing requests.'),
+  "ceuCount": zod.number().nullish(),
+  "location": zod.string().nullish(),
+  "tuition": zod.number().nullish(),
+  "lodging": zod.number().nullish(),
+  "airfare": zod.number().nullish(),
+  "rentalCar": zod.number().nullish(),
+  "parking": zod.number().nullish(),
+  "otherCosts": zod.number().nullish(),
+  "totalRequested": zod.number(),
+  "approvedTuition": zod.number().nullish(),
+  "approvedLodging": zod.number().nullish(),
+  "approvedAirfare": zod.number().nullish(),
+  "approvedRentalCar": zod.number().nullish(),
+  "approvedParking": zod.number().nullish(),
+  "approvedOther": zod.number().nullish(),
+  "totalApproved": zod.number().nullish(),
+  "managerId": zod.number().nullish(),
+  "managerName": zod.string().nullish(),
+  "managerApprovedAt": zod.coerce.date().nullish(),
+  "managerDeniedAt": zod.coerce.date().nullish(),
+  "managerDenialReason": zod.string().nullish(),
+  "boApproverId": zod.number().nullish(),
+  "boApproverName": zod.string().nullish(),
+  "boApprovedAt": zod.coerce.date().nullish(),
+  "boDeniedAt": zod.coerce.date().nullish(),
+  "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
@@ -1353,6 +1458,8 @@ export const GetEmployeeDashboardResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
@@ -1445,6 +1552,8 @@ export const GetManagerDashboardResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
@@ -1518,6 +1627,8 @@ export const GetManagerDashboardResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
@@ -1604,6 +1715,8 @@ export const GetBoDashboardResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
@@ -1677,6 +1790,8 @@ export const GetBoDashboardResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
@@ -1759,6 +1874,8 @@ export const GetAccountingDashboardResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
@@ -1832,6 +1949,8 @@ export const GetAccountingDashboardResponse = zod.object({
   "boApprovedAt": zod.coerce.date().nullish(),
   "boDeniedAt": zod.coerce.date().nullish(),
   "boDenialReason": zod.string().nullish(),
+  "reopenedAt": zod.coerce.date().nullish().describe('When the request was re-opened for revision.'),
+  "reopenerName": zod.string().nullish().describe('Name of the employee who re-opened the request.'),
   "remainingBalanceAfter": zod.number().nullish(),
   "requiresRepaymentGuarantee": zod.boolean().optional(),
   "repaymentGuarantee": zod.object({
