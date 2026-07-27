@@ -90,7 +90,7 @@ export function ReceiptFileActions({ receipt }: { receipt: ReceiptFile }) {
 
   return (
     <>
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
+      <div className="flex shrink-0 flex-col gap-2">
         <Button size="sm" onClick={() => setPreviewOpen(true)}>
           <Eye className="mr-2 h-4 w-4" aria-hidden="true" />
           View receipt
