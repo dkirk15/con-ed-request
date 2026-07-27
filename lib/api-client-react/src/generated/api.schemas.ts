@@ -597,6 +597,20 @@ export interface TaskCenter {
   items: TaskItem[];
 }
 
+export interface ConEdSettings {
+  /** Annual CE allocation per employee in dollars (default 2000) */
+  annualBudget: number;
+  updatedAt: string;
+}
+
+export interface ConEdSettingsUpdate {
+  /**
+     * @minimum 0
+     * @maximum 100000
+     */
+  annualBudget?: number;
+}
+
 export interface ReportSummary {
   totalRequests: number;
   totalRequested: number;

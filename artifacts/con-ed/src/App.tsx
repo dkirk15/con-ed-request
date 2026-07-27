@@ -20,6 +20,7 @@ import RequestDetailPage from "@/pages/RequestDetailPage";
 import UsersPage from "@/pages/UsersPage";
 import UserDetailPage from "@/pages/UserDetailPage";
 import ClinicsPage from "@/pages/ClinicsPage";
+import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/not-found";
 
 import AppLayout from "@/components/AppLayout";
@@ -71,6 +72,7 @@ function ProtectedRouter() {
         <Route path="/users/:id" component={UserDetailPage} />
         <Route path="/users" component={UsersPage} />
         <Route path="/clinics" component={ClinicsPage} />
+        <Route path="/settings" component={SettingsPage} />
         <Route path="/account" component={AccountPage} />
         <Route component={NotFound} />
       </Switch>

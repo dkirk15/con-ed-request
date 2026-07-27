@@ -28,6 +28,7 @@ import {
 } from "drizzle-orm";
 import { requireRole } from "../lib/auth";
 import { calcAnnualAllocationForYear } from "../lib/balance";
+import { getSettings } from "../lib/settings";
 
 const router: IRouter = Router();
 const REPORT_ROLES = ["manager", "business_office", "accounting", "admin"] as const;
@@ -302,6 +303,7 @@ async function buildBudgetUsage(user: ReportUser, filters: ReportFilters) {
   if (employeeRows.length === 0) return { rows: [], advancedRequests: [] };
   const employeeIds = employeeRows.map((employee) => employee.id);
   const yearEnd = new Date(`${filters.year + 1}-01-01T00:00:00`);
+  const { annualBudget } = await getSettings();
 
   const [fundingRows, guaranteeRows] = await Promise.all([
     db
@@ -375,11 +377,11 @@ async function buildBudgetUsage(user: ReportUser, filters: ReportFilters) {
     const firstRelevantYear = Math.min(filters.year, hireYear, ...approvedYears);
     let carryoverDebt = 0;
     for (let year = firstRelevantYear; year < filters.year; year += 1) {
-      const allocation = calcAnnualAllocationForYear(employee.hireDate, year).allocation;
+      const allocation = calcAnnualAllocationForYear(employee.hireDate, year, annualBudget).allocation;
       carryoverDebt = Math.max(0, carryoverDebt + (approvedByYear.get(year) ?? 0) - allocation);
     }
 
-    const calculated = calcAnnualAllocationForYear(employee.hireDate, filters.year);
+    const calculated = calcAnnualAllocationForYear(employee.hireDate, filters.year, annualBudget);
     const annualAllocation = employee.allocationOverride == null
       ? calculated.allocation
       : money(employee.allocationOverride);

@@ -122,3 +122,13 @@ export const reimbursements = pgTable("reimbursements", {
   markedById: integer("marked_by_id").references(() => users.id),
   markedAt: timestamp("marked_at").defaultNow().notNull(),
 });
+
+/**
+ * Singleton configuration row — always exactly one row (id = 1).
+ * Insert the default on first deploy; update in place thereafter.
+ */
+export const conEdSettings = pgTable("con_ed_settings", {
+  id: serial("id").primaryKey(),
+  annualBudget: numeric("annual_budget", { precision: 10, scale: 2 }).notNull().default("2000"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});

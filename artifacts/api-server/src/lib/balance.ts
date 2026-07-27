@@ -1,8 +1,8 @@
 import { db } from "@workspace/db";
 import { conEdRequests, reimbursements } from "@workspace/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
+import { getSettings } from "./settings";
 
-const ANNUAL_BUDGET = 2000;
 const APPROVED_STATUSES = [
   "awaiting_receipt",
   "receipt_submitted",
@@ -20,13 +20,14 @@ function parseMoney(value: string | null | undefined) {
 export function calcAnnualAllocationForYear(
   hireDateStr: string | null,
   year: number,
+  annualBudget: number = 2000,
 ): {
   allocation: number;
   isProrated: boolean;
   hireMonth: number | null;
 } {
   if (!hireDateStr) {
-    return { allocation: ANNUAL_BUDGET, isProrated: false, hireMonth: null };
+    return { allocation: annualBudget, isProrated: false, hireMonth: null };
   }
 
   const hireDate = new Date(hireDateStr);
@@ -37,23 +38,26 @@ export function calcAnnualAllocationForYear(
   }
 
   if (hireYear < year) {
-    return { allocation: ANNUAL_BUDGET, isProrated: false, hireMonth: null };
+    return { allocation: annualBudget, isProrated: false, hireMonth: null };
   }
 
   const hireMonth = hireDate.getMonth() + 1;
-  const allocation = roundCurrency((ANNUAL_BUDGET * (13 - hireMonth)) / 12);
+  const allocation = roundCurrency((annualBudget * (13 - hireMonth)) / 12);
 
   return { allocation, isProrated: true, hireMonth };
 }
 
-export function calcAnnualAllocation(hireDateStr: string | null) {
-  return calcAnnualAllocationForYear(hireDateStr, new Date().getFullYear());
+export function calcAnnualAllocation(hireDateStr: string | null, annualBudget: number = 2000) {
+  return calcAnnualAllocationForYear(hireDateStr, new Date().getFullYear(), annualBudget);
 }
 
 export async function getUserBalance(userId: number, hireDateStr: string | null, conEdAllocation?: number | null) {
   const year = new Date().getFullYear();
   const yearStart = new Date(`${year}-01-01`);
-  const calculated = calcAnnualAllocation(hireDateStr);
+
+  const { annualBudget } = await getSettings();
+
+  const calculated = calcAnnualAllocation(hireDateStr, annualBudget);
   const allocation = conEdAllocation != null ? conEdAllocation : calculated.allocation;
   const isProrated = conEdAllocation != null ? false : calculated.isProrated;
   const hireMonth = conEdAllocation != null ? null : calculated.hireMonth;
@@ -87,7 +91,7 @@ export async function getUserBalance(userId: number, hireDateStr: string | null,
   let carryoverDebt = 0;
 
   for (let balanceYear = firstRelevantYear; balanceYear < year; balanceYear += 1) {
-    const yearAllocation = calcAnnualAllocationForYear(hireDateStr, balanceYear).allocation;
+    const yearAllocation = calcAnnualAllocationForYear(hireDateStr, balanceYear, annualBudget).allocation;
     const yearSpend = approvedByYear.get(balanceYear) ?? 0;
     carryoverDebt = Math.max(0, carryoverDebt + yearSpend - yearAllocation);
   }

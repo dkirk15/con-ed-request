@@ -21,6 +21,8 @@ export * from './conEdRequestInputDeliveryMethod';
 export * from './conEdRequestStatus';
 export * from './conEdRequestUpdate';
 export * from './conEdRequestUpdateDeliveryMethod';
+export * from './conEdSettings';
+export * from './conEdSettingsUpdate';
 export * from './denialInput';
 export * from './employeeDashboard';
 export * from './employeeDashboardRequestCounts';

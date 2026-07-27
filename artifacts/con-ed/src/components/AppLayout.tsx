@@ -16,6 +16,7 @@ import {
   Home,
   LogOut,
   ReceiptText,
+  Settings,
   UserCircle,
   Users,
   type LucideIcon,
@@ -109,6 +110,7 @@ const NAV_ITEMS: Record<Role, NavItem[]> = {
     { label: "Reports", href: "/reports", icon: BarChart3, path: "/reports", badge: "reports" },
     { label: "People", href: "/users", icon: Users, path: "/users" },
     { label: "Clinics", href: "/clinics", icon: Building2, path: "/clinics" },
+    { label: "Settings", href: "/settings", icon: Settings, path: "/settings" },
   ],
 };
 

@@ -243,6 +243,33 @@ export const DeleteClinicResponse = zod.void()
 
 
 /**
+ * @summary Get current portal settings (admin only)
+ */
+export const GetSettingsResponse = zod.object({
+  "annualBudget": zod.number().describe('Annual CE allocation per employee in dollars (default 2000)'),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update portal settings (admin only)
+ */
+export const updateSettingsBodyAnnualBudgetMin = 0;
+export const updateSettingsBodyAnnualBudgetMax = 100000;
+
+
+
+export const UpdateSettingsBody = zod.object({
+  "annualBudget": zod.number().min(updateSettingsBodyAnnualBudgetMin).max(updateSettingsBodyAnnualBudgetMax).optional()
+})
+
+export const UpdateSettingsResponse = zod.object({
+  "annualBudget": zod.number().describe('Annual CE allocation per employee in dollars (default 2000)'),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
  * @summary List con-ed requests (scoped by role)
  */
 export const listRequestsQuerySearchMax = 120;

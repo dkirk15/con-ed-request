@@ -25,6 +25,8 @@ tags:
     description: Role-scoped workflow tasks and navigation counts
   - name: reports
     description: Operational and financial reporting
+  - name: settings
+    description: Portal configuration (admin only)
   - name: Storage
     description: Object storage upload and serving endpoints.
 
@@ -221,6 +223,68 @@ paths:
                 $ref: "#/components/schemas/ErrorEnvelope"
         "409":
           description: Clinic still has employees assigned to it
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  # ─── Settings ────────────────────────────────────────────────────────────────
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get current portal settings (admin only)
+      responses:
+        "200":
+          description: Current settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConEdSettings"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update portal settings (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConEdSettingsUpdate"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConEdSettings"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Forbidden
           content:
             application/json:
               schema:
@@ -1738,6 +1802,29 @@ components:
             $ref: "#/components/schemas/TaskItem"
 
     # ─── Object Storage ────────────────────────────────────────────────────────
+
+    # ─── Settings ──────────────────────────────────────────────────────────────
+
+    ConEdSettings:
+      type: object
+      required: [annualBudget, updatedAt]
+      properties:
+        annualBudget:
+          type: number
+          format: float
+          description: Annual CE allocation per employee in dollars (default 2000)
+        updatedAt:
+          type: string
+          format: date-time
+
+    ConEdSettingsUpdate:
+      type: object
+      properties:
+        annualBudget:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100000
 
     ReportSummary:
       type: object
