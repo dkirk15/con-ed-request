@@ -20,12 +20,14 @@ Production scope for this scan is the `artifacts/con-ed` frontend, the `artifact
 - **API to PostgreSQL** — the API has full authority over user, request, and reimbursement data. Authorization mistakes here directly expose or alter protected records.
 - **API to Object Storage** — the API signs upload URLs and serves stored objects back under the application origin. Upload validation and download response headers are therefore security-critical.
 - **Public vs authenticated vs privileged users** — health checks and Clerk bootstrap are public; employees are low-privilege authenticated users; managers, business office, accounting, and admins are progressively more trusted reviewers/operators.
+- **Browser origin boundary** — the CORS policy must restrict which origins the browser will forward authenticated requests from. A permissive `cors({ origin: true, credentials: true })` configuration eliminates this boundary.
 - **Dev-only vs production** — mockup sandbox and test helpers are excluded unless imported into production builds.
 
 ## Scan Anchors
 
 - **Production entry points:** `artifacts/api-server/src/app.ts`, `artifacts/api-server/src/routes/*.ts`, `artifacts/con-ed/src/App.tsx`
 - **Highest-risk code areas:** `artifacts/api-server/src/lib/auth.ts`, `artifacts/api-server/src/routes/requests.ts`, `artifacts/api-server/src/routes/storage.ts`, `artifacts/api-server/src/lib/objectStorage.ts`
+- **CORS configuration:** `artifacts/api-server/src/app.ts` — currently reflects all origins with credentials; should be restricted to the known deployment origin(s).
 - **Public surfaces:** `GET /api/healthz`, Clerk sign-in/sign-up pages, Clerk proxy path
 - **Authenticated surfaces:** `/api/users/me`, `/api/requests*`, `/api/storage/uploads/request-url`, `/api/storage/objects/*`
 - **Privileged surfaces:** `/api/users*`, `/api/clinics*`, manager/BO/accounting dashboard and workflow actions, admin impersonation via `X-Impersonate-Role`
@@ -65,3 +67,7 @@ Authenticated endpoints can mint object-storage upload URLs and trigger file upl
 ### Elevation of Privilege
 
 Receipt files are later viewed by higher-privilege staff. Because uploads are served back from the application origin, active content in stored files can become a privilege-escalation vector unless the server enforces safe content types and download headers. All privileged workflow actions must remain server-enforced and never rely on hidden frontend controls.
+
+### Cross-Origin Request Forgery (CORS)
+
+The CORS configuration in `artifacts/api-server/src/app.ts` uses `origin: true` (reflect all origins) with `credentials: true`. This eliminates the same-origin policy protection for authenticated API calls. The guarantee required is: the API must only accept credentialed cross-origin requests from known, trusted origins (the application's own deployment URL).
