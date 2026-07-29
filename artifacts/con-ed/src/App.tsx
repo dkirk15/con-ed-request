@@ -49,6 +49,14 @@ const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+const clerkLocalization = {
+  signIn: {
+    start: {
+      title: "Sign in to the OSS Con-Ed Portal",
+    },
+  },
+};
+
 // Clerk hands full paths (including the base) to routerPush/routerReplace, but
 // wouter's setLocation re-applies the base — strip it first to avoid doubling.
 function stripBase(path: string): string {
@@ -128,6 +136,7 @@ function ClerkWithRouter({
       proxyUrl={clerkProxyUrl}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
+      localization={clerkLocalization as never}
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >
