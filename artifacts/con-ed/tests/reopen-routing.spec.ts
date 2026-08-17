@@ -148,6 +148,73 @@ test.describe("Re-open routing on resubmit", () => {
 });
 
 /**
+ * Reopen guard: POST /api/requests/:id/reopen must return HTTP 400 with a clear
+ * error message when the request status is anything other than manager_denied or
+ * bo_denied. This covers every non-denied status in the lifecycle.
+ */
+test.describe("Reopen guard — non-denied statuses return 400", () => {
+  const nonDeniedStatuses = [
+    "draft",
+    "pending_manager",
+    "pending_bo",
+    "awaiting_receipt",
+  ] as const;
+
+  for (const status of nonDeniedStatuses) {
+    test(`reopen returns 400 for status=${status}`, async ({
+      page,
+      provisionUser,
+      signInAs,
+    }) => {
+      const clinicId = await createClinic(`E2E-Clinic-reopen-guard-${status}`);
+      const manager = await provisionUser({ role: "manager", clinicId });
+      const employee = await provisionUser({
+        role: "employee",
+        clinicId,
+        managerId: manager.dbId,
+      });
+
+      const requestId = await insertRequest({
+        employeeId: employee.dbId,
+        managerId: manager.dbId,
+        status,
+        courseNames: `E2E Reopen Guard ${status}`,
+        tuition: 200,
+        totalRequested: 200,
+      });
+
+      // Sign in as the owning employee and call the reopen endpoint directly.
+      await signInAs(employee);
+      await page.goto("/");
+      await page.waitForFunction(
+        () => Boolean((window as AnyWindow).Clerk?.session),
+      );
+
+      const { httpStatus, body } = await page.evaluate(
+        async (reqId: number) => {
+          const token = await (window as AnyWindow).Clerk!.session!.getToken();
+          const res = await fetch(`/api/requests/${reqId}/reopen`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          return { httpStatus: res.status, body: await res.json() };
+        },
+        requestId,
+      );
+
+      expect(httpStatus).toBe(400);
+      expect(body).toMatchObject({
+        error: "Only denied requests can be re-opened for revision",
+      });
+
+      // Status must remain unchanged in the database.
+      const row = await getRequest(requestId);
+      expect(row?.status).toBe(status);
+    });
+  }
+});
+
+/**
  * Cross-employee access control: POST /api/requests/:id/reopen must return 404
  * when the authenticated user does not own the request, and the request status
  * must not change.
