@@ -646,3 +646,80 @@ test("accounting user lands on payroll tab by default and cannot reach funding o
     page.getByRole("region", { name: "Paycheck reimbursement ledger" }),
   ).toBeVisible();
 });
+
+test("prorated hire-year allocation generates the correct carry-forward debt", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  // Employee hired in July of the prior year.
+  //   calcAnnualAllocationForYear(hireDate, year - 1):
+  //     hireYear === year - 1  →  prorated
+  //     hireMonth = 7
+  //     allocation = (2000 * (13 - 7)) / 12 = 1000
+  //
+  // Prior-year reimbursed spend = $1,500  →  overage = $500
+  //   carryoverDebt = max(0, $1,500 - $1,000) = $500
+  //
+  // Current-year allocation:
+  //   calcAnnualAllocationForYear(hireDate, year): hireYear < year → full $2,000
+  //   availableAllocation = max(0, $2,000 - $500) = $1,500
+  //
+  // Current-year awaiting_receipt, totalApproved = $300
+  //   usedAmount     = $300
+  //   remainingAmount = max(0, $1,500 - $300) = $1,200
+  //   Future debt (carryoverDebt column) = $500
+
+  const clinicId = await createClinic(`E2E-ProratedCarryover-${unique()}`);
+
+  // insertUser supports hireDate directly in the helpers.
+  const suffix = unique();
+  const empId = await insertUser({
+    clerkId: `prorated-carryover-${suffix}`,
+    name: `Prorated Carryover Employee ${suffix}`,
+    email: `prorated.carryover.${suffix}@example.test`,
+    role: "employee",
+    clinicId,
+    hireDate: `${year - 1}-07-01`,
+  });
+
+  // Prior-year reimbursed request — exceeds the $1,000 prorated allocation by $500.
+  // buildBudgetUsage resolves spend as: reimbursementAmount ?? totalApproved ?? totalRequested
+  // Setting totalApproved=1500 on a "reimbursed" row is sufficient (no reimbursement row needed).
+  await insertRequest({
+    employeeId: empId,
+    status: "reimbursed",
+    courseNames: `Prior Year Prorated Over-Budget ${unique()}`,
+    totalRequested: 1500,
+    totalApproved: 1500,
+    createdAt: new Date(`${year - 1}-09-15T12:00:00Z`),
+  });
+
+  // Current-year request — partially uses the reduced $1,500 available allocation.
+  await insertRequest({
+    employeeId: empId,
+    status: "awaiting_receipt",
+    courseNames: `Current Year Prorated Course ${unique()}`,
+    totalRequested: 400,
+    totalApproved: 300,
+    createdAt: new Date(`${year}-03-01T12:00:00Z`),
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  await page.goto(`/reports?year=${year}&clinicId=${clinicId}&section=funding`);
+
+  const budgetSection = page.getByRole("region", { name: "Employee budget usage" });
+  await expect(budgetSection).toBeVisible();
+
+  const row = budgetSection.getByRole("row").filter({ hasText: "Prorated Carryover Employee" });
+
+  // Available = full current-year allocation ($2,000) minus carry-forward debt ($500) = $1,500
+  await expect(row.getByText("$1,500.00")).toBeVisible();
+  // Used = current-year approved amount
+  await expect(row.getByText("$300.00")).toBeVisible();
+  // Remaining = available − used = $1,200
+  await expect(row.getByText("$1,200.00")).toBeVisible();
+  // Future debt column = carryoverDebt ($500) + advancedExposure ($0) = $500
+  await expect(row.getByText("$500.00")).toBeVisible();
+});
