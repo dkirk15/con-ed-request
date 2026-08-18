@@ -647,6 +647,29 @@ test("accounting user lands on payroll tab by default and cannot reach funding o
   ).toBeVisible();
 });
 
+test("manager lands on team-funding tab by default and cannot reach payroll or clinic tabs", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-ManagerTabs-${unique()}`);
+  const manager = await provisionUser({ role: "manager", clinicId });
+  await signInAs(manager);
+  await page.goto(`/reports?year=${year}`);
+
+  // manager defaultSection = "funding" → "Team funding" tab must be selected on load
+  await expect(page.getByRole("tab", { name: "Team funding" })).toHaveAttribute("aria-selected", "true");
+
+  // Payroll and Clinics tabs must not exist in the tab list
+  await expect(page.getByRole("tab", { name: "Payroll" })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Clinics" })).toHaveCount(0);
+
+  // Funding section must be visible as the active tab content
+  await expect(
+    page.getByRole("region", { name: "Employee budget usage" }),
+  ).toBeVisible();
+});
+
 test("prorated hire-year allocation generates the correct carry-forward debt", async ({
   page,
   provisionUser,
