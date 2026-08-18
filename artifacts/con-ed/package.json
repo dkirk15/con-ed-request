@@ -83,6 +83,6 @@
   "dependencies": {
     "@clerk/react": "^6.11.0",
     "@clerk/themes": "^2.4.57",
-    "nanoid": "^5.1.15"
+    "nanoid": "^5.1.16"
   }
 }
