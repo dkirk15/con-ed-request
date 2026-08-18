@@ -9,6 +9,10 @@ clinic approval, receipt submission, and reimbursement.
 - pnpm run typecheck - full typecheck across all packages
 - pnpm run build - typecheck and build all packages
 - pnpm --filter @workspace/api-spec run codegen - regenerate API hooks and Zod schemas
+  - Must be run (and the regenerated files committed) after any change to
+    lib/api-spec/openapi.yaml. CI (.github/workflows/ci.yml) fails the branch
+    if generated files in lib/api-client-react/src/generated/ or
+    lib/api-zod/src/generated/ are out of date.
 - pnpm --filter @workspace/db run push - push DB schema changes in development
 - pnpm --filter @workspace/con-ed run test:e2e - run Playwright with the app running
 
