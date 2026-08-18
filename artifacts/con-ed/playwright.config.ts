@@ -11,6 +11,9 @@ const chromiumExecutable = process.env.REPLIT_PLAYWRIGHT_CHROMIUM_EXECUTABLE;
 
 export default defineConfig({
   testDir: "./tests",
+  // Keep Playwright's writes (test artifacts, .last-run.json) out of the
+  // workspace so read-only validation snapshots don't fail the suite.
+  outputDir: "/tmp/playwright-results",
   // The suite shares the development database with the running app, so keep it
   // serial to avoid cross-test interference. Each test still uses unique data.
   fullyParallel: false,
