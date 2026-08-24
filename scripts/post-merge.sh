@@ -27,3 +27,17 @@ else
     echo "Generated files already up to date — no commit needed"
   fi
 fi
+
+# Keep the public GitHub mirror in sync after every successful merge.
+# Disable interactive credential prompts so a broken connection fails clearly.
+echo "Pushing merged main to GitHub"
+GIT_TERMINAL_PROMPT=0 git push github HEAD:main
+
+LOCAL_HEAD="$(git rev-parse HEAD)"
+REMOTE_HEAD="$(git ls-remote github refs/heads/main | awk 'NR == 1 { print $1 }')"
+if [[ -z "$REMOTE_HEAD" || "$LOCAL_HEAD" != "$REMOTE_HEAD" ]]; then
+  echo "GitHub verification failed: local HEAD $LOCAL_HEAD, remote main $REMOTE_HEAD" >&2
+  exit 1
+fi
+
+echo "GitHub main is synchronized at $LOCAL_HEAD"
