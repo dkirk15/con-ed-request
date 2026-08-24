@@ -7,3 +7,4 @@
 - [Clerk needs_client_trust](clerk-dev-instance-preview.md) — "needs_client_trust not supported yet" = stale clerk-js v5 from deprecated @clerk/clerk-react; fix = migrate to @clerk/react v6 (Show replaces SignedIn/SignedOut).
 - [Drizzle wraps pg errors](drizzle-error-codes.md) — SQLSTATE (e.g. 23503 FK) is on err.cause.code, not err.code; prefer a count pre-check for 409.
 - [GitHub Actions push permission](github-actions-push-permission.md) — the Replit GitHub OAuth connection’s repo access cannot push new or changed workflow files without GitHub’s separate workflow scope.
+- [Transitive dependency security](transitive-dependency-security.md) — verify resolved lockfile versions; published tool packages can retain stale exact vulnerable transitive pins.
