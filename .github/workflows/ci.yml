@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  codegen-drift:
+    name: Codegen drift & typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Regenerate API client and Zod schemas
+        run: pnpm --filter @workspace/api-spec run codegen
+
+      - name: Fail on codegen drift
+        run: |
+          if ! git diff --exit-code lib/api-client-react/src/generated/ lib/api-zod/src/generated/; then
+            echo "::error::Generated API files are out of date. Run 'pnpm --filter @workspace/api-spec run codegen' and commit the results."
+            exit 1
+          fi
+          untracked=$(git ls-files --others --exclude-standard lib/api-client-react/src/generated/ lib/api-zod/src/generated/)
+          if [ -n "$untracked" ]; then
+            echo "::error::Uncommitted generated files detected:"
+            echo "$untracked"
+            echo "Run 'pnpm --filter @workspace/api-spec run codegen' and commit the results."
+            exit 1
+          fi
+
+      - name: Typecheck all packages
+        run: pnpm run typecheck
