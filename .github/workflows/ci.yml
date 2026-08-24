@@ -36,7 +36,6 @@ jobs:
             echo "::error::Generated API files are out of date. Run 'pnpm --filter @workspace/api-spec run codegen' and commit the results."
             exit 1
           fi
-          # Also fail on brand-new generated files that were never committed.
           untracked=$(git ls-files --others --exclude-standard lib/api-client-react/src/generated/ lib/api-zod/src/generated/)
           if [ -n "$untracked" ]; then
             echo "::error::Uncommitted generated files detected:"
