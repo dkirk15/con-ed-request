@@ -3,6 +3,30 @@ import { createClinic, insertRequest, getRequest, query } from "./helpers/db";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyWindow = Window & { Clerk?: { session?: { getToken: () => Promise<string> } } };
 
+async function requestApi(
+  page: import("@playwright/test").Page,
+  path: string,
+  method = "POST",
+  body?: unknown,
+): Promise<{ status: number; body: unknown }> {
+  await page.waitForFunction(() => Boolean((window as AnyWindow).Clerk?.session));
+  return page.evaluate(
+    async ({ path, method, body }) => {
+      const token = await (window as AnyWindow).Clerk!.session!.getToken();
+      const response = await fetch(path, {
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+        },
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+      return { status: response.status, body: await response.json() };
+    },
+    { path, method, body },
+  );
+}
+
 /**
  * When a request that was previously BO-denied is re-opened and resubmitted,
  * it must skip manager re-review and land directly in `pending_bo` because
@@ -175,6 +199,88 @@ test.describe("Re-open routing on resubmit", () => {
     await page.goto(`/requests/${requestId}`);
     await expect(page.getByText("Manager denied", { exact: true })).toBeVisible();
     await expect(page.getByText("Not applicable", { exact: true })).toBeVisible();
+  });
+
+  test("two manager denial and reopen cycles preserve every timeline event", async ({
+    page,
+    provisionUser,
+    signInAs,
+  }) => {
+    const clinicId = await createClinic(`E2E-Clinic-reopen-history-${Date.now()}`);
+    const manager = await provisionUser({ role: "manager", clinicId });
+    const employee = await provisionUser({
+      role: "employee",
+      clinicId,
+      managerId: manager.dbId,
+    });
+    const requestId = await insertRequest({
+      employeeId: employee.dbId,
+      managerId: manager.dbId,
+      status: "pending_manager",
+      courseNames: "E2E Reopen History Course",
+      courseProvider: "E2E Reopen History Provider",
+      courseStartDate: "2026-10-01",
+      courseEndDate: "2026-10-02",
+      deliveryMethod: "virtual",
+      tuition: 200,
+      totalRequested: 200,
+    });
+
+    await signInAs(manager);
+    const firstDenial = await requestApi(page, `/api/requests/${requestId}/manager-deny`, "POST", {
+      reason: "First manager explanation",
+    });
+    expect(firstDenial.status).toBe(200);
+
+    await signInAs(employee);
+    const firstReopen = await requestApi(page, `/api/requests/${requestId}/reopen`);
+    expect(firstReopen.status).toBe(200);
+    const firstResubmission = await requestApi(page, `/api/requests/${requestId}/submit`);
+    expect(firstResubmission.status).toBe(200);
+    expect((await getRequest(requestId))?.status).toBe("pending_manager");
+
+    await signInAs(manager);
+    const secondDenial = await requestApi(page, `/api/requests/${requestId}/manager-deny`, "POST", {
+      reason: "Second manager explanation",
+    });
+    expect(secondDenial.status).toBe(200);
+
+    await signInAs(employee);
+    const secondReopen = await requestApi(page, `/api/requests/${requestId}/reopen`);
+    expect(secondReopen.status).toBe(200);
+    const secondResubmission = await requestApi(page, `/api/requests/${requestId}/submit`);
+    expect(secondResubmission.status).toBe(200);
+    expect((await getRequest(requestId))?.status).toBe("pending_manager");
+
+    const history = await query<{ type: string; reason: string | null }>(
+      `SELECT type, reason
+         FROM con_ed_request_events
+        WHERE request_id = $1
+        ORDER BY created_at, id`,
+      [requestId],
+    );
+    expect(history).toEqual([
+      { type: "manager_denied", reason: "First manager explanation" },
+      { type: "reopened", reason: null },
+      { type: "manager_denied", reason: "Second manager explanation" },
+      { type: "reopened", reason: null },
+    ]);
+
+    await signInAs(manager);
+    await page.goto(`/requests/${requestId}`);
+    await expect(page.getByText("First manager explanation", { exact: true })).toBeVisible();
+    await expect(page.getByText("Second manager explanation", { exact: true })).toBeVisible();
+    const eventTitles = await page.locator("ol li h3").allTextContents();
+    expect(
+      eventTitles.filter((title) =>
+        ["Manager denied", "Re-opened for revision"].includes(title),
+      ),
+    ).toEqual([
+      "Manager denied",
+      "Re-opened for revision",
+      "Manager denied",
+      "Re-opened for revision",
+    ]);
   });
 });
 

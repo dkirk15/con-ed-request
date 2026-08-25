@@ -33,6 +33,12 @@ export const requestStatusEnum = pgEnum("request_status", [
   "cancelled",
 ]);
 
+export const requestTimelineEventTypeEnum = pgEnum("request_timeline_event_type", [
+  "manager_denied",
+  "bo_denied",
+  "reopened",
+]);
+
 export const clinics = pgTable("clinics", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -105,6 +111,17 @@ export const conEdRequests = pgTable("con_ed_requests", {
   requiresRepaymentGuarantee: boolean("requires_repayment_guarantee").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const conEdRequestEvents = pgTable("con_ed_request_events", {
+  id: serial("id").primaryKey(),
+  requestId: integer("request_id")
+    .notNull()
+    .references(() => conEdRequests.id),
+  type: requestTimelineEventTypeEnum("type").notNull(),
+  actorId: integer("actor_id").references(() => users.id),
+  reason: text("reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const repaymentGuarantees = pgTable("repayment_guarantees", {

@@ -187,6 +187,25 @@ export const ConEdRequestDeliveryMethod = {
   hybrid: 'hybrid',
 } as const;
 
+export type RequestTimelineEventType = typeof RequestTimelineEventType[keyof typeof RequestTimelineEventType];
+
+
+export const RequestTimelineEventType = {
+  manager_denied: 'manager_denied',
+  bo_denied: 'bo_denied',
+  reopened: 'reopened',
+} as const;
+
+export interface RequestTimelineEvent {
+  id: number;
+  type: RequestTimelineEventType;
+  /** @nullable */
+  actorName?: string | null;
+  /** @nullable */
+  reason?: string | null;
+  createdAt: string;
+}
+
 export interface Receipt {
   id: number;
   requestId: number;
@@ -299,6 +318,8 @@ export interface ConEdRequest {
      * @nullable
      */
   reopenerName?: string | null;
+  /** Immutable denial and reopen history, ordered chronologically. */
+  timelineEvents?: RequestTimelineEvent[];
   /** @nullable */
   remainingBalanceAfter?: number | null;
   requiresRepaymentGuarantee?: boolean;

@@ -85,6 +85,8 @@ export * from './reportWorkflowStage';
 export * from './reportWorkflowStageStatus';
 export * from './reportYearParameter';
 export * from './requestListResponse';
+export * from './requestTimelineEvent';
+export * from './requestTimelineEventType';
 export * from './submitRequestInput';
 export * from './taskCenter';
 export * from './taskItem';

@@ -10,6 +10,7 @@ import type { ConEdRequestStatus } from './conEdRequestStatus';
 import type { Receipt } from './receipt';
 import type { Reimbursement } from './reimbursement';
 import type { RepaymentGuarantee } from './repaymentGuarantee';
+import type { RequestTimelineEvent } from './requestTimelineEvent';
 
 export interface ConEdRequest {
   id: number;
@@ -98,6 +99,8 @@ export interface ConEdRequest {
      * @nullable
      */
   reopenerName?: string | null;
+  /** Immutable denial and reopen history, ordered chronologically. */
+  timelineEvents?: RequestTimelineEvent[];
   /** @nullable */
   remainingBalanceAfter?: number | null;
   requiresRepaymentGuarantee?: boolean;

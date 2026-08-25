@@ -58,7 +58,11 @@ function buildEvents(request: ConEdRequest): TimelineEvent[] {
     });
   }
 
-  if (request.managerDeniedAt) {
+  const history = request.timelineEvents ?? [];
+  const hasHistoryEvent = (type: string, timestamp: string | null | undefined) =>
+    Boolean(timestamp && history.some((event) => event.type === type && event.createdAt === timestamp));
+
+  if (request.managerDeniedAt && !hasHistoryEvent("manager_denied", request.managerDeniedAt)) {
     events.push({
       title: "Manager denied",
       detail: `Denied by ${request.managerName ?? "manager"}`,
@@ -79,7 +83,7 @@ function buildEvents(request: ConEdRequest): TimelineEvent[] {
     });
   }
 
-  if (request.boDeniedAt) {
+  if (request.boDeniedAt && !hasHistoryEvent("bo_denied", request.boDeniedAt)) {
     events.push({
       title: "Business Office denied",
       detail: `Denied by ${request.boApproverName ?? "Business Office"}`,
@@ -90,13 +94,34 @@ function buildEvents(request: ConEdRequest): TimelineEvent[] {
     });
   }
 
-  if (request.reopenedAt) {
+  if (request.reopenedAt && !hasHistoryEvent("reopened", request.reopenedAt)) {
     events.push({
       title: "Re-opened for revision",
       detail: `Re-opened by ${request.reopenerName ?? "employee"}`,
       timestamp: request.reopenedAt,
       icon: RotateCcw,
       tone: "info",
+    });
+  }
+
+  for (const event of history) {
+    const isManagerDenial = event.type === "manager_denied";
+    const isBusinessOfficeDenial = event.type === "bo_denied";
+    events.push({
+      title: isManagerDenial
+        ? "Manager denied"
+        : isBusinessOfficeDenial
+          ? "Business Office denied"
+          : "Re-opened for revision",
+      detail: isManagerDenial
+        ? `Denied by ${event.actorName ?? "manager"}`
+        : isBusinessOfficeDenial
+          ? `Denied by ${event.actorName ?? "Business Office"}`
+          : `Re-opened by ${event.actorName ?? "employee"}`,
+      timestamp: event.createdAt,
+      icon: isManagerDenial || isBusinessOfficeDenial ? X : RotateCcw,
+      tone: isManagerDenial || isBusinessOfficeDenial ? "danger" : "info",
+      note: event.reason,
     });
   }
 

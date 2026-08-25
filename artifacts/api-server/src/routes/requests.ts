@@ -5,6 +5,7 @@ import {
   conEdRequests,
   users,
   clinics,
+  conEdRequestEvents,
   repaymentGuarantees,
   receipts,
   reimbursements,
@@ -101,6 +102,19 @@ async function formatRequest(req_row: typeof conEdRequests.$inferSelect) {
     reopenerName = reopener?.name ?? null;
   }
 
+  const requestEvents = await db
+    .select({
+      id: conEdRequestEvents.id,
+      type: conEdRequestEvents.type,
+      actorName: users.name,
+      reason: conEdRequestEvents.reason,
+      createdAt: conEdRequestEvents.createdAt,
+    })
+    .from(conEdRequestEvents)
+    .leftJoin(users, eq(conEdRequestEvents.actorId, users.id))
+    .where(eq(conEdRequestEvents.requestId, req_row.id))
+    .orderBy(asc(conEdRequestEvents.createdAt), asc(conEdRequestEvents.id));
+
   const [guarantee] = await db
     .select()
     .from(repaymentGuarantees)
@@ -170,6 +184,13 @@ async function formatRequest(req_row: typeof conEdRequests.$inferSelect) {
     boDenialReason: req_row.boDenialReason ?? null,
     reopenedAt: req_row.reopenedAt?.toISOString() ?? null,
     reopenerName,
+    timelineEvents: requestEvents.map((event) => ({
+      id: event.id,
+      type: event.type,
+      actorName: event.actorName ?? null,
+      reason: event.reason ?? null,
+      createdAt: event.createdAt.toISOString(),
+    })),
     remainingBalanceAfter: null,
     requiresRepaymentGuarantee: req_row.requiresRepaymentGuarantee,
     repaymentGuarantee: guarantee
@@ -466,16 +487,26 @@ router.post(
         return;
       }
 
-      const [updated] = await db
-        .update(conEdRequests)
-        .set({
-          status: "draft",
-          reopenedAt: new Date(),
-          reopenerId: user.id,
-          updatedAt: new Date(),
-        })
-        .where(eq(conEdRequests.id, requestId))
-        .returning();
+      const now = new Date();
+      const updated = await db.transaction(async (tx) => {
+        const [nextRequest] = await tx
+          .update(conEdRequests)
+          .set({
+            status: "draft",
+            reopenedAt: now,
+            reopenerId: user.id,
+            updatedAt: now,
+          })
+          .where(eq(conEdRequests.id, requestId))
+          .returning();
+        await tx.insert(conEdRequestEvents).values({
+          requestId,
+          type: "reopened",
+          actorId: user.id,
+          createdAt: now,
+        });
+        return nextRequest;
+      });
 
       res.json(await formatRequest(updated));
     } catch (err) {
@@ -900,17 +931,29 @@ router.post(
         return;
       }
 
-      const [updated] = await db
-        .update(conEdRequests)
-        .set({
-          status: "manager_denied",
-          managerId: user.id,
-          managerDeniedAt: new Date(),
-          managerDenialReason: parsed.data.reason.trim(),
-          updatedAt: new Date(),
-        })
-        .where(eq(conEdRequests.id, requestId))
-        .returning();
+      const now = new Date();
+      const reason = parsed.data.reason.trim();
+      const updated = await db.transaction(async (tx) => {
+        const [nextRequest] = await tx
+          .update(conEdRequests)
+          .set({
+            status: "manager_denied",
+            managerId: user.id,
+            managerDeniedAt: now,
+            managerDenialReason: reason,
+            updatedAt: now,
+          })
+          .where(eq(conEdRequests.id, requestId))
+          .returning();
+        await tx.insert(conEdRequestEvents).values({
+          requestId,
+          type: "manager_denied",
+          actorId: user.id,
+          reason,
+          createdAt: now,
+        });
+        return nextRequest;
+      });
 
       res.json(await formatRequest(updated));
     } catch (err) {
@@ -993,17 +1036,32 @@ router.post(
         return;
       }
 
-      const [updated] = await db
-        .update(conEdRequests)
-        .set({
-          status: "bo_denied",
-          boApproverId: req.dbUser!.id,
-          boDeniedAt: new Date(),
-          boDenialReason: parsed.data.reason.trim(),
-          updatedAt: new Date(),
-        })
-        .where(and(eq(conEdRequests.id, requestId), eq(conEdRequests.status, "pending_bo")))
-        .returning();
+      const now = new Date();
+      const reason = parsed.data.reason.trim();
+      const updated = await db.transaction(async (tx) => {
+        const [nextRequest] = await tx
+          .update(conEdRequests)
+          .set({
+            status: "bo_denied",
+            boApproverId: req.dbUser!.id,
+            boDeniedAt: now,
+            boDenialReason: reason,
+            updatedAt: now,
+          })
+          .where(and(eq(conEdRequests.id, requestId), eq(conEdRequests.status, "pending_bo")))
+          .returning();
+
+        if (!nextRequest) return undefined;
+
+        await tx.insert(conEdRequestEvents).values({
+          requestId,
+          type: "bo_denied",
+          actorId: req.dbUser!.id,
+          reason,
+          createdAt: now,
+        });
+        return nextRequest;
+      });
 
       if (!updated) {
         res.status(400).json({ error: "Request is not awaiting Business Office review" });
