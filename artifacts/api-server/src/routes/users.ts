@@ -297,14 +297,14 @@ router.patch("/users/:userId", requireAuth, async (req: Request, res: Response) 
       res.status(400).json({ error: "Invalid user ID" });
       return;
     }
-    const bodyParsed = UpdateUserBody.safeParse(req.body);
-    if (!bodyParsed.success) {
-      res.status(400).json({ error: "Invalid input" });
-      return;
-    }
     const rawHireDate = req.body?.hireDate;
     if (rawHireDate != null && !isValidHireDate(rawHireDate)) {
       res.status(400).json({ error: "Hire date must be a real YYYY-MM-DD calendar date" });
+      return;
+    }
+    const bodyParsed = UpdateUserBody.safeParse(req.body);
+    if (!bodyParsed.success) {
+      res.status(400).json({ error: "Invalid input" });
       return;
     }
 

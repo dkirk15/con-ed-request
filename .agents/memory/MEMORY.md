@@ -1,6 +1,7 @@
 - [OSS request lifecycle](oss-request-lifecycle.md) — draft→pending_manager→pending_bo→awaiting_receipt→receipt_submitted→reimbursed; guarantee enforced at submit, not manager-approve.
 - [OSS clinics](oss-clinics.md) — authoritative 25-clinic list; Enumclaw/Issaquah/Lacey/Monroe/Mukilteo/Renton are NOT OSS locations.
 - [OSS balance logic](balance-logic.md) — $2,000/year, prorated first year; prior-year overspend carries forward as debt reducing next year's allocation.
+- [Hire-date validation](hire-date-validation.md) — only real YYYY-MM-DD dates may be saved; malformed legacy values use a safe full-budget fallback.
 - [con-ed E2E tests](con-ed-e2e-tests.md) — run synchronously in batches (bg runs get reaped); status-label badge/h4 collisions; cost inputs unreachable by label (use step attr).
 - [Clerk + wouter base-path routing](clerk-routing-base-path.md) — SignIn/SignUp need full base-prefixed paths + wired routerPush, or sign-up reload-loops.
 - [Clerk API auth — Bearer token required](clerk-bearer-token.md) — do NOT rely on session cookies; use ClerkTokenSync + setAuthTokenGetter to send Bearer tokens explicitly.
