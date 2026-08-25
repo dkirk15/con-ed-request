@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import {
   clinics,
+  conEdAllocationOverrides,
   conEdRequests,
   receipts,
   reimbursements,
@@ -305,7 +306,7 @@ async function buildBudgetUsage(user: ReportUser, filters: ReportFilters) {
   const yearEnd = new Date(`${filters.year + 1}-01-01T00:00:00`);
   const { annualBudget } = await getSettings();
 
-  const [fundingRows, guaranteeRows] = await Promise.all([
+  const [fundingRows, overrideRows, guaranteeRows] = await Promise.all([
     db
       .select({
         employeeId: conEdRequests.employeeId,
@@ -322,6 +323,14 @@ async function buildBudgetUsage(user: ReportUser, filters: ReportFilters) {
         lt(conEdRequests.createdAt, yearEnd),
         inArray(conEdRequests.status, [...APPROVED_STATUSES, ...PENDING_STATUSES]),
       )),
+    db
+      .select({
+        userId: conEdAllocationOverrides.userId,
+        year: conEdAllocationOverrides.year,
+        allocation: conEdAllocationOverrides.allocation,
+      })
+      .from(conEdAllocationOverrides)
+      .where(inArray(conEdAllocationOverrides.userId, employeeIds)),
     db
       .select({
         requestId: conEdRequests.id,
@@ -344,6 +353,13 @@ async function buildBudgetUsage(user: ReportUser, filters: ReportFilters) {
       ))
       .orderBy(desc(conEdRequests.createdAt)),
   ]);
+
+  const overridesByEmployee = new Map<number, Map<number, number>>();
+  for (const row of overrideRows) {
+    const overrides = overridesByEmployee.get(row.userId) ?? new Map<number, number>();
+    overrides.set(row.year, money(row.allocation));
+    overridesByEmployee.set(row.userId, overrides);
+  }
 
   const fundingByEmployee = new Map<number, typeof fundingRows>();
   for (const row of fundingRows) {
@@ -375,20 +391,21 @@ async function buildBudgetUsage(user: ReportUser, filters: ReportFilters) {
     const hireYear = employee.hireDate ? new Date(employee.hireDate).getFullYear() : filters.year;
     const approvedYears = [...approvedByYear.keys()];
     const firstRelevantYear = Math.min(filters.year, hireYear, ...approvedYears);
-    const allocationOverride = employee.allocationOverride == null
-      ? null
-      : money(employee.allocationOverride);
+    const overrides = overridesByEmployee.get(employee.id) ?? new Map<number, number>();
+    // The legacy column predates year-scoped overrides. Treat it as a current-year
+    // value only, so changing it cannot alter historical carry-forward debt.
+    if (employee.allocationOverride != null && !overrides.has(filters.year)) {
+      overrides.set(filters.year, money(employee.allocationOverride));
+    }
     let carryoverDebt = 0;
     for (let year = firstRelevantYear; year < filters.year; year += 1) {
-      const allocation = allocationOverride
+      const allocation = overrides.get(year)
         ?? calcAnnualAllocationForYear(employee.hireDate, year, annualBudget).allocation;
       carryoverDebt = Math.max(0, carryoverDebt + (approvedByYear.get(year) ?? 0) - allocation);
     }
 
     const calculated = calcAnnualAllocationForYear(employee.hireDate, filters.year, annualBudget);
-    const annualAllocation = allocationOverride == null
-      ? calculated.allocation
-      : allocationOverride;
+    const annualAllocation = overrides.get(filters.year) ?? calculated.allocation;
     const availableAllocation = Math.max(0, annualAllocation - carryoverDebt);
     const usedAmount = approvedByYear.get(filters.year) ?? 0;
     const remainingAmount = Math.max(0, availableAllocation - usedAmount);

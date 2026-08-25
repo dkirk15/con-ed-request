@@ -1,8 +1,8 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
-import { users, clinics, repaymentGuarantees } from "@workspace/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { users, clinics, conEdAllocationOverrides, repaymentGuarantees } from "@workspace/db/schema";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import {
   CreateUserBody,
   UpdateUserBody,
@@ -14,6 +14,18 @@ import { requireAuth, requireRole } from "../lib/auth";
 import { getUserBalance } from "../lib/balance";
 
 const router: IRouter = Router();
+
+async function currentAllocationOverride(user: typeof users.$inferSelect) {
+  const [override] = await db
+    .select({ allocation: conEdAllocationOverrides.allocation })
+    .from(conEdAllocationOverrides)
+    .where(and(
+      eq(conEdAllocationOverrides.userId, user.id),
+      eq(conEdAllocationOverrides.year, new Date().getFullYear()),
+    ))
+    .limit(1);
+  return override?.allocation ?? user.conEdAllocation;
+}
 
 async function formatUser(user: typeof users.$inferSelect) {
   let clinicName: string | null = null;
@@ -36,6 +48,7 @@ async function formatUser(user: typeof users.$inferSelect) {
     managerName = manager?.name ?? null;
   }
 
+  const allocationOverride = await currentAllocationOverride(user);
   return {
     id: user.id,
     clerkId: user.clerkId,
@@ -47,7 +60,9 @@ async function formatUser(user: typeof users.$inferSelect) {
     managerId: user.managerId ?? null,
     managerName,
     hireDate: user.hireDate ?? null,
-    conEdAllocation: user.conEdAllocation != null ? parseFloat(user.conEdAllocation) : null,
+    conEdAllocation: allocationOverride != null
+      ? parseFloat(allocationOverride)
+      : null,
     createdAt: user.createdAt.toISOString(),
   };
 }
@@ -104,7 +119,8 @@ router.get("/users/:userId/balance", requireAuth, async (req: Request, res: Resp
       return;
     }
 
-    const alloc = targetUser.conEdAllocation != null ? parseFloat(targetUser.conEdAllocation) : null;
+    const currentOverride = await currentAllocationOverride(targetUser);
+    const alloc = currentOverride != null ? parseFloat(currentOverride) : null;
     const balance = await getUserBalance(targetUser.id, targetUser.hireDate, alloc);
     res.json(balance);
   } catch (err) {
@@ -304,6 +320,25 @@ router.patch("/users/:userId", requireAuth, async (req: Request, res: Response) 
     if (!user) {
       res.status(404).json({ error: "User not found" });
       return;
+    }
+
+    if (isAdmin && bodyParsed.data.conEdAllocation !== undefined) {
+      const currentYear = new Date().getFullYear();
+      if (bodyParsed.data.conEdAllocation == null) {
+        await db.delete(conEdAllocationOverrides).where(and(
+          eq(conEdAllocationOverrides.userId, user.id),
+          eq(conEdAllocationOverrides.year, currentYear),
+        ));
+      } else {
+        await db.insert(conEdAllocationOverrides).values({
+          userId: user.id,
+          year: currentYear,
+          allocation: String(bodyParsed.data.conEdAllocation),
+        }).onConflictDoUpdate({
+          target: [conEdAllocationOverrides.userId, conEdAllocationOverrides.year],
+          set: { allocation: String(bodyParsed.data.conEdAllocation), updatedAt: new Date() },
+        });
+      }
     }
 
     res.json(await formatUser(user));

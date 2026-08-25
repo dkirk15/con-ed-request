@@ -683,14 +683,15 @@ test("manual allocation override is used when computing carry-forward debt", asy
   provisionUser,
   signInAs,
 }) => {
-  // The employee's manual $3,000 allocation applies to both years.
+  // The employee's manual $3,000 allocation is explicitly assigned to both years.
   // Prior-year reimbursed spend = $3,500 → carryoverDebt = $500.
   // Current-year available = $3,000 - $500 = $2,500.
   // Current-year used = $300 → remaining = $2,200.
   // Future debt = carryoverDebt ($500) + advancedExposure ($0) = $500.
   const clinicId = await createClinic(`E2E-OverrideCarryover-${unique()}`);
   const empId = await dataUser(clinicId, "Override Carryover Employee");
-  await updateUserAllocation(empId, 3000);
+  await updateUserAllocation(empId, 3000, year - 1);
+  await updateUserAllocation(empId, 3000, year);
 
   await insertRequest({
     employeeId: empId,
@@ -720,6 +721,53 @@ test("manual allocation override is used when computing carry-forward debt", asy
   await expect(row.getByText("$2,500.00")).toBeVisible();
   await expect(row.getByText("$300.00")).toBeVisible();
   await expect(row.getByText("$2,200.00")).toBeVisible();
+  await expect(row.getByText("$500.00")).toBeVisible();
+});
+
+test("year-specific overrides preserve prior debt when the current override changes", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-Yearly-Override-${unique()}`);
+  const empId = await dataUser(clinicId, "Yearly Override Employee");
+
+  // The prior year's $3,000 override creates $500 debt from $3,500 of spend.
+  // The current year's $4,000 override must not be applied retroactively.
+  await updateUserAllocation(empId, 3000, year - 1);
+  await updateUserAllocation(empId, 4000, year);
+  await insertRequest({
+    employeeId: empId,
+    status: "reimbursed",
+    courseNames: `Yearly Override Prior Course ${unique()}`,
+    totalRequested: 3500,
+    totalApproved: 3500,
+    createdAt: new Date(`${year - 1}-06-15T12:00:00Z`),
+  });
+  await insertRequest({
+    employeeId: empId,
+    status: "awaiting_receipt",
+    courseNames: `Yearly Override Current Course ${unique()}`,
+    totalRequested: 400,
+    totalApproved: 300,
+    createdAt: new Date(`${year}-03-01T12:00:00Z`),
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  await page.goto(`/reports?year=${year}&clinicId=${clinicId}&section=funding`);
+  const budgetSection = page.getByRole("region", { name: "Employee budget usage" });
+  const row = budgetSection.getByRole("row").filter({ hasText: "Yearly Override Employee" });
+
+  // $4,000 current allocation − unchanged $500 historical debt.
+  await expect(row.getByText("$3,500.00")).toBeVisible();
+  await expect(row.getByText("$500.00")).toBeVisible();
+
+  // Clearing only the current-year override restores the normal $2,000 current
+  // allocation; the prior year's $500 debt remains unchanged.
+  await updateUserAllocation(empId, null, year);
+  await page.reload();
+  await expect(row.getByText("$1,500.00")).toBeVisible();
   await expect(row.getByText("$500.00")).toBeVisible();
 });
 

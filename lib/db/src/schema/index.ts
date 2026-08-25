@@ -8,6 +8,7 @@ import {
   date,
   boolean,
   pgEnum,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const roleEnum = pgEnum("role", [
@@ -50,6 +51,17 @@ export const users = pgTable("users", {
   conEdAllocation: numeric("con_ed_allocation", { precision: 10, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const conEdAllocationOverrides = pgTable("con_ed_allocation_overrides", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  year: integer("year").notNull(),
+  allocation: numeric("allocation", { precision: 10, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("con_ed_allocation_overrides_user_year_idx").on(table.userId, table.year),
+]);
 
 export const conEdRequests = pgTable("con_ed_requests", {
   id: serial("id").primaryKey(),

@@ -292,11 +292,26 @@ export async function setRole(
 export async function updateUserAllocation(
   userId: number,
   conEdAllocation: number | null,
+  year = new Date().getFullYear(),
 ): Promise<void> {
   await query(
     "UPDATE users SET con_ed_allocation = $1 WHERE id = $2",
     [conEdAllocation, userId],
   );
+  if (conEdAllocation == null) {
+    await query(
+      "DELETE FROM con_ed_allocation_overrides WHERE user_id = $1 AND year = $2",
+      [userId, year],
+    );
+  } else {
+    await query(
+      `INSERT INTO con_ed_allocation_overrides (user_id, year, allocation)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (user_id, year) DO UPDATE
+       SET allocation = EXCLUDED.allocation, updated_at = NOW()`,
+      [userId, year, conEdAllocation],
+    );
+  }
 }
 
 export async function getRepaymentGuarantee(

@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { conEdRequests, reimbursements } from "@workspace/db/schema";
+import { conEdAllocationOverrides, conEdRequests, reimbursements } from "@workspace/db/schema";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import { getSettings } from "./settings";
 
@@ -58,9 +58,20 @@ export async function getUserBalance(userId: number, hireDateStr: string | null,
   const { annualBudget } = await getSettings();
 
   const calculated = calcAnnualAllocation(hireDateStr, annualBudget);
-  const allocation = conEdAllocation != null ? conEdAllocation : calculated.allocation;
-  const isProrated = conEdAllocation != null ? false : calculated.isProrated;
-  const hireMonth = conEdAllocation != null ? null : calculated.hireMonth;
+  const currentYearOverride = await db
+    .select({ allocation: conEdAllocationOverrides.allocation })
+    .from(conEdAllocationOverrides)
+    .where(and(
+      eq(conEdAllocationOverrides.userId, userId),
+      eq(conEdAllocationOverrides.year, year),
+    ))
+    .limit(1);
+  const effectiveCurrentOverride = currentYearOverride[0]?.allocation != null
+    ? parseMoney(currentYearOverride[0].allocation)
+    : conEdAllocation;
+  const allocation = effectiveCurrentOverride != null ? effectiveCurrentOverride : calculated.allocation;
+  const isProrated = effectiveCurrentOverride != null ? false : calculated.isProrated;
+  const hireMonth = effectiveCurrentOverride != null ? null : calculated.hireMonth;
 
   const approvedRows = await db
     .select({
@@ -88,10 +99,22 @@ export async function getUserBalance(userId: number, hireDateStr: string | null,
   const approvedYears = [...approvedByYear.keys()];
   const hireYear = hireDateStr ? new Date(hireDateStr).getFullYear() : year;
   const firstRelevantYear = Math.min(year, hireYear, ...approvedYears);
+  const historicalOverrides = await db
+    .select({
+      year: conEdAllocationOverrides.year,
+      allocation: conEdAllocationOverrides.allocation,
+    })
+    .from(conEdAllocationOverrides)
+    .where(and(
+      eq(conEdAllocationOverrides.userId, userId),
+      sql`${conEdAllocationOverrides.year} < ${year}`,
+    ));
+  const allocationByYear = new Map(historicalOverrides.map((row) => [row.year, parseMoney(row.allocation)]));
   let carryoverDebt = 0;
 
   for (let balanceYear = firstRelevantYear; balanceYear < year; balanceYear += 1) {
-    const yearAllocation = calcAnnualAllocationForYear(hireDateStr, balanceYear, annualBudget).allocation;
+    const yearAllocation = allocationByYear.get(balanceYear)
+      ?? calcAnnualAllocationForYear(hireDateStr, balanceYear, annualBudget).allocation;
     const yearSpend = approvedByYear.get(balanceYear) ?? 0;
     carryoverDebt = Math.max(0, carryoverDebt + yearSpend - yearAllocation);
   }
