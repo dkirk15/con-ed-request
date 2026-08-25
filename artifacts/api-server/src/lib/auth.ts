@@ -3,7 +3,7 @@ import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { users } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { createClerkClient } from "@clerk/clerk-sdk-node";
+import { createClerkClient } from "@clerk/backend";
 const clerkSdk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 const DEFAULT_AUTHORIZED_DOMAINS = ["osstherapy.com"];

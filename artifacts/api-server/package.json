@@ -10,7 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@clerk/clerk-sdk-node": "^5.1.6",
+    "@clerk/backend": "^3.8.3",
     "@clerk/express": "^2.1.31",
     "@clerk/shared": "^4.21.0",
     "@google-cloud/storage": "^7.21.0",
