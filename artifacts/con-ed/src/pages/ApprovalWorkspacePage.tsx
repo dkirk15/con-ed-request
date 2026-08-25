@@ -195,7 +195,7 @@ export default function ApprovalWorkspacePage() {
     query: { enabled: Boolean(reviewRole && selectedId), queryKey: getGetRequestQueryKey(selectedId) },
   });
   const request = requestQuery.data;
-  const balanceQuery = useGetUserBalance(request?.employeeId ?? 0, {
+  const balanceQuery = useGetUserBalance(request?.employeeId ?? 0, undefined, {
     query: {
       enabled: Boolean(request?.employeeId),
       queryKey: getGetUserBalanceQueryKey(request?.employeeId ?? 0),

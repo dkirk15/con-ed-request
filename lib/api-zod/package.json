@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "fix-generated-index": "node ./scripts/fix-generated-index.mjs",
     "typecheck": "tsc --noEmit"
   },
   "exports": {

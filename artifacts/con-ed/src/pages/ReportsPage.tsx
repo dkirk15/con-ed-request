@@ -13,9 +13,11 @@ import {
   customFetch,
   getGetReportOptionsQueryKey,
   getGetReportQueryKey,
+  getGetUserBalanceQueryKey,
   useGetMe,
   useGetReport,
   useGetReportOptions,
+  useGetUserBalance,
 } from "@workspace/api-client-react";
 import {
   AlertCircle,
@@ -380,7 +382,7 @@ export default function ReportsPage() {
 
             <TabsContent value="funding" className="mt-5 space-y-5">
               <FundingSummary report={report} />
-              <BudgetUsageTable rows={report.budgetUsage} />
+              <BudgetUsageTable rows={report.budgetUsage} year={year} />
               <AdvancedFundingTable rows={report.advancedRequests} />
             </TabsContent>
 
@@ -632,7 +634,7 @@ function WorkflowHealth({ stages, onSelect }: { stages: Array<{ status: string; 
   );
 }
 
-function BudgetUsageTable({ rows }: { rows: ReportBudgetRow[] }) {
+function BudgetUsageTable({ rows, year }: { rows: ReportBudgetRow[]; year: number }) {
   return (
     <section className="overflow-hidden rounded-md border border-slate-200 bg-white" aria-labelledby="budget-usage-heading">
       <div className="border-b border-slate-200 px-5 py-4">
@@ -641,9 +643,9 @@ function BudgetUsageTable({ rows }: { rows: ReportBudgetRow[] }) {
       </div>
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader><TableRow className="bg-slate-50"><TableHead>Employee</TableHead><TableHead>Usage</TableHead><TableHead className="text-right">Available</TableHead><TableHead className="text-right">Used</TableHead><TableHead className="text-right">Pending</TableHead><TableHead className="text-right">Remaining</TableHead><TableHead className="text-right">Future debt</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow className="bg-slate-50"><TableHead>Employee</TableHead><TableHead>Usage</TableHead><TableHead className="text-right">Available</TableHead><TableHead className="text-right">Used</TableHead><TableHead className="text-right">Pending</TableHead><TableHead className="text-right">Remaining</TableHead><TableHead className="text-right">Future debt</TableHead><TableHead className="text-right">Balance check</TableHead></TableRow></TableHeader>
           <TableBody>
-            {rows.length === 0 ? <TableRow><TableCell colSpan={7} className="h-28 text-center text-slate-500">No employees match this scope.</TableCell></TableRow> : rows.map((row) => {
+            {rows.length === 0 ? <TableRow><TableCell colSpan={8} className="h-28 text-center text-slate-500">No employees match this scope.</TableCell></TableRow> : rows.map((row) => {
               const consumed = row.usedAmount + row.pendingAmount;
               const percentage = row.availableAllocation > 0 ? Math.min(100, (consumed / row.availableAllocation) * 100) : consumed > 0 ? 100 : 0;
               return (
@@ -655,6 +657,7 @@ function BudgetUsageTable({ rows }: { rows: ReportBudgetRow[] }) {
                   <TableCell className="text-right tabular-nums">{formatCurrency(row.pendingAmount)}</TableCell>
                   <TableCell className="text-right font-medium tabular-nums">{formatCurrency(row.remainingAmount)}</TableCell>
                   <TableCell className={cn("text-right tabular-nums", (row.carryoverDebt > 0 || row.advancedExposure > 0) && "font-semibold text-amber-800")}>{formatCurrency(row.carryoverDebt + row.advancedExposure)}</TableCell>
+                  <TableCell className="text-right"><BalanceCheck employeeId={row.employeeId} year={year} report={row} /></TableCell>
                 </TableRow>
               );
             })}
@@ -662,6 +665,35 @@ function BudgetUsageTable({ rows }: { rows: ReportBudgetRow[] }) {
         </Table>
       </div>
     </section>
+  );
+}
+
+function BalanceCheck({
+  employeeId,
+  year,
+  report,
+}: {
+  employeeId: number;
+  year: number;
+  report: ReportBudgetRow;
+}) {
+  const balanceQuery = useGetUserBalance(employeeId, { year }, {
+    query: {
+      queryKey: getGetUserBalanceQueryKey(employeeId, { year }),
+    },
+  });
+  if (balanceQuery.isLoading) return <span className="text-xs text-slate-400">Checking…</span>;
+  if (balanceQuery.isError || !balanceQuery.data) return <span className="text-xs text-slate-400">Unavailable</span>;
+  const matches = [
+    ["available", balanceQuery.data.availableAllocation, report.availableAllocation],
+    ["used", balanceQuery.data.usedAmount, report.usedAmount],
+    ["remaining", balanceQuery.data.remainingAmount, report.remainingAmount],
+    ["debt", balanceQuery.data.carryoverDebt, report.carryoverDebt],
+  ].every(([, endpointValue, reportValue]) => Math.abs(Number(endpointValue) - Number(reportValue)) < 0.01);
+  return (
+    <span className={cn("text-xs font-medium", matches ? "text-emerald-700" : "text-red-700")} title={`API balance for ${year}`}>
+      {matches ? "Matches" : "Review"}
+    </span>
   );
 }
 

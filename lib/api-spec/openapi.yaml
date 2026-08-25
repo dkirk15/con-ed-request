@@ -881,13 +881,14 @@ paths:
     get:
       operationId: getUserBalance
       tags: [users]
-      summary: Get a user's current con-ed balance for this year
+      summary: Get a user's con-ed balance for a reporting year
       parameters:
         - name: userId
           in: path
           required: true
           schema:
             type: integer
+        - $ref: "#/components/parameters/ReportYear"
       responses:
         "200":
           description: Balance info

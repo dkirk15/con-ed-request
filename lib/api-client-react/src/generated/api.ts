@@ -37,6 +37,7 @@ import type {
   ErrorEnvelope,
   ExportReportParams,
   GetReportParams,
+  GetUserBalanceParams,
   HealthStatus,
   ListRequestsParams,
   ListUsersParams,
@@ -2788,20 +2789,29 @@ export function useExportReport<TData = Awaited<ReturnType<typeof exportReport>>
 
 
 
-export const getGetUserBalanceUrl = (userId: number,) => {
+export const getGetUserBalanceUrl = (userId: number,
+    params?: GetUserBalanceParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/users/${userId}/balance`
+  return stringifiedParams.length > 0 ? `/api/users/${userId}/balance?${stringifiedParams}` : `/api/users/${userId}/balance`
 }
 
 /**
- * @summary Get a user's current con-ed balance for this year
+ * @summary Get a user's con-ed balance for a reporting year
  */
-export const getUserBalance = async (userId: number, options?: RequestInit): Promise<BalanceInfo> => {
+export const getUserBalance = async (userId: number,
+    params?: GetUserBalanceParams, options?: RequestInit): Promise<BalanceInfo> => {
 
-  return customFetch<BalanceInfo>(getGetUserBalanceUrl(userId),
+  return customFetch<BalanceInfo>(getGetUserBalanceUrl(userId,params),
   {
     ...options,
     method: 'GET'
@@ -2814,23 +2824,25 @@ export const getUserBalance = async (userId: number, options?: RequestInit): Pro
 
 
 
-export const getGetUserBalanceQueryKey = (userId: number,) => {
+export const getGetUserBalanceQueryKey = (userId: number,
+    params?: GetUserBalanceParams,) => {
     return [
-    `/api/users/${userId}/balance`
+    `/api/users/${userId}/balance`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetUserBalanceQueryOptions = <TData = Awaited<ReturnType<typeof getUserBalance>>, TError = ErrorType<unknown>>(userId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUserBalance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetUserBalanceQueryOptions = <TData = Awaited<ReturnType<typeof getUserBalance>>, TError = ErrorType<unknown>>(userId: number,
+    params?: GetUserBalanceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUserBalance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetUserBalanceQueryKey(userId);
+  const queryKey =  queryOptions?.queryKey ?? getGetUserBalanceQueryKey(userId,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserBalance>>> = ({ signal }) => getUserBalance(userId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserBalance>>> = ({ signal }) => getUserBalance(userId,params, { signal, ...requestOptions });
 
 
 
@@ -2844,15 +2856,16 @@ export type GetUserBalanceQueryError = ErrorType<unknown>
 
 
 /**
- * @summary Get a user's current con-ed balance for this year
+ * @summary Get a user's con-ed balance for a reporting year
  */
 
 export function useGetUserBalance<TData = Awaited<ReturnType<typeof getUserBalance>>, TError = ErrorType<unknown>>(
- userId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUserBalance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ userId: number,
+    params?: GetUserBalanceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUserBalance>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetUserBalanceQueryOptions(userId,options)
+  const queryOptions = getGetUserBalanceQueryOptions(userId,params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

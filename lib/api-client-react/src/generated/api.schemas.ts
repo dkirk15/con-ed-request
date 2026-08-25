@@ -1199,3 +1199,11 @@ sort?: ReportSortParameter;
 order?: ReportOrderParameter;
 };
 
+export type GetUserBalanceParams = {
+/**
+ * @minimum 2000
+ * @maximum 2100
+ */
+year?: ReportYearParameter;
+};
+

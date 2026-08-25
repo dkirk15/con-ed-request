@@ -121,7 +121,12 @@ router.get("/users/:userId/balance", requireAuth, async (req: Request, res: Resp
 
     const currentOverride = await currentAllocationOverride(targetUser);
     const alloc = currentOverride != null ? parseFloat(currentOverride) : null;
-    const balance = await getUserBalance(targetUser.id, targetUser.hireDate, alloc);
+    const requestedYear = req.query.year == null ? undefined : Number(req.query.year);
+    if (requestedYear !== undefined && (!Number.isInteger(requestedYear) || requestedYear < 2000 || requestedYear > 2100)) {
+      res.status(400).json({ error: "Invalid reporting year" });
+      return;
+    }
+    const balance = await getUserBalance(targetUser.id, targetUser.hireDate, alloc, requestedYear);
     res.json(balance);
   } catch (err) {
     req.log.error({ err }, "getUserBalance error");

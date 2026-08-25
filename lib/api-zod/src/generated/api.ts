@@ -2304,10 +2304,19 @@ export const ExportReportResponse = zod.unknown()
 
 
 /**
- * @summary Get a user's current con-ed balance for this year
+ * @summary Get a user's con-ed balance for a reporting year
  */
 export const GetUserBalanceParams = zod.object({
   "userId": zod.coerce.number()
+})
+
+export const getUserBalanceQueryYearMin = 2000;
+export const getUserBalanceQueryYearMax = 2100;
+
+
+
+export const GetUserBalanceQueryParams = zod.object({
+  "year": zod.coerce.number().min(getUserBalanceQueryYearMin).max(getUserBalanceQueryYearMax).optional()
 })
 
 export const GetUserBalanceResponse = zod.object({

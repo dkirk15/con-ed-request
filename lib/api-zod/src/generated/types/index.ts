@@ -29,6 +29,7 @@ export * from './employeeDashboardRequestCounts';
 export * from './errorEnvelope';
 export * from './exportReportParams';
 export * from './getReportParams';
+export * from './getUserBalanceParams';
 export * from './healthStatus';
 export * from './listRequestsOrder';
 export * from './listRequestsParams';

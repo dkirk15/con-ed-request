@@ -51,14 +51,20 @@ export function calcAnnualAllocation(hireDateStr: string | null, annualBudget: n
   return calcAnnualAllocationForYear(hireDateStr, new Date().getFullYear(), annualBudget);
 }
 
-export async function getUserBalance(userId: number, hireDateStr: string | null, conEdAllocation?: number | null) {
-  const year = new Date().getFullYear();
+export async function getUserBalance(
+  userId: number,
+  hireDateStr: string | null,
+  conEdAllocation?: number | null,
+  requestedYear?: number,
+) {
+  const year = requestedYear ?? new Date().getFullYear();
   const yearStart = new Date(`${year}-01-01`);
+  const yearEnd = new Date(`${year + 1}-01-01`);
 
   const { annualBudget } = await getSettings();
 
-  const calculated = calcAnnualAllocation(hireDateStr, annualBudget);
-  const currentYearOverride = await db
+  const calculated = calcAnnualAllocationForYear(hireDateStr, year, annualBudget);
+  const yearOverride = await db
     .select({ allocation: conEdAllocationOverrides.allocation })
     .from(conEdAllocationOverrides)
     .where(and(
@@ -66,12 +72,12 @@ export async function getUserBalance(userId: number, hireDateStr: string | null,
       eq(conEdAllocationOverrides.year, year),
     ))
     .limit(1);
-  const effectiveCurrentOverride = currentYearOverride[0]?.allocation != null
-    ? parseMoney(currentYearOverride[0].allocation)
-    : conEdAllocation;
-  const allocation = effectiveCurrentOverride != null ? effectiveCurrentOverride : calculated.allocation;
-  const isProrated = effectiveCurrentOverride != null ? false : calculated.isProrated;
-  const hireMonth = effectiveCurrentOverride != null ? null : calculated.hireMonth;
+  const effectiveOverride = yearOverride[0]?.allocation != null
+    ? parseMoney(yearOverride[0].allocation)
+    : requestedYear == null ? conEdAllocation : null;
+  const allocation = effectiveOverride != null ? effectiveOverride : calculated.allocation;
+  const isProrated = effectiveOverride != null ? false : calculated.isProrated;
+  const hireMonth = effectiveOverride != null ? null : calculated.hireMonth;
 
   const approvedRows = await db
     .select({
@@ -107,7 +113,7 @@ export async function getUserBalance(userId: number, hireDateStr: string | null,
     .from(conEdAllocationOverrides)
     .where(and(
       eq(conEdAllocationOverrides.userId, userId),
-      sql`${conEdAllocationOverrides.year} < ${year}`,
+    sql`${conEdAllocationOverrides.year} < ${year}`,
     ));
   const allocationByYear = new Map(historicalOverrides.map((row) => [row.year, parseMoney(row.allocation)]));
   let carryoverDebt = 0;
@@ -129,6 +135,7 @@ export async function getUserBalance(userId: number, hireDateStr: string | null,
       and(
         eq(conEdRequests.employeeId, userId),
         sql`${conEdRequests.createdAt} >= ${yearStart}`,
+        sql`${conEdRequests.createdAt} < ${yearEnd}`,
         inArray(conEdRequests.status, ["pending_manager", "pending_bo"]),
       ),
     );
