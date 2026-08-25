@@ -388,7 +388,8 @@ async function buildBudgetUsage(user: ReportUser, filters: ReportFilters) {
       }
     }
 
-    const hireYear = employee.hireDate ? getHireDateParts(employee.hireDate).year : filters.year;
+    const hireDateParts = employee.hireDate ? getHireDateParts(employee.hireDate) : null;
+    const hireYear = hireDateParts?.isValid ? hireDateParts.year : filters.year;
     const approvedYears = [...approvedByYear.keys()];
     const firstRelevantYear = Math.min(filters.year, hireYear, ...approvedYears);
     const overrides = overridesByEmployee.get(employee.id) ?? new Map<number, number>();

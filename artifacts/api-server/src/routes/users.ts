@@ -11,7 +11,7 @@ import {
   ListUsersQueryParams,
 } from "@workspace/api-zod";
 import { requireAuth, requireRole } from "../lib/auth";
-import { getUserBalance } from "../lib/balance";
+import { getUserBalance, isValidHireDate } from "../lib/balance";
 
 const router: IRouter = Router();
 
@@ -202,12 +202,17 @@ router.get("/users", requireRole("admin", "manager"), async (req: Request, res: 
 // POST /api/users — admin only
 router.post("/users", requireRole("admin"), async (req: Request, res: Response) => {
   try {
+    const rawHireDate = req.body?.hireDate;
+    if (rawHireDate != null && !isValidHireDate(rawHireDate)) {
+      res.status(400).json({ error: "Hire date must be a real YYYY-MM-DD calendar date" });
+      return;
+    }
     const parsed = CreateUserBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Invalid input" });
       return;
     }
-    const { clerkId, name, email, role, clinicId, managerId, hireDate } = parsed.data;
+    const { clerkId, name, email, role, clinicId, managerId } = parsed.data;
 
     const [user] = await db
       .insert(users)
@@ -219,7 +224,7 @@ router.post("/users", requireRole("admin"), async (req: Request, res: Response) 
       role: role as any,
         clinicId: clinicId ?? null,
         managerId: managerId ?? null,
-        hireDate: hireDate ? (hireDate as unknown as string) : null,
+        hireDate: rawHireDate ?? null,
       })
       .returning();
 
@@ -297,6 +302,11 @@ router.patch("/users/:userId", requireAuth, async (req: Request, res: Response) 
       res.status(400).json({ error: "Invalid input" });
       return;
     }
+    const rawHireDate = req.body?.hireDate;
+    if (rawHireDate != null && !isValidHireDate(rawHireDate)) {
+      res.status(400).json({ error: "Hire date must be a real YYYY-MM-DD calendar date" });
+      return;
+    }
 
     const updates: Partial<typeof users.$inferInsert> = {};
     if (bodyParsed.data.name !== undefined) {
@@ -314,7 +324,7 @@ router.patch("/users/:userId", requireAuth, async (req: Request, res: Response) 
         updates.managerId = bodyParsed.data.managerId ?? null;
       }
       if (bodyParsed.data.hireDate !== undefined) {
-        updates.hireDate = bodyParsed.data.hireDate ? (bodyParsed.data.hireDate as unknown as string) : null;
+        updates.hireDate = rawHireDate ?? null;
       }
       if (bodyParsed.data.conEdAllocation !== undefined) {
         updates.conEdAllocation = bodyParsed.data.conEdAllocation != null ? String(bodyParsed.data.conEdAllocation) : null;

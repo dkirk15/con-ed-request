@@ -17,14 +17,27 @@ function parseMoney(value: string | number | null | undefined) {
   return typeof value === "number" ? value : parseFloat(value ?? "0");
 }
 
-export function getHireDateParts(hireDateStr: string): { year: number; month: number } {
-  const dateOnly = /^(\d{4})-(\d{2})/.exec(hireDateStr);
-  if (dateOnly) {
-    return { year: Number(dateOnly[1]), month: Number(dateOnly[2]) };
-  }
+export function getHireDateParts(hireDateStr: string): {
+  year: number;
+  month: number;
+  isValid: boolean;
+} {
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(hireDateStr);
+  if (!dateOnly) return { year: 0, month: 0, isValid: false };
 
-  const hireDate = new Date(hireDateStr);
-  return { year: hireDate.getFullYear(), month: hireDate.getMonth() + 1 };
+  const year = Number(dateOnly[1]);
+  const month = Number(dateOnly[2]);
+  const day = Number(dateOnly[3]);
+  const daysInMonth = month >= 1 && month <= 12
+    ? new Date(Date.UTC(year, month, 0)).getUTCDate()
+    : 0;
+  const isValid = year >= 1 && month >= 1 && month <= 12 && day >= 1 && day <= daysInMonth;
+
+  return { year, month, isValid };
+}
+
+export function isValidHireDate(hireDateStr: unknown): hireDateStr is string {
+  return typeof hireDateStr === "string" && getHireDateParts(hireDateStr).isValid;
 }
 
 export function calcAnnualAllocationForYear(
@@ -40,7 +53,12 @@ export function calcAnnualAllocationForYear(
     return { allocation: annualBudget, isProrated: false, hireMonth: null };
   }
 
-  const { year: hireYear, month: hireMonth } = getHireDateParts(hireDateStr);
+  const { year: hireYear, month: hireMonth, isValid } = getHireDateParts(hireDateStr);
+  if (!isValid) {
+    // Legacy malformed dates must never create an invalid or misleading
+    // proration. Treat them as an unspecified hire date until corrected.
+    return { allocation: annualBudget, isProrated: false, hireMonth: null };
+  }
 
   if (hireYear > year) {
     return { allocation: 0, isProrated: false, hireMonth: null };
@@ -113,7 +131,8 @@ export async function getUserBalance(
   }
 
   const approvedYears = [...approvedByYear.keys()];
-  const hireYear = hireDateStr ? getHireDateParts(hireDateStr).year : year;
+  const hireDateParts = hireDateStr ? getHireDateParts(hireDateStr) : null;
+  const hireYear = hireDateParts?.isValid ? hireDateParts.year : year;
   const firstRelevantYear = Math.min(year, hireYear, ...approvedYears);
   const historicalOverrides = await db
     .select({
