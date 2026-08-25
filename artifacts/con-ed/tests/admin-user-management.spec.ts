@@ -149,3 +149,61 @@ test("admin sees newly created user in Users directory", async ({
     await deleteClerkUser(newClerkId).catch(() => {});
   }
 });
+
+test("returns a generic denial when Clerk user lookup fails", async ({
+  page,
+  signUpUser,
+  signInAs,
+}) => {
+  const user = await signUpUser();
+  await signInAs(user);
+
+  // Keep the already-issued session token, then make the Clerk lookup fail.
+  await deleteClerkUser(user.clerkId);
+  const response = await page.evaluate(async () => {
+    const token = await (window as any).Clerk?.session?.getToken();
+    const result = await fetch("/api/dashboard/employee", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return { status: result.status, body: await result.text() };
+  });
+
+  expect(response.status).toBe(403);
+  expect(response.body).toBe(
+    '{"error":"Unable to provision user. Contact your administrator."}',
+  );
+  expect(response.body).not.toContain(user.email);
+  expect(response.body).not.toContain(user.clerkId);
+});
+
+test("returns an authorization denial for an unauthorized Clerk email", async ({
+  page,
+  signInAs,
+}) => {
+  const unauthorizedEmail = `e2e-unauthorized-${nanoid(8)}@example.com`;
+  const clerkId = await createClerkUser({
+    firstName: "E2E",
+    lastName: "Unauthorized",
+    email: unauthorizedEmail,
+  });
+
+  try {
+    await signInAs({ email: unauthorizedEmail });
+    const response = await page.evaluate(async () => {
+      const token = await (window as any).Clerk?.session?.getToken();
+      const result = await fetch("/api/dashboard/employee", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return { status: result.status, body: await result.text() };
+    });
+
+    expect(response.status).toBe(403);
+    expect(response.body).toBe(
+      '{"error":"This account is not authorized for the CE portal. Contact an administrator."}',
+    );
+    expect(response.body).not.toContain(unauthorizedEmail);
+    expect(response.body).not.toContain(clerkId);
+  } finally {
+    await deleteClerkUser(clerkId);
+  }
+});

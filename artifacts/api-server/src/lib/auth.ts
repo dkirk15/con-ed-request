@@ -4,6 +4,7 @@ import { db } from "@workspace/db";
 import { users } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { createClerkClient } from "@clerk/backend";
+import { logger } from "./logger";
 const clerkSdk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 const DEFAULT_AUTHORIZED_DOMAINS = ["osstherapy.com"];
@@ -30,6 +31,31 @@ declare global {
   }
 }
 
+function getClerkLookupDiagnostic(error: unknown): {
+  errorType: string;
+  status?: number;
+  code?: string;
+  requestId?: string;
+} {
+  const candidate = error as {
+    status?: unknown;
+    code?: unknown;
+    clerkTraceId?: unknown;
+    requestId?: unknown;
+  };
+
+  return {
+    errorType: error instanceof Error ? error.name : typeof error,
+    ...(typeof candidate.status === "number" ? { status: candidate.status } : {}),
+    ...(typeof candidate.code === "string" ? { code: candidate.code } : {}),
+    ...(typeof candidate.clerkTraceId === "string"
+      ? { requestId: candidate.clerkTraceId }
+      : typeof candidate.requestId === "string"
+        ? { requestId: candidate.requestId }
+        : {}),
+  };
+}
+
 async function resolveOrProvisionUser(clerkId: string): Promise<typeof users.$inferSelect | null> {
   const [existing] = await db
     .select()
@@ -40,26 +66,39 @@ async function resolveOrProvisionUser(clerkId: string): Promise<typeof users.$in
   if (existing) return existing;
 
   // New users must pass the workforce allowlist before they are provisioned.
+  let clerkUser;
   try {
-    const clerkUser = await clerkSdk.users.getUser(clerkId);
-    const email = clerkUser.emailAddresses?.find(
-      (candidate) => candidate.id === clerkUser.primaryEmailAddressId,
-    )?.emailAddress ?? clerkUser.emailAddresses?.[0]?.emailAddress;
+    clerkUser = await clerkSdk.users.getUser(clerkId);
+  } catch (error) {
+    logger.error(
+      {
+        clerkId,
+        operation: "users.getUser",
+        clerk: getClerkLookupDiagnostic(error),
+      },
+      "Clerk user lookup failed during auto-provisioning",
+    );
+    return null;
+  }
 
-    if (!email || !isAuthorizedEmail(email)) {
-      throw new AdmissionDeniedError();
-    }
+  const email = clerkUser.emailAddresses?.find(
+    (candidate) => candidate.id === clerkUser.primaryEmailAddressId,
+  )?.emailAddress ?? clerkUser.emailAddresses?.[0]?.emailAddress;
 
-    const name =
-      [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || email;
+  if (!email || !isAuthorizedEmail(email)) {
+    throw new AdmissionDeniedError();
+  }
 
+  const name =
+    [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ") || email;
+
+  try {
     const [created] = await db
       .insert(users)
       .values({ clerkId, name, email, role: "employee" })
       .returning();
     return created;
-  } catch (error) {
-    if (error instanceof AdmissionDeniedError) throw error;
+  } catch {
     return null;
   }
 }
