@@ -20,6 +20,7 @@ test.describe("Re-open routing on resubmit", () => {
   }) => {
     const clinicId = await createClinic("E2E-Clinic-reopen-bo");
     const manager = await provisionUser({ role: "manager", clinicId });
+    const businessOffice = await provisionUser({ role: "business_office" });
     const employee = await provisionUser({
       role: "employee",
       clinicId,
@@ -61,6 +62,15 @@ test.describe("Re-open routing on resubmit", () => {
     await expect(page).toHaveURL(new RegExp(`/requests/${requestId}/edit`));
     expect((await getRequest(requestId))?.status).toBe("draft");
 
+    // The employee's reopened detail view must retain the original BO denial
+    // reason and show that the request was reopened, not replace its history.
+    await page.goto(`/requests/${requestId}`);
+    await expect(page.getByText("Business Office denied", { exact: true })).toBeVisible();
+    await expect(page.getByText("Outside policy", { exact: true })).toBeVisible();
+    await expect(page.getByText("Re-opened for revision", { exact: true })).toBeVisible();
+
+    await page.goto(`/requests/${requestId}/edit`);
+
     // Step 2: Submit from the edit form (already navigated there by re-open).
     // Wait for the form to hydrate
     await expect(page.locator('input[name="courseProvider"]')).toHaveValue(
@@ -80,6 +90,12 @@ test.describe("Re-open routing on resubmit", () => {
     expect(row?.status).toBe("pending_bo");
     // manager_approved_at must still be set — manager approval was NOT reset.
     expect(row?.manager_approved_at).not.toBeNull();
+
+    // The next reviewer must also see the prior denial reason in the timeline.
+    await signInAs(businessOffice);
+    await page.goto(`/requests/${requestId}`);
+    await expect(page.getByText("Business Office denied", { exact: true })).toBeVisible();
+    await expect(page.getByText("Outside policy", { exact: true })).toBeVisible();
   });
 
   test("manager-denied → re-open → submit goes back to pending_manager", async ({
@@ -129,6 +145,15 @@ test.describe("Re-open routing on resubmit", () => {
     await expect(page).toHaveURL(new RegExp(`/requests/${requestId}/edit`));
     expect((await getRequest(requestId))?.status).toBe("draft");
 
+    // The employee's reopened detail view must retain the original manager
+    // denial reason and show that the request was reopened.
+    await page.goto(`/requests/${requestId}`);
+    await expect(page.getByText("Manager denied", { exact: true })).toBeVisible();
+    await expect(page.getByText("Not applicable", { exact: true })).toBeVisible();
+    await expect(page.getByText("Re-opened for revision", { exact: true })).toBeVisible();
+
+    await page.goto(`/requests/${requestId}/edit`);
+
     // Step 2: Submit from the edit form (already navigated there by re-open).
     await expect(page.locator('input[name="courseProvider"]')).toHaveValue(
       "E2E Mgr Denied Provider",
@@ -144,6 +169,12 @@ test.describe("Re-open routing on resubmit", () => {
     expect(row?.status).toBe("pending_manager");
     // manager_approved_at must remain null — manager has not yet approved.
     expect(row?.manager_approved_at).toBeNull();
+
+    // The next reviewer must also see the prior denial reason in the timeline.
+    await signInAs(manager);
+    await page.goto(`/requests/${requestId}`);
+    await expect(page.getByText("Manager denied", { exact: true })).toBeVisible();
+    await expect(page.getByText("Not applicable", { exact: true })).toBeVisible();
   });
 });
 
