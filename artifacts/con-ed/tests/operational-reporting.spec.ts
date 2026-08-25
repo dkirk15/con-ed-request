@@ -438,6 +438,48 @@ test("budget-usage view shows correct allocation, used, and remaining amounts pe
   await expect(rowB.getByText("$1,100.00")).toBeVisible();
 });
 
+test("current-year mid-year hire receives a prorated budget allocation", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-MidYearHire-${unique()}`);
+  const suffix = unique();
+  const employeeId = await insertUser({
+    clerkId: `report-mid-year-hire-${suffix}`,
+    name: `Mid-Year Hire ${suffix}`,
+    email: `report.mid-year-hire.${suffix}@example.test`,
+    role: "employee",
+    clinicId,
+    hireDate: `${year}-07-01`,
+  });
+
+  // July hire: (13 - 7) / 12 × $2,000 = $1,000 allocation.
+  await insertRequest({
+    employeeId,
+    status: "awaiting_receipt",
+    courseNames: `Mid-Year Hire Course ${unique()}`,
+    totalRequested: 300,
+    totalApproved: 300,
+    createdAt: new Date(`${year}-08-01T12:00:00Z`),
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  await page.goto(`/reports?year=${year}&clinicId=${clinicId}&section=funding`);
+
+  const budgetSection = page.getByRole("region", { name: "Employee budget usage" });
+  await expect(budgetSection).toBeVisible();
+  const row = budgetSection.getByRole("row").filter({ hasText: `Mid-Year Hire ${suffix}` });
+  const cells = row.getByRole("cell");
+
+  // Available: $1,000 allocation, Used: $300, Remaining: $700, Future debt: $0.
+  await expect(cells.nth(2)).toHaveText("$1,000.00");
+  await expect(cells.nth(3)).toHaveText("$300.00");
+  await expect(cells.nth(5)).toHaveText("$700.00");
+  await expect(cells.nth(6)).toHaveText("$0.00");
+});
+
 test("clinic-comparison tab shows correct totals and denial rate per clinic", async ({
   page,
   provisionUser,
