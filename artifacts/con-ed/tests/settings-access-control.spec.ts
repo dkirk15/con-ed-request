@@ -114,4 +114,30 @@ test.describe("Settings access control — non-admin roles blocked", () => {
     // Frontend: Settings link must not appear in the sidebar.
     await expect(page.getByRole("link", { name: "Settings" })).toHaveCount(0);
   });
+
+  test("employee: direct /settings navigation shows access denied without the settings form", async ({
+    page,
+    provisionUser,
+    signInAs,
+  }) => {
+    const clinicId = await createClinic(`E2E-Clinic-settings-direct`);
+    const employee = await provisionUser({ role: "employee", clinicId });
+    await signInAs(employee);
+
+    await page.goto("/dashboard");
+    await page.waitForFunction(() =>
+      Boolean(
+        (window as Window & { Clerk?: { session?: unknown } }).Clerk?.session,
+      ),
+    );
+
+    // Typing the restricted URL directly must not expose the Settings form.
+    await page.goto("/settings");
+    await expect(page).toHaveURL(/\/settings$/);
+    await expect(
+      page.getByText("You do not have permission to view this page.", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("spinbutton")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
+  });
 });
