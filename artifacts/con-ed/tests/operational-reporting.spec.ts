@@ -1076,6 +1076,30 @@ test("manager lands on team-funding tab by default and cannot reach payroll or c
   ).toBeVisible();
 });
 
+test("manager is redirected to team funding from restricted report URLs", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-ManagerRestrictedReports-${unique()}`);
+  const manager = await provisionUser({ role: "manager", clinicId });
+  await signInAs(manager);
+
+  for (const restrictedSection of ["payroll", "clinics"]) {
+    await page.goto(`/reports?year=${year}&section=${restrictedSection}`);
+
+    await expect(page.getByRole("tab", { name: "Team funding" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(page.getByRole("tab", { name: "Payroll" })).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: "Clinics" })).toHaveCount(0);
+    await expect(
+      page.getByRole("region", { name: "Employee budget usage" }),
+    ).toBeVisible();
+  }
+});
+
 test("prorated hire-year allocation generates the correct carry-forward debt", async ({
   page,
   provisionUser,
