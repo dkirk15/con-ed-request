@@ -556,6 +556,54 @@ test("carry-forward debt from a prior year reduces the employee's available allo
   await expect(row.getByText("$500.00")).toBeVisible();
 });
 
+test("consecutive prior-year overspend accumulates carry-forward debt", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  // No hireDate → $2,000 allocation in each year.
+  // Year - 2: $2,500 spend → debt = max(0, 0 + 2,500 - 2,000) = $500.
+  // Year - 1: $2,500 spend → debt = max(0, 500 + 2,500 - 2,000) = $1,000.
+  // Current year: available = $2,000 - $1,000 = $1,000.
+  // After $300 approved this year, remaining = $700 and future debt = $1,000.
+  const clinicId = await createClinic(`E2E-ConsecutiveCarryover-${unique()}`);
+  const empId = await dataUser(clinicId, "Consecutive Carryover Employee");
+
+  for (const priorYear of [year - 2, year - 1]) {
+    await insertRequest({
+      employeeId: empId,
+      status: "reimbursed",
+      courseNames: `Prior Year ${priorYear} Over-Budget ${unique()}`,
+      totalRequested: 2500,
+      totalApproved: 2500,
+      createdAt: new Date(`${priorYear}-06-15T12:00:00Z`),
+    });
+  }
+
+  await insertRequest({
+    employeeId: empId,
+    status: "awaiting_receipt",
+    courseNames: `Current Year Consecutive Course ${unique()}`,
+    totalRequested: 400,
+    totalApproved: 300,
+    createdAt: new Date(`${year}-03-01T12:00:00Z`),
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  await page.goto(`/reports?year=${year}&clinicId=${clinicId}&section=funding`);
+
+  const budgetSection = page.getByRole("region", { name: "Employee budget usage" });
+  await expect(budgetSection).toBeVisible();
+  const row = budgetSection.getByRole("row").filter({ hasText: "Consecutive Carryover Employee" });
+  const cells = row.getByRole("cell");
+
+  await expect(cells.nth(2)).toHaveText("$1,000.00");
+  await expect(cells.nth(3)).toHaveText("$300.00");
+  await expect(cells.nth(5)).toHaveText("$700.00");
+  await expect(cells.nth(6)).toHaveText("$1,000.00");
+});
+
 test("manual allocation override is used when computing carry-forward debt", async ({
   page,
   provisionUser,
