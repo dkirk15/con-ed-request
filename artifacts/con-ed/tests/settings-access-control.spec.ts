@@ -3,7 +3,7 @@ import { createClinic } from "./helpers/db";
 
 /**
  * Confirms that GET /api/settings and PATCH /api/settings are inaccessible
- * to non-admin roles (employee, manager), and that the Settings nav link is
+ * to non-admin roles (employee, manager, business_office, accounting), and that the Settings nav link is
  * absent from their sidebar navigation.
  *
  * The server enforces this via requireRole("admin") on both endpoints.
@@ -140,4 +140,37 @@ test.describe("Settings access control — non-admin roles blocked", () => {
     await expect(page.getByRole("spinbutton")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
   });
+
+  for (const { role, label } of [
+    { role: "business_office" as const, label: "business_office" },
+    { role: "accounting" as const, label: "accounting" },
+  ]) {
+    test(`${label}: GET /api/settings returns 403, PATCH /api/settings returns 403, no Settings nav link`, async ({
+      page,
+      provisionUser,
+      signInAs,
+    }) => {
+      const user = await provisionUser({ role });
+      await signInAs(user);
+
+      await page.goto("/dashboard");
+
+      // Wait until the Clerk session is fully available in the browser context.
+      await page.waitForFunction(() =>
+        Boolean(
+          (window as Window & { Clerk?: { session?: unknown } }).Clerk?.session,
+        ),
+      );
+
+      const getRes = await apiCall(page, "GET", "/api/settings");
+      expect(getRes.status).toBe(403);
+
+      const patchRes = await apiCall(page, "PATCH", "/api/settings", {
+        annualBudget: 9999,
+      });
+      expect(patchRes.status).toBe(403);
+
+      await expect(page.getByRole("link", { name: "Settings" })).toHaveCount(0);
+    });
+  }
 });
