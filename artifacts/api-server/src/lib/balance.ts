@@ -17,6 +17,16 @@ function parseMoney(value: string | number | null | undefined) {
   return typeof value === "number" ? value : parseFloat(value ?? "0");
 }
 
+export function getHireDateParts(hireDateStr: string): { year: number; month: number } {
+  const dateOnly = /^(\d{4})-(\d{2})/.exec(hireDateStr);
+  if (dateOnly) {
+    return { year: Number(dateOnly[1]), month: Number(dateOnly[2]) };
+  }
+
+  const hireDate = new Date(hireDateStr);
+  return { year: hireDate.getFullYear(), month: hireDate.getMonth() + 1 };
+}
+
 export function calcAnnualAllocationForYear(
   hireDateStr: string | null,
   year: number,
@@ -30,8 +40,7 @@ export function calcAnnualAllocationForYear(
     return { allocation: annualBudget, isProrated: false, hireMonth: null };
   }
 
-  const hireDate = new Date(hireDateStr);
-  const hireYear = hireDate.getFullYear();
+  const { year: hireYear, month: hireMonth } = getHireDateParts(hireDateStr);
 
   if (hireYear > year) {
     return { allocation: 0, isProrated: false, hireMonth: null };
@@ -41,7 +50,6 @@ export function calcAnnualAllocationForYear(
     return { allocation: annualBudget, isProrated: false, hireMonth: null };
   }
 
-  const hireMonth = hireDate.getMonth() + 1;
   const allocation = roundCurrency((annualBudget * (13 - hireMonth)) / 12);
 
   return { allocation, isProrated: true, hireMonth };
@@ -105,7 +113,7 @@ export async function getUserBalance(
   }
 
   const approvedYears = [...approvedByYear.keys()];
-  const hireYear = hireDateStr ? new Date(hireDateStr).getFullYear() : year;
+  const hireYear = hireDateStr ? getHireDateParts(hireDateStr).year : year;
   const firstRelevantYear = Math.min(year, hireYear, ...approvedYears);
   const historicalOverrides = await db
     .select({

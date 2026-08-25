@@ -28,7 +28,7 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { requireRole } from "../lib/auth";
-import { calcAnnualAllocationForYear } from "../lib/balance";
+import { calcAnnualAllocationForYear, getHireDateParts } from "../lib/balance";
 import { getSettings } from "../lib/settings";
 
 const router: IRouter = Router();
@@ -388,7 +388,7 @@ async function buildBudgetUsage(user: ReportUser, filters: ReportFilters) {
       }
     }
 
-    const hireYear = employee.hireDate ? new Date(employee.hireDate).getFullYear() : filters.year;
+    const hireYear = employee.hireDate ? getHireDateParts(employee.hireDate).year : filters.year;
     const approvedYears = [...approvedByYear.keys()];
     const firstRelevantYear = Math.min(filters.year, hireYear, ...approvedYears);
     const overrides = overridesByEmployee.get(employee.id) ?? new Map<number, number>();

@@ -583,6 +583,82 @@ test("current-year mid-year hire receives a prorated budget allocation", async (
   await expect(cells.nth(6)).toHaveText("$0.00");
 });
 
+test("budget boundaries allocate January fully and December for one month", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-Budget-Boundaries-${unique()}`);
+  const januarySuffix = unique();
+  const decemberSuffix = unique();
+  const priorDecemberSuffix = unique();
+
+  const januaryEmployeeId = await insertUser({
+    clerkId: `budget-january-${januarySuffix}`,
+    name: `January Boundary Employee ${januarySuffix}`,
+    email: `budget.january.${januarySuffix}@example.test`,
+    role: "employee",
+    clinicId,
+    hireDate: `${year}-01-01`,
+  });
+  const decemberEmployeeId = await insertUser({
+    clerkId: `budget-december-${decemberSuffix}`,
+    name: `December Boundary Employee ${decemberSuffix}`,
+    email: `budget.december.${decemberSuffix}@example.test`,
+    role: "employee",
+    clinicId,
+    hireDate: `${year}-12-01`,
+  });
+  const priorDecemberEmployeeId = await insertUser({
+    clerkId: `budget-prior-december-${priorDecemberSuffix}`,
+    name: `Prior December Employee ${priorDecemberSuffix}`,
+    email: `budget.prior.december.${priorDecemberSuffix}@example.test`,
+    role: "employee",
+    clinicId,
+    hireDate: `${year - 1}-12-01`,
+  });
+
+  await insertRequest({
+    employeeId: januaryEmployeeId,
+    status: "awaiting_receipt",
+    courseNames: `January Boundary Course ${unique()}`,
+    totalRequested: 300,
+    totalApproved: 300,
+    createdAt: new Date(`${year}-01-15T12:00:00Z`),
+  });
+  await insertRequest({
+    employeeId: decemberEmployeeId,
+    status: "awaiting_receipt",
+    courseNames: `December Boundary Course ${unique()}`,
+    totalRequested: 25,
+    totalApproved: 25,
+    createdAt: new Date(`${year}-12-15T12:00:00Z`),
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  await page.goto(`/reports?year=${year}&clinicId=${clinicId}&section=funding`);
+
+  const budgetSection = page.getByRole("region", { name: "Employee budget usage" });
+
+  const januaryRow = budgetSection.getByRole("row").filter({ hasText: `January Boundary Employee ${januarySuffix}` });
+  await expect(januaryRow.getByRole("cell").nth(2)).toHaveText("$2,000.00");
+  await expect(januaryRow.getByRole("cell").nth(3)).toHaveText("$300.00");
+  await expect(januaryRow.getByRole("cell").nth(5)).toHaveText("$1,700.00");
+
+  // December receives one month: round($2,000 / 12) = $166.67.
+  const decemberRow = budgetSection.getByRole("row").filter({ hasText: `December Boundary Employee ${decemberSuffix}` });
+  await expect(decemberRow.getByRole("cell").nth(2)).toHaveText("$166.67");
+  await expect(decemberRow.getByRole("cell").nth(3)).toHaveText("$25.00");
+  await expect(decemberRow.getByRole("cell").nth(5)).toHaveText("$141.67");
+
+  // A December hire from the prior year is no longer prorated in this year.
+  const priorDecemberRow = budgetSection.getByRole("row").filter({ hasText: `Prior December Employee ${priorDecemberSuffix}` });
+  await expect(priorDecemberRow.getByRole("cell").nth(2)).toHaveText("$2,000.00");
+  await expect(priorDecemberRow.getByRole("cell").nth(3)).toHaveText("$0.00");
+  await expect(priorDecemberRow.getByRole("cell").nth(5)).toHaveText("$2,000.00");
+});
+
 test("clinic-comparison tab shows correct totals and denial rate per clinic", async ({
   page,
   provisionUser,

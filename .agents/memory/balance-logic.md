@@ -18,3 +18,9 @@ Business Office later approves an amount within the remaining balance.
 
 **Why:** Business rule — employees hired mid-year get a partial budget proportional to months remaining.
 **How to apply:** `getUserBalance()` in `artifacts/api-server/src/lib/balance.ts` is the balance entry point. It accounts for outstanding prior-year advances before reporting the current year's remaining balance. All balance-consuming statuses are derived from the DB schema status enum.
+
+Date-only hire dates must be interpreted from their calendar year/month components rather than through UTC-sensitive `new Date("YYYY-MM-DD")` month access. Otherwise a December hire can become a November hire on servers west of UTC.
+
+**Why:** Hire dates are calendar dates, not instants; timezone conversion can change the proration month at the year boundary.
+
+**How to apply:** Reuse the calendar-safe hire-date parsing helper anywhere allocation or historical carry-forward logic derives a hire year or month.
