@@ -1,5 +1,6 @@
 import { test, expect } from "./fixtures";
 import { createClinic } from "./helpers/db";
+import { signIn } from "./helpers/clerk";
 
 /**
  * Verifies that updating annualBudget via PATCH /api/settings immediately
@@ -27,6 +28,13 @@ async function apiCall(
   path: string,
   body?: unknown,
 ): Promise<{ status: number; data: unknown }> {
+  await page.waitForFunction(() =>
+    Boolean(
+      (window as Window & {
+        Clerk?: { session?: { getToken?: unknown } };
+      }).Clerk?.session?.getToken,
+    ),
+  );
   return page.evaluate(
     async ({ method, path, body }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -237,7 +245,7 @@ test("budget report refreshes after changing the budget in Settings", async ({
     await expect(budgetInput).toHaveValue("2000");
     await budgetInput.fill("1500");
     await page.getByRole("button", { name: "Save changes" }).click();
-    await expect(page.getByText("Settings saved")).toBeVisible();
+    await expect(page.getByText("Settings saved", { exact: true })).toBeVisible();
 
     // Return through the Reports link, with no hard refresh, and select funding.
     await page.getByRole("link", { name: "Reports" }).click();
@@ -260,5 +268,48 @@ test("budget report refreshes after changing the budget in Settings", async ({
     await apiCall(page, "PATCH", "/api/settings", {
       annualBudget: ORIGINAL_BUDGET,
     });
+  }
+});
+
+test("new request refreshes funding after an admin changes the budget", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-Clinic-settings-new-request-${Date.now()}`);
+  const employee = await provisionUser({ role: "employee", clinicId });
+  const admin = await provisionUser({ role: "admin", clinicId });
+  const browser = page.context().browser();
+  if (!browser) throw new Error("Playwright browser is unavailable");
+  const adminContext = await browser.newContext();
+  const adminPage = await adminContext.newPage();
+
+  try {
+    await signInAs(employee);
+    await page.goto("/requests/new");
+    await expect(page.getByText("$2,000.00", { exact: true })).toBeVisible();
+
+    // Keep the employee session and form page alive while the admin changes
+    // the shared setting in a separate browser context.
+    await signIn(adminPage, admin.email);
+    await adminPage.goto("/dashboard");
+    const updateResponse = await apiCall(adminPage, "PATCH", "/api/settings", { annualBudget: 1500 });
+    expect(updateResponse.status).toBe(200);
+
+    // Navigate within the same employee session; do not reload the browser.
+    await page.goto("/dashboard");
+    await page.goto("/requests/new");
+    await expect(page.getByText("$1,500.00", { exact: true })).toBeVisible();
+
+    // The refreshed threshold should also drive the guarantee requirement.
+    await page.getByLabel("Tuition / registration ($)").fill("1600");
+    await expect(page.getByText("$100.00 future CE debt", { exact: true })).toBeVisible();
+    await expect(page.getByText("OSS repayment guarantee", { exact: true })).toBeVisible();
+  } finally {
+    await signIn(adminPage, admin.email);
+    await adminPage.goto("/dashboard");
+    const restoreResponse = await apiCall(adminPage, "PATCH", "/api/settings", { annualBudget: ORIGINAL_BUDGET });
+    expect(restoreResponse.status).toBe(200);
+    await adminContext.close();
   }
 });

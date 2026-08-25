@@ -279,6 +279,9 @@ export default function NewRequestPage() {
       customFetch<{ balance: BalanceData }>("/api/dashboard/employee").then(
         (data) => data.balance,
       ),
+    // The annual budget can change in another user's session while this
+    // employee is navigating the app. Never reuse a cached balance on entry.
+    refetchOnMount: "always",
   });
   const balanceData = balanceQuery.data;
 
