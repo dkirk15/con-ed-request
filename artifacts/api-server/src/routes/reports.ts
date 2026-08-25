@@ -375,16 +375,20 @@ async function buildBudgetUsage(user: ReportUser, filters: ReportFilters) {
     const hireYear = employee.hireDate ? new Date(employee.hireDate).getFullYear() : filters.year;
     const approvedYears = [...approvedByYear.keys()];
     const firstRelevantYear = Math.min(filters.year, hireYear, ...approvedYears);
+    const allocationOverride = employee.allocationOverride == null
+      ? null
+      : money(employee.allocationOverride);
     let carryoverDebt = 0;
     for (let year = firstRelevantYear; year < filters.year; year += 1) {
-      const allocation = calcAnnualAllocationForYear(employee.hireDate, year, annualBudget).allocation;
+      const allocation = allocationOverride
+        ?? calcAnnualAllocationForYear(employee.hireDate, year, annualBudget).allocation;
       carryoverDebt = Math.max(0, carryoverDebt + (approvedByYear.get(year) ?? 0) - allocation);
     }
 
     const calculated = calcAnnualAllocationForYear(employee.hireDate, filters.year, annualBudget);
-    const annualAllocation = employee.allocationOverride == null
+    const annualAllocation = allocationOverride == null
       ? calculated.allocation
-      : money(employee.allocationOverride);
+      : allocationOverride;
     const availableAllocation = Math.max(0, annualAllocation - carryoverDebt);
     const usedAmount = approvedByYear.get(filters.year) ?? 0;
     const remainingAmount = Math.max(0, availableAllocation - usedAmount);

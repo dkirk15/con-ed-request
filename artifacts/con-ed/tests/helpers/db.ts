@@ -289,6 +289,16 @@ export async function setRole(
   );
 }
 
+export async function updateUserAllocation(
+  userId: number,
+  conEdAllocation: number | null,
+): Promise<void> {
+  await query(
+    "UPDATE users SET con_ed_allocation = $1 WHERE id = $2",
+    [conEdAllocation, userId],
+  );
+}
+
 export async function getRepaymentGuarantee(
   requestId: number,
 ): Promise<Record<string, unknown> | undefined> {

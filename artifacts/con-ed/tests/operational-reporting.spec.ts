@@ -5,6 +5,7 @@ import {
   insertReimbursement,
   insertRequest,
   insertUser,
+  updateUserAllocation,
 } from "./helpers/db";
 
 const year = new Date().getFullYear();
@@ -404,6 +405,51 @@ test("carry-forward debt from a prior year reduces the employee's available allo
   // Remaining = available − used = $1,200
   await expect(row.getByText("$1,200.00")).toBeVisible();
   // Future debt column = carryoverDebt ($500) + advancedExposure ($0)
+  await expect(row.getByText("$500.00")).toBeVisible();
+});
+
+test("manual allocation override is used when computing carry-forward debt", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  // The employee's manual $3,000 allocation applies to both years.
+  // Prior-year reimbursed spend = $3,500 → carryoverDebt = $500.
+  // Current-year available = $3,000 - $500 = $2,500.
+  // Current-year used = $300 → remaining = $2,200.
+  // Future debt = carryoverDebt ($500) + advancedExposure ($0) = $500.
+  const clinicId = await createClinic(`E2E-OverrideCarryover-${unique()}`);
+  const empId = await dataUser(clinicId, "Override Carryover Employee");
+  await updateUserAllocation(empId, 3000);
+
+  await insertRequest({
+    employeeId: empId,
+    status: "reimbursed",
+    courseNames: `Prior Year Override Over-Budget ${unique()}`,
+    totalRequested: 3500,
+    totalApproved: 3500,
+    createdAt: new Date(`${year - 1}-06-15T12:00:00Z`),
+  });
+  await insertRequest({
+    employeeId: empId,
+    status: "awaiting_receipt",
+    courseNames: `Current Year Override Course ${unique()}`,
+    totalRequested: 400,
+    totalApproved: 300,
+    createdAt: new Date(`${year}-03-01T12:00:00Z`),
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  await page.goto(`/reports?year=${year}&clinicId=${clinicId}&section=funding`);
+
+  const budgetSection = page.getByRole("region", { name: "Employee budget usage" });
+  await expect(budgetSection).toBeVisible();
+  const row = budgetSection.getByRole("row").filter({ hasText: "Override Carryover Employee" });
+
+  await expect(row.getByText("$2,500.00")).toBeVisible();
+  await expect(row.getByText("$300.00")).toBeVisible();
+  await expect(row.getByText("$2,200.00")).toBeVisible();
   await expect(row.getByText("$500.00")).toBeVisible();
 });
 
