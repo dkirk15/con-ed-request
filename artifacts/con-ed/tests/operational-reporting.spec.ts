@@ -604,6 +604,80 @@ test("consecutive prior-year overspend accumulates carry-forward debt", async ({
   await expect(cells.nth(6)).toHaveText("$1,000.00");
 });
 
+test("underspending after a prior overspend pays down carry-forward debt", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  // No hireDate → $2,000 allocation in each year.
+  // Year - 2: $2,500 spend → debt = max(0, 0 + 2,500 - 2,000) = $500.
+  // Year - 1: $1,000 spend → debt = max(0, 500 + 1,000 - 2,000) = 0.
+  // Current year: available = $2,000, used = $300, remaining = $1,700.
+  const clinicId = await createClinic(`E2E-PaydownCarryover-${unique()}`);
+  const empId = await dataUser(clinicId, "Paydown Carryover Employee");
+
+  await insertRequest({
+    employeeId: empId,
+    status: "reimbursed",
+    courseNames: `Prior Year Overspend for Paydown ${unique()}`,
+    totalRequested: 2500,
+    totalApproved: 2500,
+    createdAt: new Date(`${year - 2}-06-15T12:00:00Z`),
+  });
+  await insertRequest({
+    employeeId: empId,
+    status: "reimbursed",
+    courseNames: `Later Year Underspend for Paydown ${unique()}`,
+    totalRequested: 1000,
+    totalApproved: 1000,
+    createdAt: new Date(`${year - 1}-06-15T12:00:00Z`),
+  });
+  await insertRequest({
+    employeeId: empId,
+    status: "awaiting_receipt",
+    courseNames: `Current Year Paydown Course ${unique()}`,
+    totalRequested: 400,
+    totalApproved: 300,
+    createdAt: new Date(`${year}-03-01T12:00:00Z`),
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  await page.goto(`/reports?year=${year}&clinicId=${clinicId}&section=funding`);
+
+  const budgetSection = page.getByRole("region", { name: "Employee budget usage" });
+  await expect(budgetSection).toBeVisible();
+  const row = budgetSection.getByRole("row").filter({ hasText: "Paydown Carryover Employee" });
+  const cells = row.getByRole("cell");
+
+  await expect(cells.nth(2)).toHaveText("$2,000.00");
+  await expect(cells.nth(3)).toHaveText("$300.00");
+  await expect(cells.nth(5)).toHaveText("$1,700.00");
+  await expect(cells.nth(6)).toHaveText("$0.00");
+
+  await page.waitForFunction(() => Boolean(
+    (window as Window & { Clerk?: { session?: unknown } }).Clerk?.session,
+  ));
+  const balance = await page.evaluate(async (userId: number) => {
+    const token = await (window as Window & {
+      Clerk?: { session?: { getToken: () => Promise<string | null> } };
+    }).Clerk?.session?.getToken();
+    const response = await fetch(`/api/users/${userId}/balance`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return { status: response.status, data: await response.json() };
+  }, empId);
+
+  expect(balance.status).toBe(200);
+  expect(balance.data).toMatchObject({
+    annualAllocation: 2000,
+    availableAllocation: 2000,
+    carryoverDebt: 0,
+    usedAmount: 300,
+    remainingAmount: 1700,
+  });
+});
+
 test("manual allocation override is used when computing carry-forward debt", async ({
   page,
   provisionUser,
