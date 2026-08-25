@@ -75,6 +75,14 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  # Security override policy:
+  # - Prefer upgrading the direct dependency that brings in an advisory.
+  # - Use the narrowest exact override only when the direct upgrade does not
+  #   resolve the transitive package.
+  # - Every override must be reviewed against `pnpm audit --audit-level high`
+  #   and the upstream dependency tree; remove it once the parent package no
+  #   longer needs it. Do not keep overrides solely because they are harmless.
+  #
   # Keep transitive dependencies at the patched versions required by the
   # security advisories used by the API code generator.
   fast-uri: 3.1.5

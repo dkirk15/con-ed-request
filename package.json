@@ -4,6 +4,7 @@
   "license": "MIT",
   "scripts": {
     "preinstall": "node ./scripts/ensure-pnpm.mjs",
+    "audit:high": "pnpm audit --audit-level high",
     "build": "corepack pnpm run typecheck && corepack pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "corepack pnpm run typecheck:libs && corepack pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"

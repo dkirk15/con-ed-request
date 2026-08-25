@@ -28,6 +28,10 @@ args = "codegen-drift"
 task = "workflow.run"
 args = "typecheck-libs"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "dependency-audit"
+
 [[workflows.workflow]]
 name = "e2e"
 author = "agent"
@@ -92,3 +96,14 @@ packages = []
 
 [objectStorage]
 defaultBucketID = "replit-objstore-d7eaeab6-ec4e-435e-838b-c3f387cc0f2a"
+
+[[workflows.workflow]]
+name = "dependency-audit"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm run audit:high"
+
+[workflows.workflow.metadata]
+isValidation = true

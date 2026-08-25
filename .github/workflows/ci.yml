@@ -27,6 +27,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Audit dependencies for high-severity vulnerabilities
+        run: pnpm run audit:high
+
       - name: Regenerate API client and Zod schemas
         run: pnpm --filter @workspace/api-spec run codegen
 
