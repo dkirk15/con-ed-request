@@ -49,14 +49,21 @@ test.describe("Approval queue — no flash after action", () => {
     await page.goto(`/approvals?selected=${firstRequestId}`);
 
     const sidebar = page.getByRole("list", { name: "Requests awaiting approval" });
+    const waitingCount = page.getByText("Waiting", { exact: true }).locator("..").locator("div").nth(1);
     await expect(sidebar.getByText(firstName)).toBeVisible();
+    await expect(waitingCount).toHaveText("2");
 
+    await page.route("**/api/requests?*", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await route.continue();
+    });
     await page.getByRole("button", { name: "Approve and open next" }).click();
     await page.getByRole("button", { name: "Confirm approval" }).click();
 
     // The processed entry must not appear in the sidebar at any point after the
     // action — the optimistic removal should fire before the re-fetch arrives.
     await expect(sidebar.getByText(firstName)).not.toBeVisible();
+    await expect.poll(() => waitingCount.textContent(), { timeout: 500 }).toBe("1");
 
     // The next request should now be selected in the detail pane.
     await expect(page.getByRole("heading", { name: secondName })).toBeVisible();
@@ -147,13 +154,20 @@ test.describe("Approval queue — no flash after action", () => {
     await page.goto(`/approvals?selected=${firstRequestId}&clinicId=${clinicId}`);
 
     const sidebar = page.getByRole("list", { name: "Requests awaiting approval" });
+    const waitingCount = page.getByText("Waiting", { exact: true }).locator("..").locator("div").nth(1);
     await expect(sidebar.getByText(firstName)).toBeVisible();
+    await expect(waitingCount).toHaveText("2");
 
+    await page.route("**/api/requests?*", async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await route.continue();
+    });
     await page.getByRole("button", { name: "Approve and open next" }).click();
     await page.getByRole("button", { name: "Confirm approval" }).click();
 
     // Optimistic removal must have fired — the completed item must be gone.
     await expect(sidebar.getByText(firstName)).not.toBeVisible();
+    await expect.poll(() => waitingCount.textContent(), { timeout: 500 }).toBe("1");
 
     // The next request must now be visible in the detail pane.
     await expect(page.getByRole("heading", { name: secondName })).toBeVisible();
