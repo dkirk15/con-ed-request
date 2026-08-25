@@ -11,6 +11,46 @@ import {
 const year = new Date().getFullYear();
 const unique = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+function parseCsv(csv: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+
+  for (let index = csv.charCodeAt(0) === 0xfeff ? 1 : 0; index < csv.length; index += 1) {
+    const character = csv[index];
+    if (quoted) {
+      if (character === '"' && csv[index + 1] === '"') {
+        cell += '"';
+        index += 1;
+      } else if (character === '"') {
+        quoted = false;
+      } else {
+        cell += character;
+      }
+    } else if (character === '"') {
+      quoted = true;
+    } else if (character === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (character === "\r" && csv[index + 1] === "\n") {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+      index += 1;
+    } else {
+      cell += character;
+    }
+  }
+
+  if (cell || row.length > 0) {
+    row.push(cell);
+    rows.push(row);
+  }
+  return rows;
+}
+
 async function dataUser(clinicId: number, label: string) {
   const suffix = unique();
   return insertUser({
@@ -21,6 +61,114 @@ async function dataUser(clinicId: number, label: string) {
     clinicId,
   });
 }
+
+test("reports CSV export applies filters and preserves its schema", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const includedClinicId = await createClinic(`E2E-Export-Included-${unique()}`);
+  const excludedClinicId = await createClinic(`E2E-Export-Excluded-${unique()}`);
+  const includedEmployeeId = await dataUser(includedClinicId, "Export Included");
+  const excludedEmployeeId = await dataUser(excludedClinicId, "Export Excluded");
+  const pendingCourse = `Export Pending ${unique()}`;
+  const reimbursedCourse = `Export Reimbursed ${unique()}`;
+  const excludedCourse = `Export Excluded ${unique()}`;
+
+  await insertRequest({
+    employeeId: includedEmployeeId,
+    status: "pending_manager",
+    courseNames: pendingCourse,
+    courseProvider: "CSV Test Provider",
+    deliveryMethod: "virtual",
+    totalRequested: 125,
+    createdAt: new Date(`${year}-01-15T12:00:00Z`),
+  });
+  const reimbursedId = await insertRequest({
+    employeeId: includedEmployeeId,
+    status: "reimbursed",
+    courseNames: reimbursedCourse,
+    courseProvider: "CSV Test Provider",
+    deliveryMethod: "in_person",
+    totalRequested: 450,
+    totalApproved: 400,
+    createdAt: new Date(`${year}-02-15T12:00:00Z`),
+  });
+  const accountingId = await insertUser({
+    clerkId: `report-export-accounting-${unique()}`,
+    name: "Export Accounting",
+    email: `report.export.accounting.${unique()}@example.test`,
+    role: "accounting",
+  });
+  await insertReimbursement({
+    requestId: reimbursedId,
+    amount: 375,
+    paycheckDate: `${year}-03-01`,
+    markedById: accountingId,
+  });
+  await insertRequest({
+    employeeId: excludedEmployeeId,
+    status: "pending_manager",
+    courseNames: excludedCourse,
+    totalRequested: 999,
+    createdAt: new Date(`${year}-03-15T12:00:00Z`),
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+
+  const exportCsv = async (query: string) => page.evaluate(async (path) => {
+    const clerk = (window as Window & {
+      Clerk?: { session?: { getToken: () => Promise<string | null> } };
+    }).Clerk;
+    const token = await clerk?.session?.getToken();
+    const response = await fetch(`/api/reports/export?${path}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return { status: response.status, text: await response.text() };
+  }, query);
+
+  const headers = [
+    "Request ID", "Status", "Employee", "Employee Email", "Clinic", "Course",
+    "Provider", "Course URL", "Start Date", "End Date", "Location",
+    "Requested", "Approved", "Reimbursed", "Created",
+    "Manager Decision", "Business Office Decision", "Paycheck Date",
+  ];
+
+  const clinicExport = await exportCsv(`year=${year}&clinicId=${includedClinicId}`);
+  expect(clinicExport.status).toBe(200);
+  const clinicRows = parseCsv(clinicExport.text);
+  expect(clinicRows[0]).toEqual(headers);
+  expect(clinicRows).toHaveLength(3);
+  expect(clinicRows.slice(1).map((row) => row[5]).sort()).toEqual(
+    [pendingCourse, reimbursedCourse].sort(),
+  );
+  expect(clinicRows.slice(1).every((row) => row.length === headers.length)).toBeTruthy();
+
+  const statusExport = await exportCsv(
+    `year=${year}&clinicId=${includedClinicId}&status=pending_manager`,
+  );
+  expect(statusExport.status).toBe(200);
+  expect(parseCsv(statusExport.text).slice(1).map((row) => row[5])).toEqual([pendingCourse]);
+
+  const searchExport = await exportCsv(
+    `year=${year}&clinicId=${includedClinicId}&search=${encodeURIComponent(reimbursedCourse)}`,
+  );
+  expect(searchExport.status).toBe(200);
+  expect(parseCsv(searchExport.text).slice(1).map((row) => row[5])).toEqual([reimbursedCourse]);
+
+  const otherYearExport = await exportCsv(`year=${year - 1}&clinicId=${includedClinicId}`);
+  expect(otherYearExport.status).toBe(200);
+  expect(parseCsv(otherYearExport.text)).toHaveLength(1);
+
+  // deliveryMethod is intentionally absent from ExportReportQueryParams. Zod's
+  // object parser strips this legacy parameter, so it must not filter the rows.
+  const legacyFilterExport = await exportCsv(
+    `year=${year}&clinicId=${includedClinicId}&deliveryMethod=virtual`,
+  );
+  expect(legacyFilterExport.status).toBe(200);
+  expect(parseCsv(legacyFilterExport.text)).toHaveLength(3);
+});
 
 test("admin reviews financial totals and exports the filtered ledger", async ({
   page,
