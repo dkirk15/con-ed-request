@@ -153,3 +153,54 @@ test("budget change in Settings immediately reflects in employee balance calcula
     });
   }
 });
+
+test("only admins can change the annual budget", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic("E2E-Clinic-settings-access");
+  const nonAdminUsers = [
+    await provisionUser({ role: "employee", clinicId }),
+    await provisionUser({ role: "manager", clinicId }),
+    await provisionUser({ role: "business_office" }),
+    await provisionUser({ role: "accounting" }),
+  ];
+  const admin = await provisionUser({ role: "admin", clinicId });
+
+  // Keep the attempted value distinct from the normal budget so an accidental
+  // successful non-admin update cannot be mistaken for a no-op.
+  const unauthorizedBudget = 9999;
+  for (const user of nonAdminUsers) {
+    await signInAs(user);
+    await page.goto("/dashboard");
+    await page.waitForFunction(() => Boolean(
+      (window as Window & {
+        Clerk?: { session?: { getToken?: unknown } };
+      }).Clerk?.session?.getToken,
+    ));
+    const response = await apiCall(page, "PATCH", "/api/settings", {
+      annualBudget: unauthorizedBudget,
+    });
+    expect(response.status).toBe(403);
+  }
+
+  await signInAs(admin);
+  await page.goto("/dashboard");
+  await page.waitForFunction(() => Boolean(
+    (window as Window & {
+      Clerk?: { session?: { getToken?: unknown } };
+    }).Clerk?.session?.getToken,
+  ));
+  try {
+    const adminResponse = await apiCall(page, "PATCH", "/api/settings", {
+      annualBudget: 2100,
+    });
+    expect(adminResponse.status).toBe(200);
+    expect((adminResponse.data as { annualBudget: number }).annualBudget).toBe(2100);
+  } finally {
+    await apiCall(page, "PATCH", "/api/settings", {
+      annualBudget: ORIGINAL_BUDGET,
+    });
+  }
+});
