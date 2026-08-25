@@ -187,6 +187,16 @@ export async function getRequest(id: number): Promise<RequestRow | undefined> {
   return rows[0];
 }
 
+export async function updateRequestStatus(
+  id: number,
+  status: RequestStatus,
+): Promise<void> {
+  await query(
+    "UPDATE con_ed_requests SET status = $1, updated_at = NOW() WHERE id = $2",
+    [status, id],
+  );
+}
+
 export async function insertReceipt(
   requestId: number,
   fileName = "e2e-receipt.pdf",

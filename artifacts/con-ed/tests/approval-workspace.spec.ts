@@ -1,5 +1,10 @@
 import { expect, test } from "./fixtures";
-import { createClinic, getRequest, insertRequest } from "./helpers/db";
+import {
+  createClinic,
+  getRequest,
+  insertRequest,
+  updateRequestStatus,
+} from "./helpers/db";
 
 test.describe("Approval workspace", () => {
   test("manager approves one request, opens the next, and records a denial reason", async ({
@@ -123,6 +128,56 @@ test.describe("Approval workspace", () => {
     await expect(
       page.getByRole("heading", { name: "E2E Empty Queue Cold Start Course" }),
     ).toBeVisible();
+  });
+
+  test("manager keeps reviewing the remaining request after another leaves the queue", async ({
+    page,
+    provisionUser,
+    signInAs,
+  }) => {
+    const clinicId = await createClinic(`E2E-Clinic-${Date.now()}-workspace-recovery`);
+    const manager = await provisionUser({ role: "manager", clinicId });
+    const firstEmployee = await provisionUser({
+      role: "employee",
+      clinicId,
+      managerId: manager.dbId,
+    });
+    const secondEmployee = await provisionUser({
+      role: "employee",
+      clinicId,
+      managerId: manager.dbId,
+    });
+    const firstRequestId = await insertRequest({
+      employeeId: firstEmployee.dbId,
+      managerId: manager.dbId,
+      status: "pending_manager",
+      courseNames: "E2E Workspace Remaining Course",
+      tuition: 325,
+      totalRequested: 325,
+      createdAt: new Date(Date.now() - 120_000),
+    });
+    const secondRequestId = await insertRequest({
+      employeeId: secondEmployee.dbId,
+      managerId: manager.dbId,
+      status: "pending_manager",
+      courseNames: "E2E Workspace Removed Course",
+      tuition: 475,
+      totalRequested: 475,
+      createdAt: new Date(Date.now() - 60_000),
+    });
+
+    await signInAs(manager);
+    await page.goto(`/approvals?selected=${firstRequestId}`);
+
+    await expect(page.getByRole("heading", { name: "E2E Workspace Remaining Course" })).toBeVisible();
+    await expect(page.getByText("2", { exact: true }).first()).toBeVisible();
+
+    await updateRequestStatus(secondRequestId, "cancelled");
+    await page.reload();
+
+    await expect(page.getByRole("heading", { name: "E2E Workspace Remaining Course" })).toBeVisible();
+    await expect(page.getByText("E2E Workspace Removed Course", { exact: true })).not.toBeVisible();
+    await expect(page.getByText("1", { exact: true }).first()).toBeVisible();
   });
 
   test("Business Office compares, adjusts, and approves funding in place", async ({
