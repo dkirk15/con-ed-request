@@ -204,3 +204,61 @@ test("only admins can change the annual budget", async ({
     });
   }
 });
+
+test("budget report refreshes after changing the budget in Settings", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const year = new Date().getFullYear();
+  const clinicId = await createClinic("E2E-Clinic-settings-refresh");
+  const employee = await provisionUser({
+    role: "employee",
+    clinicId,
+    firstName: "Budget",
+    lastName: "Refresh Employee",
+    hireDate: `${year - 1}-01-01`,
+  });
+  const admin = await provisionUser({ role: "admin", clinicId });
+  await signInAs(admin);
+
+  try {
+    // Open the report and record the default allocation before changing Settings.
+    await page.goto(`/reports?year=${year}&clinicId=${clinicId}&section=funding`);
+    const budgetSection = page.getByRole("region", { name: "Employee budget usage" });
+    await expect(budgetSection).toBeVisible();
+    const row = budgetSection.getByRole("row").filter({ hasText: employee.name });
+    await expect(row.getByRole("cell").nth(2)).toHaveText("$2,000.00");
+
+    // Navigate through the app shell rather than reloading the page.
+    await page.getByRole("link", { name: "Settings" }).click();
+    await expect(page).toHaveURL(/\/settings$/);
+    const budgetInput = page.getByRole("spinbutton");
+    await expect(budgetInput).toHaveValue("2000");
+    await budgetInput.fill("1500");
+    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Settings saved")).toBeVisible();
+
+    // Return through the Reports link, with no hard refresh, and select funding.
+    await page.getByRole("link", { name: "Reports" }).click();
+    await expect(page).toHaveURL(/\/reports/);
+    await page.getByRole("tab", { name: "Funding & advances" }).click();
+    await expect(page.getByRole("region", { name: "Employee budget usage" })).toBeVisible();
+
+    const refreshedRow = page
+      .getByRole("region", { name: "Employee budget usage" })
+      .getByRole("row")
+      .filter({ hasText: employee.name });
+    await expect(refreshedRow.getByRole("cell").nth(2)).toHaveText("$1,500.00");
+  } finally {
+    // Restore the shared setting even if a UI assertion fails.
+    await page.waitForFunction(() => Boolean(
+      (window as Window & {
+        Clerk?: { session?: { getToken?: unknown } };
+      }).Clerk?.session?.getToken,
+    ));
+    await apiCall(page, "PATCH", "/api/settings", {
+      annualBudget: ORIGINAL_BUDGET,
+    });
+  }
+});
