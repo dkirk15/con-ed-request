@@ -5,6 +5,7 @@ import {
   insertReimbursement,
   insertRequest,
   insertUser,
+  query,
   updateUserAllocation,
 } from "./helpers/db";
 
@@ -168,6 +169,108 @@ test("reports CSV export applies filters and preserves its schema", async ({
   );
   expect(legacyFilterExport.status).toBe(200);
   expect(parseCsv(legacyFilterExport.text)).toHaveLength(3);
+});
+
+test("reports CSV export honors each supported date basis", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-Export-Date-Basis-${unique()}`);
+  const employeeId = await dataUser(clinicId, "Date Basis Employee");
+  const previousYear = year - 1;
+  const currentYearDate = `${year}-06-15`;
+  const previousYearDate = `${previousYear}-06-15`;
+
+  const requestDateMatch = await insertRequest({
+    employeeId,
+    status: "pending_manager",
+    courseNames: `Date basis request ${unique()}`,
+    totalRequested: 101,
+    courseStartDate: previousYearDate,
+    courseEndDate: previousYearDate,
+    createdAt: new Date(`${year}-01-15T12:00:00Z`),
+  });
+  const courseDateMatch = await insertRequest({
+    employeeId,
+    status: "pending_manager",
+    courseNames: `Date basis course ${unique()}`,
+    totalRequested: 102,
+    courseStartDate: currentYearDate,
+    courseEndDate: currentYearDate,
+    createdAt: new Date(`${previousYear}-01-15T12:00:00Z`),
+  });
+  const approvalDateMatch = await insertRequest({
+    employeeId,
+    status: "manager_approved",
+    courseNames: `Date basis approval ${unique()}`,
+    totalRequested: 103,
+    courseStartDate: previousYearDate,
+    courseEndDate: previousYearDate,
+    createdAt: new Date(`${previousYear}-02-15T12:00:00Z`),
+  });
+  const reimbursementDateMatch = await insertRequest({
+    employeeId,
+    status: "reimbursed",
+    courseNames: `Date basis reimbursement ${unique()}`,
+    totalRequested: 104,
+    totalApproved: 104,
+    courseStartDate: previousYearDate,
+    courseEndDate: previousYearDate,
+    createdAt: new Date(`${previousYear}-03-15T12:00:00Z`),
+  });
+
+  await query(
+    `UPDATE con_ed_requests
+        SET manager_approved_at = CASE id
+          WHEN $1 THEN $3::timestamptz
+          WHEN $2 THEN $4::timestamptz
+        END
+      WHERE id IN ($1, $2)`,
+    [
+      approvalDateMatch,
+      reimbursementDateMatch,
+      `${year}-04-15T12:00:00Z`,
+      `${previousYear}-04-15T12:00:00Z`,
+    ],
+  );
+  const accountingId = await insertUser({
+    clerkId: `report-date-basis-accounting-${unique()}`,
+    name: "Date Basis Accounting",
+    email: `report.date.basis.accounting.${unique()}@example.test`,
+    role: "accounting",
+  });
+  await insertReimbursement({
+    requestId: reimbursementDateMatch,
+    amount: 104,
+    paycheckDate: currentYearDate,
+    markedById: accountingId,
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+
+  const exportIds = async (dateBasis: "request" | "course" | "approval" | "reimbursement") =>
+    page.evaluate(async ({ clinicId, dateBasis, year }) => {
+      const clerk = (window as Window & {
+        Clerk?: { session?: { getToken: () => Promise<string | null> } };
+      }).Clerk;
+      const token = await clerk?.session?.getToken();
+      const response = await fetch(
+        `/api/reports/export?year=${year}&clinicId=${clinicId}&dateBasis=${dateBasis}`,
+        { headers: token ? { Authorization: `Bearer ${token}` } : undefined },
+      );
+      const text = await response.text();
+      return { status: response.status, ids: text };
+    }, { clinicId, dateBasis, year }).then((result) => {
+      expect(result.status).toBe(200);
+      return parseCsv(result.ids).slice(1).map((row) => Number(row[0]));
+    });
+
+  await expect(exportIds("request")).resolves.toEqual([requestDateMatch]);
+  await expect(exportIds("course")).resolves.toEqual([courseDateMatch]);
+  await expect(exportIds("approval")).resolves.toEqual([approvalDateMatch]);
+  await expect(exportIds("reimbursement")).resolves.toEqual([reimbursementDateMatch]);
 });
 
 test("admin reviews financial totals and exports the filtered ledger", async ({
