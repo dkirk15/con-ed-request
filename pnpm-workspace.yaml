@@ -83,10 +83,10 @@ overrides:
   #   and the upstream dependency tree; remove it once the parent package no
   #   longer needs it. Do not keep overrides solely because they are harmless.
   #
-  # Keep transitive dependencies at the patched versions required by the
-  # security advisories used by the API code generator.
-  fast-uri: 3.1.5
-  brace-expansion: 5.0.9
+  # These exact patches remain necessary because the current parent ranges
+  # otherwise resolve vulnerable releases: js-yaml 4.2.x, uuid 9.x, and
+  # js-cookie 3.0.5. Recheck them whenever Orval, Clerk, or Google libraries
+  # are upgraded; remove each override when its parent resolves the patch.
   js-yaml: 4.3.1
   # replit uses linux-x64 only, we can exclude all other platforms
   "esbuild>@esbuild/darwin-arm64": "-"
@@ -171,13 +171,6 @@ overrides:
   # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.28.1"
-  # Security: force patched versions of vulnerable transitive dependencies
-  body-parser: ">=2.3.0"
+  # Security: force patched versions of vulnerable transitive dependencies.
   js-cookie: ">=3.0.7"
   uuid: ">=11.1.1"
-  markdown-it: ">=14.2.0"
-  qs: ">=6.15.2"
-  "@babel/core": ">=7.29.6"
-  postcss: "^8.5.18"
-  fast-xml-parser: "^5.10.1"
-  linkify-it: "5.0.2"
