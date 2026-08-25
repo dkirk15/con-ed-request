@@ -158,6 +158,9 @@ test.describe("Reopen guard — non-denied statuses return 400", () => {
     "pending_manager",
     "pending_bo",
     "awaiting_receipt",
+    "cancelled",
+    "receipt_submitted",
+    "reimbursed",
   ] as const;
 
   for (const status of nonDeniedStatuses) {
