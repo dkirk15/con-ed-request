@@ -13,8 +13,8 @@ function roundCurrency(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-function parseMoney(value: string | null | undefined) {
-  return parseFloat(value ?? "0");
+function parseMoney(value: string | number | null | undefined) {
+  return typeof value === "number" ? value : parseFloat(value ?? "0");
 }
 
 export function calcAnnualAllocationForYear(
@@ -54,7 +54,7 @@ export function calcAnnualAllocation(hireDateStr: string | null, annualBudget: n
 export async function getUserBalance(
   userId: number,
   hireDateStr: string | null,
-  conEdAllocation?: number | null,
+  conEdAllocation?: string | number | null,
   requestedYear?: number,
 ) {
   const year = requestedYear ?? new Date().getFullYear();
@@ -74,7 +74,9 @@ export async function getUserBalance(
     .limit(1);
   const effectiveOverride = yearOverride[0]?.allocation != null
     ? parseMoney(yearOverride[0].allocation)
-    : requestedYear == null ? conEdAllocation : null;
+    : requestedYear == null && conEdAllocation != null
+      ? parseMoney(conEdAllocation)
+      : null;
   const allocation = effectiveOverride != null ? effectiveOverride : calculated.allocation;
   const isProrated = effectiveOverride != null ? false : calculated.isProrated;
   const hireMonth = effectiveOverride != null ? null : calculated.hireMonth;

@@ -7,7 +7,7 @@ import { pool } from "./helpers/db";
  * shared development database.
  *
  * Delete order respects FK constraints:
- *   repayment_guarantees → receipts → reimbursements → request events
+ *   repayment_guarantees → receipts → reimbursements → request events → allocation overrides
  *   → con_ed_requests → users → clinics
  */
 export default async function globalTeardown() {
@@ -27,6 +27,7 @@ export default async function globalTeardown() {
     await pool.query(`DELETE FROM reimbursements       WHERE request_id IN ${testRequests} OR marked_by_id IN ${testUsers}`);
     await pool.query(`DELETE FROM con_ed_request_events WHERE request_id IN ${testRequests}`);
     await pool.query(`DELETE FROM con_ed_requests      WHERE id IN ${testRequests}`);
+    await pool.query(`DELETE FROM con_ed_allocation_overrides WHERE user_id IN ${testUsers}`);
     await pool.query(`UPDATE users SET manager_id = NULL WHERE manager_id IN ${testUsers}`);
     await pool.query(`UPDATE users SET clinic_id  = NULL WHERE clinic_id  IN ${testClinics}`);
     await pool.query(`DELETE FROM users   WHERE email LIKE 'e2e.%+clerk_test@osstherapy.com'`);

@@ -11,7 +11,7 @@ const router: IRouter = Router();
 router.get("/dashboard/employee", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.dbUser!;
-    const balance = await getUserBalance(user.id, user.hireDate);
+    const balance = await getUserBalance(user.id, user.hireDate, user.conEdAllocation);
 
     const allReqs = await db
       .select({ status: conEdRequests.status })
@@ -55,7 +55,7 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const user = req.dbUser!;
-      const balance = await getUserBalance(user.id, user.hireDate);
+      const balance = await getUserBalance(user.id, user.hireDate, user.conEdAllocation);
 
       let clinicEmployeeIds: number[] = [];
       if (user.clinicId) {

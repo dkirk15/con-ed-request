@@ -425,7 +425,7 @@ router.post("/requests", requireAuth, async (req: Request, res: Response) => {
     }
 
     // Compute over-budget: if this request would push the employee over their allocation
-    const balance = await getUserBalance(user.id, user.hireDate);
+    const balance = await getUserBalance(user.id, user.hireDate, user.conEdAllocation);
     const requiresRepaymentGuarantee = totalRequested > balance.remainingAmount;
 
     const [newRequest] = await db
@@ -571,7 +571,7 @@ router.post(
         typeof body.guaranteeSignedDate === "string" ? body.guaranteeSignedDate.trim() || undefined : undefined;
       const guaranteeAcknowledged: boolean = body.guaranteeAcknowledged === true;
 
-      const balance = await getUserBalance(user.id, user.hireDate);
+      const balance = await getUserBalance(user.id, user.hireDate, user.conEdAllocation);
       const requiresRepaymentGuarantee =
         parseFloat(existing.totalRequested) > balance.remainingAmount;
 
@@ -741,7 +741,11 @@ router.patch("/requests/:requestId", requireAuth, async (req: Request, res: Resp
 
     const nextTotalRequested =
       data.totalRequested !== undefined ? data.totalRequested : parseFloat(existing.totalRequested);
-    const balance = await getUserBalance(req.dbUser!.id, req.dbUser!.hireDate);
+    const balance = await getUserBalance(
+      req.dbUser!.id,
+      req.dbUser!.hireDate,
+      req.dbUser!.conEdAllocation,
+    );
     updates.requiresRepaymentGuarantee = nextTotalRequested > balance.remainingAmount;
 
     const [updated] = await db

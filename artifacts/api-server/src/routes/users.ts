@@ -119,14 +119,19 @@ router.get("/users/:userId/balance", requireAuth, async (req: Request, res: Resp
       return;
     }
 
-    const currentOverride = await currentAllocationOverride(targetUser);
-    const alloc = currentOverride != null ? parseFloat(currentOverride) : null;
     const requestedYear = req.query.year == null ? undefined : Number(req.query.year);
     if (requestedYear !== undefined && (!Number.isInteger(requestedYear) || requestedYear < 2000 || requestedYear > 2100)) {
       res.status(400).json({ error: "Invalid reporting year" });
       return;
     }
-    const balance = await getUserBalance(targetUser.id, targetUser.hireDate, alloc, requestedYear);
+    // getUserBalance resolves the requested year's override itself. The legacy
+    // allocation is only its current-year fallback when no override exists.
+    const balance = await getUserBalance(
+      targetUser.id,
+      targetUser.hireDate,
+      targetUser.conEdAllocation,
+      requestedYear,
+    );
     res.json(balance);
   } catch (err) {
     req.log.error({ err }, "getUserBalance error");
