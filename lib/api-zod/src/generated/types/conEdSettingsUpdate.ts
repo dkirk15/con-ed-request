@@ -8,7 +8,7 @@
 
 export interface ConEdSettingsUpdate {
   /**
-     * @minimum 0
+     * @minimum 0.01
      * @maximum 100000
      */
   annualBudget?: number;

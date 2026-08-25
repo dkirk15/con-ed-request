@@ -254,7 +254,7 @@ export const GetSettingsResponse = zod.object({
 /**
  * @summary Update portal settings (admin only)
  */
-export const updateSettingsBodyAnnualBudgetMin = 0;
+export const updateSettingsBodyAnnualBudgetMin = 0.01;
 export const updateSettingsBodyAnnualBudgetMax = 100000;
 
 

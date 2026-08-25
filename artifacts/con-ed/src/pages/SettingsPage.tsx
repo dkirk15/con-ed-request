@@ -28,7 +28,7 @@ const formSchema = z.object({
   annualBudget: z
     .string()
     .min(1, "Annual budget is required")
-    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, {
+    .refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0.01, {
       message: "Must be a positive dollar amount",
     })
     .refine((val) => parseFloat(val) <= 100_000, {
@@ -124,7 +124,7 @@ export default function SettingsPage() {
                         <Input
                           {...field}
                           type="number"
-                          min={0}
+                          min={0.01}
                           max={100000}
                           step={0.01}
                           className="pl-7"

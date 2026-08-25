@@ -213,6 +213,46 @@ test("only admins can change the annual budget", async ({
   }
 });
 
+test("rejects invalid annual budgets without replacing the configured budget", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic("E2E-Clinic-settings-validation");
+  const admin = await provisionUser({ role: "admin", clinicId });
+  await signInAs(admin);
+  await page.goto("/dashboard");
+  await page.waitForFunction(() => Boolean(
+    (window as Window & {
+      Clerk?: { session?: { getToken?: unknown } };
+    }).Clerk?.session?.getToken,
+  ));
+
+  try {
+    for (const invalidBudget of [-1, 0, "not-a-number"]) {
+      const response = await apiCall(page, "PATCH", "/api/settings", {
+        annualBudget: invalidBudget,
+      });
+      expect(response.status).toBe(400);
+      expect(response.data).toEqual(expect.objectContaining({ error: expect.any(String) }));
+
+      const current = await apiCall(page, "GET", "/api/settings");
+      expect(current.status).toBe(200);
+      expect((current.data as { annualBudget: number }).annualBudget).toBe(ORIGINAL_BUDGET);
+    }
+
+    const validResponse = await apiCall(page, "PATCH", "/api/settings", {
+      annualBudget: TEST_BUDGET,
+    });
+    expect(validResponse.status).toBe(200);
+    expect((validResponse.data as { annualBudget: number }).annualBudget).toBe(TEST_BUDGET);
+  } finally {
+    await apiCall(page, "PATCH", "/api/settings", {
+      annualBudget: ORIGINAL_BUDGET,
+    });
+  }
+});
+
 test("budget report refreshes after changing the budget in Settings", async ({
   page,
   provisionUser,
