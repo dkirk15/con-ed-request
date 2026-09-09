@@ -160,20 +160,26 @@ test("returns a generic denial when Clerk user lookup fails", async ({
 
   // Keep the already-issued session token, then make the Clerk lookup fail.
   await deleteClerkUser(user.clerkId);
-  const response = await page.evaluate(async () => {
+  const responses = await page.evaluate(async () => {
     const token = await (window as any).Clerk?.session?.getToken();
-    const result = await fetch("/api/dashboard/employee", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return { status: result.status, body: await result.text() };
+    const results: Array<{ status: number; body: string }> = [];
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const result = await fetch("/api/dashboard/employee", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      results.push({ status: result.status, body: await result.text() });
+    }
+    return results;
   });
 
-  expect(response.status).toBe(403);
-  expect(response.body).toBe(
-    '{"error":"Unable to provision user. Contact your administrator."}',
-  );
-  expect(response.body).not.toContain(user.email);
-  expect(response.body).not.toContain(user.clerkId);
+  for (const response of responses) {
+    expect(response.status).toBe(403);
+    expect(response.body).toBe(
+      '{"error":"Unable to provision user. Contact your administrator."}',
+    );
+    expect(response.body).not.toContain(user.email);
+    expect(response.body).not.toContain(user.clerkId);
+  }
 });
 
 test("returns an authorization denial for an unauthorized Clerk email", async ({

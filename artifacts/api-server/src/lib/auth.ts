@@ -4,7 +4,10 @@ import { db } from "@workspace/db";
 import { users } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { createClerkClient } from "@clerk/backend";
-import { logger } from "./logger";
+import {
+  recordClerkProvisioningLookupFailure,
+  type ClerkLookupDiagnostic,
+} from "./logger";
 const clerkSdk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 const DEFAULT_AUTHORIZED_DOMAINS = ["osstherapy.com"];
@@ -31,12 +34,7 @@ declare global {
   }
 }
 
-function getClerkLookupDiagnostic(error: unknown): {
-  errorType: string;
-  status?: number;
-  code?: string;
-  requestId?: string;
-} {
+function getClerkLookupDiagnostic(error: unknown): ClerkLookupDiagnostic {
   const candidate = error as {
     status?: unknown;
     code?: unknown;
@@ -70,14 +68,7 @@ async function resolveOrProvisionUser(clerkId: string): Promise<typeof users.$in
   try {
     clerkUser = await clerkSdk.users.getUser(clerkId);
   } catch (error) {
-    logger.error(
-      {
-        clerkId,
-        operation: "users.getUser",
-        clerk: getClerkLookupDiagnostic(error),
-      },
-      "Clerk user lookup failed during auto-provisioning",
-    );
+    recordClerkProvisioningLookupFailure(getClerkLookupDiagnostic(error));
     return null;
   }
 

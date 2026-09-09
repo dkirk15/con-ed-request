@@ -6,6 +6,7 @@
 - [con-ed E2E tests](con-ed-e2e-tests.md) — run synchronously in batches (bg runs get reaped); status-label badge/h4 collisions; cost inputs unreachable by label (use step attr).
 - [Clerk + wouter base-path routing](clerk-routing-base-path.md) — SignIn/SignUp need full base-prefixed paths + wired routerPush, or sign-up reload-loops.
 - [Clerk API auth — Bearer token required](clerk-bearer-token.md) — do NOT rely on session cookies; use ClerkTokenSync + setAuthTokenGetter to send Bearer tokens explicitly.
+- [Clerk provisioning alerts](clerk-provisioning-alerts.md) — five lookup failures in five minutes emit a privacy-safe fatal alert; suppress repeats for 15 minutes.
 - [Clerk needs_client_trust](clerk-dev-instance-preview.md) — "needs_client_trust not supported yet" = stale clerk-js v5 from deprecated @clerk/clerk-react; fix = migrate to @clerk/react v6 (Show replaces SignedIn/SignedOut).
 - [Drizzle wraps pg errors](drizzle-error-codes.md) — SQLSTATE (e.g. 23503 FK) is on err.cause.code, not err.code; prefer a count pre-check for 409.
 - [GitHub Actions push permission](github-actions-push-permission.md) — the Replit GitHub OAuth connection’s repo access cannot push new or changed workflow files without GitHub’s separate workflow scope.
