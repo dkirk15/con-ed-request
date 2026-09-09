@@ -74,10 +74,15 @@ export default function SettingsPage() {
           form.reset({ annualBudget: String(updated.annualBudget) });
           toast({ title: "Settings saved", description: "Annual allocation updated successfully." });
         },
-        onError: () => {
+        onError: (error) => {
+          const description =
+            error.status === 400
+              ? error.data?.error ?? "Failed to save settings. Please try again."
+              : "Failed to save settings. Please try again.";
+
           toast({
             title: "Error",
-            description: "Failed to save settings. Please try again.",
+            description,
             variant: "destructive",
           });
         },
