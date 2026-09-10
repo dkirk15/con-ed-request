@@ -293,10 +293,15 @@ test("admin sees budget validation details and keeps the saved value after a rej
 
   await budgetInput.fill("1500");
   await page.getByRole("button", { name: "Save changes" }).click();
-  await expect(page.getByText(validationMessage, { exact: true })).toBeVisible();
+  await expect(
+    page.locator('p[id$="-form-item-message"]').filter({ hasText: validationMessage }),
+  ).toBeVisible();
   await expect(budgetInput).toHaveValue(String(ORIGINAL_BUDGET));
 
   await budgetInput.fill("1500");
+  await expect(
+    page.locator('p[id$="-form-item-message"]').filter({ hasText: validationMessage }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText(genericMessage, { exact: true })).toBeVisible();
   await expect(budgetInput).toHaveValue(String(ORIGINAL_BUDGET));
