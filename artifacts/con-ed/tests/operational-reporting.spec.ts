@@ -1056,6 +1056,65 @@ test("balance API preserves historical overrides, usage, pending spend, and debt
   });
 });
 
+test("historical balance API enforces employee and clinic access boundaries", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const priorYear = year - 1;
+  const ownClinicId = await createClinic(`E2E-Historical-Access-Own-${unique()}`);
+  const otherClinicId = await createClinic(`E2E-Historical-Access-Other-${unique()}`);
+  const manager = await provisionUser({ role: "manager", clinicId: ownClinicId });
+  const ownEmployee = await provisionUser({ role: "employee", clinicId: ownClinicId });
+  const otherEmployee = await provisionUser({ role: "employee", clinicId: otherClinicId });
+  const admin = await provisionUser({ role: "admin" });
+
+  // Distinct historical overrides make successful responses prove that the
+  // explicit year was honored, not just that the target user was found.
+  await updateUserAllocation(ownEmployee.dbId, 1250, priorYear);
+  await updateUserAllocation(otherEmployee.dbId, 1750, priorYear);
+
+  const getBalance = async (userId: number) => page.evaluate(async ({ userId, priorYear }) => {
+    const token = await (window as Window & {
+      Clerk?: { session?: { getToken: () => Promise<string | null> } };
+    }).Clerk?.session?.getToken();
+    const response = await fetch(`/api/users/${userId}/balance?year=${priorYear}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return { status: response.status, data: await response.json() };
+  }, { userId, priorYear });
+
+  // An employee can view their own historical balance but not another
+  // employee's balance.
+  await signInAs(ownEmployee);
+  const employeeSelf = await getBalance(ownEmployee.dbId);
+  expect(employeeSelf.status).toBe(200);
+  expect(employeeSelf.data).toMatchObject({
+    annualAllocation: 1250,
+    year: priorYear,
+  });
+  const employeeOther = await getBalance(otherEmployee.dbId);
+  expect(employeeOther.status).toBe(403);
+
+  // A manager can view a historical balance within the assigned clinic, but
+  // cannot cross the clinic boundary.
+  await signInAs(manager);
+  const managerOwnClinic = await getBalance(ownEmployee.dbId);
+  expect(managerOwnClinic.status).toBe(200);
+  expect(managerOwnClinic.data.year).toBe(priorYear);
+  const managerOtherClinic = await getBalance(otherEmployee.dbId);
+  expect(managerOtherClinic.status).toBe(403);
+
+  // Administrators retain cross-clinic access for historical reporting.
+  await signInAs(admin);
+  const adminOtherClinic = await getBalance(otherEmployee.dbId);
+  expect(adminOtherClinic.status).toBe(200);
+  expect(adminOtherClinic.data).toMatchObject({
+    annualAllocation: 1750,
+    year: priorYear,
+  });
+});
+
 test("year-specific overrides preserve prior debt when the current override changes", async ({
   page,
   provisionUser,
