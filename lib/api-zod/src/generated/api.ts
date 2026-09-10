@@ -2216,6 +2216,7 @@ export const GetTaskCenterResponse = zod.object({
  */
 export const getReportQueryYearMin = 2000;
 export const getReportQueryYearMax = 2100;
+export const getReportQueryYearMultipleOf = 1;
 
 export const getReportQueryViewDefault = `all`;
 export const getReportQueryDateBasisDefault = `request`;
@@ -2236,7 +2237,7 @@ export const getReportQueryPageSizeMax = 100;
 
 
 export const GetReportQueryParams = zod.object({
-  "year": zod.coerce.number().min(getReportQueryYearMin).max(getReportQueryYearMax).optional(),
+  "year": zod.coerce.number().min(getReportQueryYearMin).max(getReportQueryYearMax).multipleOf(getReportQueryYearMultipleOf).optional(),
   "clinicId": zod.coerce.number().nullish(),
   "employeeId": zod.coerce.number().nullish(),
   "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']).optional(),
@@ -2398,6 +2399,7 @@ export const GetReportOptionsResponse = zod.object({
  */
 export const exportReportQueryYearMin = 2000;
 export const exportReportQueryYearMax = 2100;
+export const exportReportQueryYearMultipleOf = 1;
 
 export const exportReportQueryViewDefault = `all`;
 export const exportReportQueryDateBasisDefault = `request`;
@@ -2411,7 +2413,7 @@ export const exportReportQuerySortDefault = `createdAt`;
 export const exportReportQueryOrderDefault = `desc`;
 
 export const ExportReportQueryParams = zod.object({
-  "year": zod.coerce.number().min(exportReportQueryYearMin).max(exportReportQueryYearMax).optional(),
+  "year": zod.coerce.number().min(exportReportQueryYearMin).max(exportReportQueryYearMax).multipleOf(exportReportQueryYearMultipleOf).optional(),
   "clinicId": zod.coerce.number().nullish(),
   "employeeId": zod.coerce.number().nullish(),
   "status": zod.enum(['draft', 'pending_manager', 'manager_approved', 'manager_denied', 'pending_bo', 'bo_approved', 'bo_denied', 'awaiting_receipt', 'receipt_submitted', 'reimbursed', 'cancelled']).optional(),
@@ -2438,11 +2440,12 @@ export const GetUserBalanceParams = zod.object({
 
 export const getUserBalanceQueryYearMin = 2000;
 export const getUserBalanceQueryYearMax = 2100;
+export const getUserBalanceQueryYearMultipleOf = 1;
 
 
 
 export const GetUserBalanceQueryParams = zod.object({
-  "year": zod.coerce.number().min(getUserBalanceQueryYearMin).max(getUserBalanceQueryYearMax).optional()
+  "year": zod.coerce.number().min(getUserBalanceQueryYearMin).max(getUserBalanceQueryYearMax).multipleOf(getUserBalanceQueryYearMultipleOf).optional()
 })
 
 export const GetUserBalanceResponse = zod.object({

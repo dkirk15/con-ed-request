@@ -11,3 +11,4 @@
 - [Drizzle wraps pg errors](drizzle-error-codes.md) — SQLSTATE (e.g. 23503 FK) is on err.cause.code, not err.code; prefer a count pre-check for 409.
 - [GitHub Actions push permission](github-actions-push-permission.md) — the Replit GitHub OAuth connection’s repo access cannot push new or changed workflow files without GitHub’s separate workflow scope.
 - [Transitive dependency security](transitive-dependency-security.md) — verify resolved lockfile versions; published tool packages can retain stale exact vulnerable transitive pins.
+- [OpenAPI integer query validation](openapi-integer-query-validation.md) — Orval's Zod output needs `multipleOf: 1` to reject fractional values for integer query parameters.

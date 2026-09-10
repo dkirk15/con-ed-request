@@ -989,8 +989,10 @@ components:
       in: query
       schema:
         type: integer
+        format: int32
         minimum: 2000
         maximum: 2100
+        multipleOf: 1
     ReportClinicId:
       name: clinicId
       in: query
