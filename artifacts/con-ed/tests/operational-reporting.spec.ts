@@ -1357,6 +1357,49 @@ test("business-office user is redirected to funding from the restricted clinics 
   await expect(page.getByRole("region", { name: "Employee budget usage" })).toBeVisible();
 });
 
+test("business-office restricted URL preserves valid report filters", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicName = `E2E-BO-URL-Filter-Clinic-${unique()}`;
+  const clinicId = await createClinic(clinicName);
+  const employeeId = await dataUser(clinicId, "BO URL Filter Employee");
+  const courseName = `BO URL Filter Course ${unique()}`;
+
+  await insertRequest({
+    employeeId,
+    status: "awaiting_receipt",
+    courseNames: courseName,
+    totalRequested: 450,
+    totalApproved: 400,
+    createdAt: new Date(`${year}-06-15T12:00:00Z`),
+  });
+
+  const bo = await provisionUser({ role: "business_office" });
+  await signInAs(bo);
+  await page.goto(
+    `/reports?year=${year}&clinicId=${clinicId}&employeeId=${employeeId}` +
+      `&search=${encodeURIComponent(courseName)}&section=clinics`,
+  );
+
+  // The restricted section falls back to funding, while every valid scope
+  // filter remains represented in the URL-driven controls and results.
+  await expect(page.getByRole("tab", { name: "Funding & advances" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.getByRole("tab", { name: "Clinics" })).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Reporting year" })).toHaveText(String(year));
+  await expect(page.getByRole("combobox", { name: "Clinic" })).toHaveText(clinicName);
+  await expect(page.getByRole("combobox", { name: "Employee" })).toHaveText(/BO URL Filter Employee/);
+  await expect(page.locator('input[name="report-search"]')).toHaveValue(courseName);
+  await expect(page.getByRole("region", { name: "Employee budget usage" })).toContainText(
+    "BO URL Filter Employee",
+  );
+  await expect(page.getByRole("region", { name: "Request ledger" })).toContainText(courseName);
+});
+
 test("quick view badges show the correct count and the ledger total matches after clicking", async ({
   page,
   provisionUser,
