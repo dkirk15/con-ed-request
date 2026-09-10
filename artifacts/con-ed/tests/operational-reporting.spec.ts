@@ -1115,6 +1115,43 @@ test("historical balance API enforces employee and clinic access boundaries", as
   });
 });
 
+test("balance API rejects invalid reporting years and accepts inclusive boundaries", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-Balance-Year-Validation-${unique()}`);
+  const empId = await dataUser(clinicId, "Balance Year Validation Employee");
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  await page.goto(`/reports?year=${year}&clinicId=${clinicId}&section=funding`);
+  await page.waitForFunction(() => Boolean(
+    (window as Window & { Clerk?: { session?: unknown } }).Clerk?.session,
+  ));
+
+  const getBalance = async (requestedYear: string) => page.evaluate(async ({ userId, requestedYear }) => {
+    const token = await (window as Window & {
+      Clerk?: { session?: { getToken: () => Promise<string | null> } };
+    }).Clerk?.session?.getToken();
+    const response = await fetch(`/api/users/${userId}/balance?year=${encodeURIComponent(requestedYear)}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return { status: response.status, data: await response.json() };
+  }, { userId: empId, requestedYear });
+
+  for (const requestedYear of ["not-a-year", "2025.5", "1999", "2101"]) {
+    const response = await getBalance(requestedYear);
+    expect(response.status).toBe(400);
+    expect(response.data).toEqual({ error: "Invalid reporting year" });
+  }
+
+  for (const requestedYear of ["2000", "2100"]) {
+    const response = await getBalance(requestedYear);
+    expect(response.status).toBe(200);
+    expect(response.data.year).toBe(Number(requestedYear));
+  }
+});
+
 test("year-specific overrides preserve prior debt when the current override changes", async ({
   page,
   provisionUser,
