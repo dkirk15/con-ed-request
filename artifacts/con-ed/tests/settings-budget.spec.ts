@@ -253,6 +253,60 @@ test("rejects invalid annual budgets without replacing the configured budget", a
   }
 });
 
+test("admin sees budget validation details and keeps the saved value after a rejected save", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic("E2E-Clinic-settings-save-errors");
+  const admin = await provisionUser({ role: "admin", clinicId });
+  const genericMessage = "Failed to save settings. Please try again.";
+  const validationMessage = "Annual budget must be approved by Finance.";
+  const responses = [
+    { status: 400, body: { error: validationMessage } },
+    { status: 401, body: { error: "Authentication required" } },
+    { status: 500, body: { error: "Internal server error" } },
+  ];
+
+  await signInAs(admin);
+  await page.route("**/api/settings", async (route) => {
+    if (route.request().method() !== "PATCH") {
+      await route.continue();
+      return;
+    }
+
+    const response = responses.shift();
+    if (!response) {
+      throw new Error("Unexpected extra Settings save request");
+    }
+
+    await route.fulfill({
+      status: response.status,
+      contentType: "application/json",
+      body: JSON.stringify(response.body),
+    });
+  });
+  await page.goto("/settings");
+
+  const budgetInput = page.getByRole("spinbutton");
+  await expect(budgetInput).toHaveValue(String(ORIGINAL_BUDGET));
+
+  await budgetInput.fill("1500");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText(validationMessage, { exact: true })).toBeVisible();
+  await expect(budgetInput).toHaveValue(String(ORIGINAL_BUDGET));
+
+  await budgetInput.fill("1500");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText(genericMessage, { exact: true })).toBeVisible();
+  await expect(budgetInput).toHaveValue(String(ORIGINAL_BUDGET));
+
+  await budgetInput.fill("1500");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText(genericMessage, { exact: true })).toBeVisible();
+  await expect(budgetInput).toHaveValue(String(ORIGINAL_BUDGET));
+});
+
 test("budget report refreshes after changing the budget in Settings", async ({
   page,
   provisionUser,

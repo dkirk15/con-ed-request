@@ -83,11 +83,15 @@ overrides:
   #   and the upstream dependency tree; remove it once the parent package no
   #   longer needs it. Do not keep overrides solely because they are harmless.
   #
-  # These exact patches remain necessary because the current parent ranges
-  # otherwise resolve vulnerable releases: js-yaml 4.2.x, uuid 9.x, and
-  # js-cookie 3.0.5. Recheck them whenever Orval, Clerk, or Google libraries
-  # are upgraded; remove each override when its parent resolves the patch.
-  js-yaml: 4.3.1
+  # These exact patches remain necessary because current parent ranges
+  # otherwise resolve vulnerable transitive releases. Recheck them whenever
+  # the related toolchain packages are upgraded; remove each override when its
+  # parent resolves the patch.
+  browserslist: 4.28.9
+  baseline-browser-mapping: 2.11.21
+  fast-uri: 3.1.7
+  js-yaml: 4.3.2
+  qs: 6.16.0
   # replit uses linux-x64 only, we can exclude all other platforms
   "esbuild>@esbuild/darwin-arm64": "-"
   "esbuild>@esbuild/darwin-x64": "-"

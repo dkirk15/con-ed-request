@@ -80,6 +80,10 @@ export default function SettingsPage() {
               ? error.data?.error ?? "Failed to save settings. Please try again."
               : "Failed to save settings. Please try again.";
 
+          if (settings) {
+            form.reset({ annualBudget: String(settings.annualBudget) });
+          }
+
           toast({
             title: "Error",
             description,
