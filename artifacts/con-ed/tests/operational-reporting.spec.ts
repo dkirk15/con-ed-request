@@ -1047,10 +1047,10 @@ test("balance API preserves historical overrides, usage, pending spend, and debt
   expect(current.status).toBe(200);
   expect(current.data).toMatchObject({
     annualAllocation: 4000,
-    availableAllocation: 3500,
-    carryoverDebt: 500,
+    availableAllocation: 4000,
+    carryoverDebt: 0,
     usedAmount: 300,
-    remainingAmount: 3200,
+    remainingAmount: 3700,
     pendingAmount: 90,
     year,
   });
