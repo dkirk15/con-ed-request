@@ -1337,6 +1337,26 @@ test("business-office user sees employees from all clinics in the budget-usage v
   await expect(page.getByRole("tab", { name: "Clinics" })).toHaveCount(0);
 });
 
+test("business-office user is redirected to funding from the restricted clinics URL", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const bo = await provisionUser({ role: "business_office" });
+  await signInAs(bo);
+
+  // The direct URL must not expose the admin-only Clinics section. The
+  // invalid section falls back to the Business Office default: funding.
+  await page.goto(`/reports?year=${year}&section=clinics`);
+
+  await expect(page.getByRole("tab", { name: "Funding & advances" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(page.getByRole("tab", { name: "Clinics" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Employee budget usage" })).toBeVisible();
+});
+
 test("quick view badges show the correct count and the ledger total matches after clicking", async ({
   page,
   provisionUser,
