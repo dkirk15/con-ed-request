@@ -2745,7 +2745,7 @@ export const getExportReportQueryKey = (params?: ExportReportParams,) => {
     }
 
 
-export const getExportReportQueryOptions = <TData = Awaited<ReturnType<typeof exportReport>>, TError = ErrorType<unknown>>(params?: ExportReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getExportReportQueryOptions = <TData = Awaited<ReturnType<typeof exportReport>>, TError = ErrorType<ErrorEnvelope>>(params?: ExportReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -2764,14 +2764,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ExportReportQueryResult = NonNullable<Awaited<ReturnType<typeof exportReport>>>
-export type ExportReportQueryError = ErrorType<unknown>
+export type ExportReportQueryError = ErrorType<ErrorEnvelope>
 
 
 /**
  * @summary Export the filtered role-scoped report as CSV
  */
 
-export function useExportReport<TData = Awaited<ReturnType<typeof exportReport>>, TError = ErrorType<unknown>>(
+export function useExportReport<TData = Awaited<ReturnType<typeof exportReport>>, TError = ErrorType<ErrorEnvelope>>(
  params?: ExportReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
