@@ -945,6 +945,117 @@ test("manual allocation override is used when computing carry-forward debt", asy
   await expect(row.getByText("$500.00")).toBeVisible();
 });
 
+test("balance API preserves historical overrides, usage, pending spend, and debt", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const priorYear = year - 1;
+  const twoYearsAgo = year - 2;
+  const clinicId = await createClinic(`E2E-Historical-Balance-${unique()}`);
+  const empId = await dataUser(clinicId, "Historical Balance Employee");
+
+  // Two years ago, $2,500 of approved spend against a $2,000 allocation
+  // creates $500 of carry-forward debt into the requested historical year.
+  await updateUserAllocation(empId, 2000, twoYearsAgo);
+  await insertRequest({
+    employeeId: empId,
+    status: "reimbursed",
+    courseNames: `Historical Debt Course ${unique()}`,
+    totalRequested: 2500,
+    totalApproved: 2500,
+    createdAt: new Date(`${twoYearsAgo}-06-15T12:00:00Z`),
+  });
+
+  // The historical year has its own $3,000 override, $700 approved usage,
+  // and $200 still pending. Available is $3,000 - $500 debt = $2,500;
+  // remaining is $2,500 - $700 used = $1,800.
+  await updateUserAllocation(empId, 3000, priorYear);
+  await insertRequest({
+    employeeId: empId,
+    status: "awaiting_receipt",
+    courseNames: `Historical Approved Course ${unique()}`,
+    totalRequested: 800,
+    totalApproved: 700,
+    createdAt: new Date(`${priorYear}-03-01T12:00:00Z`),
+  });
+  await insertRequest({
+    employeeId: empId,
+    status: "pending_manager",
+    courseNames: `Historical Pending Manager Course ${unique()}`,
+    totalRequested: 125,
+    createdAt: new Date(`${priorYear}-04-01T12:00:00Z`),
+  });
+  await insertRequest({
+    employeeId: empId,
+    status: "pending_bo",
+    courseNames: `Historical Pending BO Course ${unique()}`,
+    totalRequested: 75,
+    createdAt: new Date(`${priorYear}-05-01T12:00:00Z`),
+  });
+
+  // A different current-year override proves that an explicit historical year
+  // does not accidentally reuse the current allocation.
+  await updateUserAllocation(empId, 4000, year);
+  await insertRequest({
+    employeeId: empId,
+    status: "awaiting_receipt",
+    courseNames: `Current Approved Course ${unique()}`,
+    totalRequested: 350,
+    totalApproved: 300,
+    createdAt: new Date(`${year}-02-01T12:00:00Z`),
+  });
+  await insertRequest({
+    employeeId: empId,
+    status: "pending_manager",
+    courseNames: `Current Pending Course ${unique()}`,
+    totalRequested: 90,
+    createdAt: new Date(`${year}-03-01T12:00:00Z`),
+  });
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  await page.goto(`/reports?year=${year}&clinicId=${clinicId}&section=funding`);
+  await page.waitForFunction(() => Boolean(
+    (window as Window & { Clerk?: { session?: unknown } }).Clerk?.session,
+  ));
+
+  const getBalance = async (requestedYear?: number) => page.evaluate(async ({ userId, requestedYear }) => {
+    const token = await (window as Window & {
+      Clerk?: { session?: { getToken: () => Promise<string | null> } };
+    }).Clerk?.session?.getToken();
+    const query = requestedYear == null ? "" : `?year=${requestedYear}`;
+    const response = await fetch(`/api/users/${userId}/balance${query}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return { status: response.status, data: await response.json() };
+  }, { userId: empId, requestedYear });
+
+  const historical = await getBalance(priorYear);
+  expect(historical.status).toBe(200);
+  expect(historical.data).toMatchObject({
+    annualAllocation: 3000,
+    availableAllocation: 2500,
+    carryoverDebt: 500,
+    usedAmount: 700,
+    remainingAmount: 1800,
+    pendingAmount: 200,
+    year: priorYear,
+  });
+
+  const current = await getBalance();
+  expect(current.status).toBe(200);
+  expect(current.data).toMatchObject({
+    annualAllocation: 4000,
+    availableAllocation: 3500,
+    carryoverDebt: 500,
+    usedAmount: 300,
+    remainingAmount: 3200,
+    pendingAmount: 90,
+    year,
+  });
+});
+
 test("year-specific overrides preserve prior debt when the current override changes", async ({
   page,
   provisionUser,
