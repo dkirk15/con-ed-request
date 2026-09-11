@@ -39,8 +39,13 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function SettingsPage() {
-  const { data: me } = useGetMe();
-  const { data: settings, isLoading } = useGetSettings();
+  const { data: me, isLoading: meLoading } = useGetMe();
+  const { data: settings, isLoading: settingsLoading } = useGetSettings({
+    query: {
+      enabled: me?.role === "admin",
+      queryKey: getGetSettingsQueryKey(),
+    },
+  });
   const updateSettings = useUpdateSettings();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -57,7 +62,11 @@ export default function SettingsPage() {
     }
   }, [settings, form]);
 
-  if (me && me.role !== "admin") {
+  if (meLoading) {
+    return <SettingsLoadingState />;
+  }
+
+  if (!me || me.role !== "admin") {
     return (
       <div className="flex h-full items-center justify-center">
         <p className="text-muted-foreground">You do not have permission to view this page.</p>
@@ -118,7 +127,7 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        {isLoading ? (
+        {settingsLoading ? (
           <div className="space-y-3">
             <Skeleton className="h-4 w-32" />
             <Skeleton className="h-10 w-64" />
@@ -160,6 +169,23 @@ export default function SettingsPage() {
             </form>
           </Form>
         )}
+      </div>
+    </div>
+  );
+}
+
+function SettingsLoadingState() {
+  return (
+    <div className="space-y-6">
+      <Skeleton className="h-12 w-64" />
+      <div className="rounded-lg border bg-white p-6 shadow-sm">
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="mt-3 h-4 w-full max-w-xl" />
+        <div className="mt-6 space-y-3">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-9 w-24" />
+        </div>
       </div>
     </div>
   );

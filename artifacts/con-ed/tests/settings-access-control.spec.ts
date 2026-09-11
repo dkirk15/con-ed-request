@@ -141,6 +141,47 @@ test.describe("Settings access control — non-admin roles blocked", () => {
     await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
   });
 
+  test("employee: direct /settings navigation never flashes the settings form while permissions load", async ({
+    page,
+    provisionUser,
+    signInAs,
+  }) => {
+    const employee = await provisionUser({ role: "employee" });
+    await signInAs(employee);
+
+    let releaseMe!: () => void;
+    const meReady = new Promise<void>((resolve) => {
+      releaseMe = resolve;
+    });
+    let holdMe = true;
+    await page.route("**/api/users/me", async (route) => {
+      if (holdMe) await meReady;
+      await route.continue();
+    });
+
+    try {
+      const navigation = page.goto("/settings");
+
+      // While the current user's role is unresolved, neither admin control may
+      // be present, even if the settings request would resolve first.
+      await expect(page.getByRole("spinbutton")).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
+
+      holdMe = false;
+      releaseMe();
+      await navigation;
+      await expect(
+        page.getByText("You do not have permission to view this page.", { exact: true }),
+      ).toBeVisible();
+      await expect(page.getByRole("spinbutton")).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
+    } finally {
+      holdMe = false;
+      releaseMe();
+      await page.unroute("**/api/users/me");
+    }
+  });
+
   for (const { role, label } of [
     { role: "business_office" as const, label: "business_office" },
     { role: "accounting" as const, label: "accounting" },
