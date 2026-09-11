@@ -1115,6 +1115,44 @@ test("historical balance API enforces employee and clinic access boundaries", as
   });
 });
 
+test("historical balance API does not expose details for a missing employee", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  await page.goto(`/reports?year=${year}&section=funding`);
+  await page.waitForFunction(() => Boolean(
+    (window as Window & { Clerk?: { session?: unknown } }).Clerk?.session,
+  ));
+
+  const missingEmployeeId = 2_147_483_647;
+  const response = await page.evaluate(async ({ userId, requestedYear }) => {
+    const token = await (window as Window & {
+      Clerk?: { session?: { getToken: () => Promise<string | null> } };
+    }).Clerk?.session?.getToken();
+    const result = await fetch(`/api/users/${userId}/balance?year=${requestedYear}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    return { status: result.status, data: await result.json() as Record<string, unknown> };
+  }, { userId: missingEmployeeId, requestedYear: year - 1 });
+
+  expect(response.status).toBe(404);
+  expect(response.data).toEqual({ error: "User not found" });
+  for (const field of [
+    "annualAllocation",
+    "availableAllocation",
+    "usedAmount",
+    "pendingAmount",
+    "carryoverDebt",
+    "remainingAmount",
+    "year",
+  ]) {
+    expect(response.data).not.toHaveProperty(field);
+  }
+});
+
 test("balance API requires authentication for historical and current-year details", async ({
   request,
 }) => {
