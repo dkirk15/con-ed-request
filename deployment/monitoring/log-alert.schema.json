@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Production log alert contract",
+  "type": "object",
+  "required": [
+    "service",
+    "source",
+    "match",
+    "notification"
+  ],
+  "properties": {
+    "service": {
+      "type": "string"
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "format",
+        "stream"
+      ],
+      "properties": {
+        "format": {
+          "const": "json"
+        },
+        "stream": {
+          "const": "stdout"
+        }
+      },
+      "additionalProperties": false
+    },
+    "match": {
+      "type": "object",
+      "required": [
+        "levelAtLeast",
+        "event",
+        "alert"
+      ],
+      "properties": {
+        "levelAtLeast": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "event": {
+          "const": "alert.auth.clerk_provisioning_lookup_failures"
+        },
+        "alert": {
+          "const": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "notification": {
+      "type": "object",
+      "required": [
+        "recipient",
+        "cooldownSeconds",
+        "deduplicationKey",
+        "message",
+        "includeFields",
+        "excludePaths"
+      ],
+      "properties": {
+        "recipient": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cooldownSeconds": {
+          "const": 900
+        },
+        "deduplicationKey": {
+          "const": "event"
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "includeFields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "excludePaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

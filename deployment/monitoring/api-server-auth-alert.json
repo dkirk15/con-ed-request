@@ -1,0 +1,32 @@
+{
+  "$schema": "./log-alert.schema.json",
+  "service": "api-server",
+  "source": {
+    "format": "json",
+    "stream": "stdout"
+  },
+  "match": {
+    "levelAtLeast": 60,
+    "event": "alert.auth.clerk_provisioning_lookup_failures",
+    "alert": true
+  },
+  "notification": {
+    "recipient": "on-call-administrators",
+    "cooldownSeconds": 900,
+    "deduplicationKey": "event",
+    "message": "Authentication provisioning outage: {{failureCount}} Clerk lookups failed in {{windowSeconds}} seconds. {{action}}",
+    "includeFields": [
+      "failureCount",
+      "threshold",
+      "windowSeconds",
+      "cooldownSeconds",
+      "action"
+    ],
+    "excludePaths": [
+      "clerk",
+      "req.headers.authorization",
+      "req.headers.cookie",
+      "res.headers.set-cookie"
+    ]
+  }
+}
