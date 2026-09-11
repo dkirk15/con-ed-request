@@ -186,6 +186,36 @@ test.describe("Settings access control — non-admin roles blocked", () => {
     { role: "business_office" as const, label: "business_office" },
     { role: "accounting" as const, label: "accounting" },
   ]) {
+    test(`${label}: direct /settings navigation shows access denied without the settings form`, async ({
+      page,
+      provisionUser,
+      signInAs,
+    }) => {
+      const user = await provisionUser({ role });
+      await signInAs(user);
+
+      await page.goto("/dashboard");
+      await page.waitForFunction(() =>
+        Boolean(
+          (window as Window & { Clerk?: { session?: unknown } }).Clerk?.session,
+        ),
+      );
+
+      await page.goto("/settings");
+      await expect(page).toHaveURL(/\/settings$/);
+      await expect(
+        page.getByText("You do not have permission to view this page.", { exact: true }),
+      ).toBeVisible();
+      await expect(page.getByRole("spinbutton")).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "Settings" })).toHaveCount(0);
+    });
+  }
+
+  for (const { role, label } of [
+    { role: "business_office" as const, label: "business_office" },
+    { role: "accounting" as const, label: "accounting" },
+  ]) {
     test(`${label}: GET /api/settings returns 403, PATCH /api/settings returns 403, no Settings nav link`, async ({
       page,
       provisionUser,
