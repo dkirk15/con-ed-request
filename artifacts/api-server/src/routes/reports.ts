@@ -42,6 +42,7 @@ const ACTIVE_STAGES = [
   { status: "receipt_submitted", label: "Ready to reimburse" },
 ] as const;
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const REPORT_DATE_FIELDS = ["dateFrom", "dateTo", "courseFrom", "courseTo"] as const;
 
 type ReportUser = NonNullable<Request["dbUser"]>;
 type ParsedReportFilters = ReturnType<typeof GetReportQueryParams.parse>;
@@ -58,6 +59,24 @@ function normalizeFilters(filters: ParsedReportFilters): ReportFilters {
     view: filters.view ?? "all",
     dateBasis: filters.dateBasis ?? "request",
   };
+}
+
+function hasInvalidCalendarDate(
+  filters: Partial<Record<(typeof REPORT_DATE_FIELDS)[number], string>>,
+) {
+  return REPORT_DATE_FIELDS.some((field) => {
+    const value = filters[field];
+    if (value == null) return false;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!match) return true;
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return date.getUTCFullYear() !== year
+      || date.getUTCMonth() !== month - 1
+      || date.getUTCDate() !== day;
+  });
 }
 
 function roundCurrency(value: number) {
@@ -516,6 +535,10 @@ router.get(
         res.status(400).json({ error: "Invalid report filters" });
         return;
       }
+      if (hasInvalidCalendarDate(parsed.data)) {
+        res.status(400).json({ error: "Invalid report filters" });
+        return;
+      }
 
       const user = req.dbUser!;
       const filters = normalizeFilters(parsed.data);
@@ -869,6 +892,10 @@ router.get(
     try {
       const parsed = ExportReportQueryParams.safeParse(req.query);
       if (!parsed.success) {
+        res.status(400).json({ error: "Invalid report filters" });
+        return;
+      }
+      if (hasInvalidCalendarDate(parsed.data)) {
         res.status(400).json({ error: "Invalid report filters" });
         return;
       }

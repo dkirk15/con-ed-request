@@ -1222,6 +1222,46 @@ test("report APIs reject invalid reporting years and accept inclusive boundaries
   }
 });
 
+test("report APIs reject impossible calendar dates and accept valid boundaries", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  await page.goto(`/reports?year=${year}`);
+  await page.waitForFunction(() => Boolean(
+    (window as Window & { Clerk?: { session?: unknown } }).Clerk?.session,
+  ));
+
+  const requestReport = async (
+    endpoint: "reports" | "reports/export",
+    field: "dateFrom" | "dateTo" | "courseFrom" | "courseTo",
+    value: string,
+  ) => page.evaluate(async ({ endpoint, field, value }) => {
+    const token = await (window as Window & {
+      Clerk?: { session?: { getToken: () => Promise<string | null> } };
+    }).Clerk?.session?.getToken();
+    const response = await fetch(
+      `/api/${endpoint}?year=2024&${field}=${encodeURIComponent(value)}`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : undefined },
+    );
+    return { status: response.status, body: await response.text() };
+  }, { endpoint, field, value });
+
+  const dateFields = ["dateFrom", "dateTo", "courseFrom", "courseTo"] as const;
+  for (const field of dateFields) {
+    for (const endpoint of ["reports", "reports/export"] as const) {
+      const invalid = await requestReport(endpoint, field, "2024-02-31");
+      expect(invalid.status).toBe(400);
+      expect(JSON.parse(invalid.body)).toEqual({ error: "Invalid report filters" });
+
+      const valid = await requestReport(endpoint, field, "2024-02-29");
+      expect(valid.status).toBe(200);
+    }
+  }
+});
+
 test("year-specific overrides preserve prior debt when the current override changes", async ({
   page,
   provisionUser,
