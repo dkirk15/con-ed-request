@@ -268,9 +268,19 @@ test("admin clears stale budget validation after a successful retry", async ({
     { status: 500, body: { error: "Internal server error" } },
     { status: 200, body: { annualBudget: 1500 } },
   ];
+  let persistedBudget = ORIGINAL_BUDGET;
 
   await signInAs(admin);
   await page.route("**/api/settings", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ annualBudget: persistedBudget }),
+      });
+      return;
+    }
+
     if (route.request().method() !== "PATCH") {
       await route.continue();
       return;
@@ -279,6 +289,10 @@ test("admin clears stale budget validation after a successful retry", async ({
     const response = responses.shift();
     if (!response) {
       throw new Error("Unexpected extra Settings save request");
+    }
+
+    if (response.status === 200) {
+      persistedBudget = response.body.annualBudget;
     }
 
     await route.fulfill({
@@ -319,6 +333,12 @@ test("admin clears stale budget validation after a successful retry", async ({
     page.locator('p[id$="-form-item-message"]').filter({ hasText: validationMessage }),
   ).toHaveCount(0);
   await expect(budgetInput).toHaveValue("1500");
+
+  await page.reload();
+  await expect(page.getByRole("spinbutton")).toHaveValue("1500");
+  await expect(
+    page.locator('p[id$="-form-item-message"]').filter({ hasText: validationMessage }),
+  ).toHaveCount(0);
 });
 
 test("budget report refreshes after changing the budget in Settings", async ({
