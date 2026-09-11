@@ -171,6 +171,61 @@ test("reports CSV export applies filters and preserves its schema", async ({
   expect(parseCsv(legacyFilterExport.text)).toHaveLength(3);
 });
 
+test("sorted report exports keep the same row order as the visible ledger", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-Export-Sort-${unique()}`);
+  const employeeId = await dataUser(clinicId, "Export Sort Employee");
+  const lowCourse = `Export Sort Low ${unique()}`;
+  const middleCourse = `Export Sort Middle ${unique()}`;
+  const highCourse = `Export Sort High ${unique()}`;
+
+  for (const [courseNames, totalRequested] of [
+    [lowCourse, 125],
+    [middleCourse, 375],
+    [highCourse, 625],
+  ] as const) {
+    await insertRequest({
+      employeeId,
+      status: "pending_manager",
+      courseNames,
+      totalRequested,
+      createdAt: new Date(`${year}-02-15T12:00:00Z`),
+    });
+  }
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  await page.goto(`/reports?year=${year}&clinicId=${clinicId}`);
+
+  const ledger = page.getByRole("region", { name: "Request ledger" });
+  const visibleCourses = () => ledger.locator("tbody a").allTextContents();
+  const exportCourses = async () => {
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Export current view" }).click();
+    const download = await downloadPromise;
+    const downloadPath = await download.path();
+    expect(downloadPath).toBeTruthy();
+    return parseCsv(await readFile(downloadPath!, "utf8")).slice(1).map((row) => row[5]);
+  };
+
+  await page.getByRole("combobox", { name: "Sort requests" }).click();
+  await page.getByRole("option", { name: "Requested amount" }).click();
+
+  await expect.poll(() => new URL(page.url()).searchParams.get("sort")).toBe("totalRequested");
+  await expect.poll(visibleCourses).toEqual([highCourse, middleCourse, lowCourse]);
+  expect(new URL(page.url()).searchParams.get("order")).toBeNull();
+  expect(await exportCourses()).toEqual(await visibleCourses());
+
+  await page.getByRole("button", { name: "Sort ascending" }).click();
+
+  await expect.poll(() => new URL(page.url()).searchParams.get("order")).toBe("asc");
+  await expect.poll(visibleCourses).toEqual([lowCourse, middleCourse, highCourse]);
+  expect(await exportCourses()).toEqual(await visibleCourses());
+});
+
 test("reports CSV export honors each supported date basis", async ({
   page,
   provisionUser,
