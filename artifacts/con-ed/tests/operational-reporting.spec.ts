@@ -1627,6 +1627,97 @@ test("business-office tab switches preserve report filters and scoped data", asy
   await assertScopedReport("funding");
 });
 
+test("business-office quick views preserve report filters and scoped ledger data", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const includedClinicName = `E2E-BO-Quick-Included-${unique()}`;
+  const excludedClinicName = `E2E-BO-Quick-Excluded-${unique()}`;
+  const includedClinicId = await createClinic(includedClinicName);
+  const excludedClinicId = await createClinic(excludedClinicName);
+  const includedEmployeeId = await dataUser(includedClinicId, "BO Quick Included Employee");
+  const excludedEmployeeId = await dataUser(excludedClinicId, "BO Quick Excluded Employee");
+  const scopeSearch = `BO Quick Scope ${unique()}`;
+  const includedApproval = `${scopeSearch} Included Approval`;
+  const includedReceipt = `${scopeSearch} Included Receipt`;
+  const includedAdvanced = `${scopeSearch} Included Advanced`;
+  const excludedApproval = `${scopeSearch} Excluded Approval`;
+  const excludedReceipt = `${scopeSearch} Excluded Receipt`;
+  const excludedAdvanced = `${scopeSearch} Excluded Advanced`;
+
+  for (const [employeeId, courses] of [
+    [includedEmployeeId, [includedApproval, includedReceipt, includedAdvanced]],
+    [excludedEmployeeId, [excludedApproval, excludedReceipt, excludedAdvanced]],
+  ] as const) {
+    await insertRequest({
+      employeeId,
+      status: "pending_bo",
+      courseNames: courses[0],
+      totalRequested: 200,
+      createdAt: new Date(`${year}-02-01T12:00:00Z`),
+    });
+    await insertRequest({
+      employeeId,
+      status: "awaiting_receipt",
+      courseNames: courses[1],
+      courseStartDate: `${year}-03-01`,
+      courseEndDate: `${year}-03-02`,
+      totalRequested: 300,
+      totalApproved: 275,
+      createdAt: new Date(`${year}-03-01T12:00:00Z`),
+    });
+    await insertRequest({
+      employeeId,
+      status: "draft",
+      courseNames: courses[2],
+      requiresRepaymentGuarantee: true,
+      totalRequested: 400,
+      createdAt: new Date(`${year}-04-01T12:00:00Z`),
+    });
+  }
+
+  const bo = await provisionUser({ role: "business_office" });
+  await signInAs(bo);
+  await page.goto(
+    `/reports?year=${year}&clinicId=${includedClinicId}&employeeId=${includedEmployeeId}` +
+      `&search=${encodeURIComponent(scopeSearch)}&section=funding`,
+  );
+
+  const quickViews = page.getByRole("region", { name: "Quick views" });
+  const ledger = page.getByRole("region", { name: "Request ledger" });
+  const assertScope = async (view: string | null, includedCourse: string) => {
+    await expect(ledger).toContainText(includedCourse);
+    const url = new URL(page.url());
+    expect(url.searchParams.get("year")).toBe(String(year));
+    expect(url.searchParams.get("clinicId")).toBe(String(includedClinicId));
+    expect(url.searchParams.get("employeeId")).toBe(String(includedEmployeeId));
+    expect(url.searchParams.get("search")).toBe(scopeSearch);
+    expect(url.searchParams.get("section")).toBe("funding");
+    expect(url.searchParams.get("view")).toBe(view);
+    await expect(ledger).toContainText("BO Quick Included Employee");
+    await expect(ledger).toContainText(includedClinicName);
+    await expect(ledger).not.toContainText("BO Quick Excluded Employee");
+    await expect(ledger).not.toContainText(excludedClinicName);
+    await expect(ledger).not.toContainText(excludedApproval);
+    await expect(ledger).not.toContainText(excludedReceipt);
+    await expect(ledger).not.toContainText(excludedAdvanced);
+  };
+
+  const cases = [
+    { label: /All activity/, view: null, course: includedApproval },
+    { label: /Needs attention/, view: "needs_attention", course: includedReceipt },
+    { label: /Needs approval/, view: "needs_approval", course: includedApproval },
+    { label: /Advanced funding/, view: "advanced_funding", course: includedAdvanced },
+    { label: /Awaiting receipts/, view: "awaiting_receipts", course: includedReceipt },
+  ];
+
+  for (const item of cases) {
+    await quickViews.getByRole("button", { name: item.label }).click();
+    await assertScope(item.view, item.course);
+  }
+});
+
 test("quick view badges show the correct count and the ledger total matches after clicking", async ({
   page,
   provisionUser,
