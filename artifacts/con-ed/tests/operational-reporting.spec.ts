@@ -1115,6 +1115,31 @@ test("historical balance API enforces employee and clinic access boundaries", as
   });
 });
 
+test("balance API requires authentication for historical and current-year details", async ({
+  request,
+}) => {
+  const clinicId = await createClinic(`E2E-Unauthenticated-Balance-${unique()}`);
+  const employeeId = await dataUser(clinicId, "Unauthenticated Balance Employee");
+  const sensitiveFields = [
+    "annualAllocation",
+    "availableAllocation",
+    "carryoverDebt",
+    "usedAmount",
+    "remainingAmount",
+    "pendingAmount",
+  ];
+
+  for (const query of [`?year=${year - 1}`, ""]) {
+    const response = await request.get(`/api/users/${employeeId}/balance${query}`);
+    expect(response.status()).toBe(401);
+
+    const body = await response.json() as Record<string, unknown>;
+    for (const field of sensitiveFields) {
+      expect(body).not.toHaveProperty(field);
+    }
+  }
+});
+
 test("balance API rejects invalid reporting years and accepts inclusive boundaries", async ({
   page,
   provisionUser,
