@@ -253,7 +253,7 @@ test("rejects invalid annual budgets without replacing the configured budget", a
   }
 });
 
-test("admin sees budget validation details and keeps the saved value after a rejected save", async ({
+test("admin clears stale budget validation after a successful retry", async ({
   page,
   provisionUser,
   signInAs,
@@ -266,6 +266,7 @@ test("admin sees budget validation details and keeps the saved value after a rej
     { status: 400, body: { error: validationMessage } },
     { status: 401, body: { error: "Authentication required" } },
     { status: 500, body: { error: "Internal server error" } },
+    { status: 200, body: { annualBudget: 1500 } },
   ];
 
   await signInAs(admin);
@@ -310,6 +311,14 @@ test("admin sees budget validation details and keeps the saved value after a rej
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText(genericMessage, { exact: true })).toBeVisible();
   await expect(budgetInput).toHaveValue(String(ORIGINAL_BUDGET));
+
+  await budgetInput.fill("1500");
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Settings saved", { exact: true })).toBeVisible();
+  await expect(
+    page.locator('p[id$="-form-item-message"]').filter({ hasText: validationMessage }),
+  ).toHaveCount(0);
+  await expect(budgetInput).toHaveValue("1500");
 });
 
 test("budget report refreshes after changing the budget in Settings", async ({
