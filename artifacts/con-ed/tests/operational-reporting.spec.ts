@@ -1452,6 +1452,78 @@ test("business-office export preserves restricted URL filters and reporting year
   expect(rows.slice(1).map((row) => row[5])).not.toContain(nonMatchingCourse);
 });
 
+test("business-office tab switches preserve report filters and scoped data", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const includedClinicName = `E2E-BO-Tabs-Included-${unique()}`;
+  const excludedClinicName = `E2E-BO-Tabs-Excluded-${unique()}`;
+  const includedClinicId = await createClinic(includedClinicName);
+  const excludedClinicId = await createClinic(excludedClinicName);
+  const includedEmployeeId = await dataUser(includedClinicId, "BO Tab Included Employee");
+  const excludedEmployeeId = await dataUser(excludedClinicId, "BO Tab Excluded Employee");
+  const includedCourse = `BO Tab Included Course ${unique()}`;
+  const excludedCourse = `BO Tab Excluded Course ${unique()}`;
+
+  await insertRequest({
+    employeeId: includedEmployeeId,
+    status: "awaiting_receipt",
+    courseNames: includedCourse,
+    totalRequested: 325,
+    totalApproved: 300,
+    createdAt: new Date(`${year}-07-15T12:00:00Z`),
+  });
+  await insertRequest({
+    employeeId: excludedEmployeeId,
+    status: "awaiting_receipt",
+    courseNames: excludedCourse,
+    totalRequested: 725,
+    totalApproved: 700,
+    createdAt: new Date(`${year}-07-15T12:00:00Z`),
+  });
+
+  const bo = await provisionUser({ role: "business_office" });
+  await signInAs(bo);
+  await page.goto(
+    `/reports?year=${year}&clinicId=${includedClinicId}&employeeId=${includedEmployeeId}` +
+      `&search=${encodeURIComponent(includedCourse)}&section=funding`,
+  );
+
+  const assertScopedReport = async (section: "funding" | "workflow") => {
+    const url = new URL(page.url());
+    expect(url.searchParams.get("year")).toBe(String(year));
+    expect(url.searchParams.get("clinicId")).toBe(String(includedClinicId));
+    expect(url.searchParams.get("employeeId")).toBe(String(includedEmployeeId));
+    expect(url.searchParams.get("search")).toBe(includedCourse);
+    expect(url.searchParams.get("section")).toBe(section);
+
+    await expect(page.getByRole("tab", { name: "Funding & advances" })).toHaveAttribute(
+      "aria-selected",
+      section === "funding" ? "true" : "false",
+    );
+    await expect(page.getByRole("tab", { name: "Workflow" })).toHaveAttribute(
+      "aria-selected",
+      section === "workflow" ? "true" : "false",
+    );
+    await expect(page.getByRole("tab", { name: "Clinics" })).toHaveCount(0);
+
+    const ledger = page.getByRole("region", { name: "Request ledger" });
+    await expect(ledger).toContainText(includedCourse);
+    await expect(ledger).toContainText("BO Tab Included Employee");
+    await expect(ledger).toContainText(includedClinicName);
+    await expect(ledger).not.toContainText(excludedCourse);
+    await expect(ledger).not.toContainText("BO Tab Excluded Employee");
+    await expect(ledger).not.toContainText(excludedClinicName);
+  };
+
+  await assertScopedReport("funding");
+  await page.getByRole("tab", { name: "Workflow" }).click();
+  await assertScopedReport("workflow");
+  await page.getByRole("tab", { name: "Funding & advances" }).click();
+  await assertScopedReport("funding");
+});
+
 test("quick view badges show the correct count and the ledger total matches after clicking", async ({
   page,
   provisionUser,
