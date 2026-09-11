@@ -1734,15 +1734,14 @@ test("business-office quick views preserve report filters and scoped ledger data
 
   const bo = await provisionUser({ role: "business_office" });
   await signInAs(bo);
-  await page.goto(
+  const scopedReportUrl =
     `/reports?year=${year}&clinicId=${includedClinicId}&employeeId=${includedEmployeeId}` +
-      `&search=${encodeURIComponent(scopeSearch)}&section=funding`,
-  );
+    `&search=${encodeURIComponent(scopeSearch)}&section=funding`;
+  await page.goto(`${scopedReportUrl}&page=2`);
 
   const quickViews = page.getByRole("region", { name: "Quick views" });
   const ledger = page.getByRole("region", { name: "Request ledger" });
   const assertScope = async (view: string | null, includedCourse: string) => {
-    await expect(ledger).toContainText(includedCourse);
     const url = new URL(page.url());
     expect(url.searchParams.get("year")).toBe(String(year));
     expect(url.searchParams.get("clinicId")).toBe(String(includedClinicId));
@@ -1750,6 +1749,8 @@ test("business-office quick views preserve report filters and scoped ledger data
     expect(url.searchParams.get("search")).toBe(scopeSearch);
     expect(url.searchParams.get("section")).toBe("funding");
     expect(url.searchParams.get("view")).toBe(view);
+    expect(url.searchParams.get("page")).toBe("1");
+    await expect(ledger).toContainText(includedCourse);
     await expect(ledger).toContainText("BO Quick Included Employee");
     await expect(ledger).toContainText(includedClinicName);
     await expect(ledger).not.toContainText("BO Quick Excluded Employee");
@@ -1768,6 +1769,13 @@ test("business-office quick views preserve report filters and scoped ledger data
   ];
 
   for (const item of cases) {
+    // Start each selection from a later, intentionally empty page. This proves
+    // quick-view changes reset pagination instead of retaining a stale page.
+    const currentView = item.view === null ? "needs_attention" : null;
+    await page.goto(
+      `${scopedReportUrl}&page=2${currentView ? `&view=${currentView}` : ""}`,
+    );
+    await expect(ledger).toContainText("Page 2 of 1");
     await quickViews.getByRole("button", { name: item.label }).click();
     await assertScope(item.view, item.course);
   }
