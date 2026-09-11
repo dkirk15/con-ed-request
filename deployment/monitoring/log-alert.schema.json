@@ -6,6 +6,7 @@
     "service",
     "source",
     "match",
+    "aggregation",
     "notification"
   ],
   "properties": {
@@ -32,8 +33,7 @@
       "type": "object",
       "required": [
         "levelAtLeast",
-        "event",
-        "alert"
+        "event"
       ],
       "properties": {
         "levelAtLeast": {
@@ -41,10 +41,42 @@
           "minimum": 0
         },
         "event": {
-          "const": "alert.auth.clerk_provisioning_lookup_failures"
+          "const": "auth.clerk_provisioning_lookup_failure"
+        }
+      },
+      "additionalProperties": false
+    },
+    "aggregation": {
+      "type": "object",
+      "required": [
+        "count",
+        "windowSeconds",
+        "groupBy",
+        "deduplicationKey",
+        "cooldownSeconds",
+        "alertEvent"
+      ],
+      "properties": {
+        "count": {
+          "const": 5
         },
-        "alert": {
-          "const": true
+        "windowSeconds": {
+          "const": 300
+        },
+        "groupBy": {
+          "const": [
+            "service",
+            "event"
+          ]
+        },
+        "deduplicationKey": {
+          "const": "event"
+        },
+        "cooldownSeconds": {
+          "const": 900
+        },
+        "alertEvent": {
+          "const": "alert.auth.clerk_provisioning_lookup_failures"
         }
       },
       "additionalProperties": false

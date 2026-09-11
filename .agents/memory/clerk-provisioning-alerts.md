@@ -3,11 +3,11 @@ name: Clerk provisioning alerts
 description: Operational alert threshold and privacy rules for repeated Clerk user lookup failures.
 ---
 
-Count Clerk auto-provisioning lookup failures in a rolling five-minute window. Emit an actionable fatal alert when the count reaches five, then suppress repeat alerts for fifteen minutes. Individual failures remain structured error events.
+The API emits one structured error event per failed Clerk auto-provisioning lookup. The production monitor aggregates that event across the autoscaled API service at five failures in five minutes and deduplicates administrator notifications for fifteen minutes.
 
-**Why:** A short burst can indicate that authorized users cannot enter the portal, but alerting on every failure would create noise. Authentication logs must not include Clerk user IDs, email addresses, tokens, cookies, or request headers.
+**Why:** API processes can scale horizontally or restart, so an in-memory rolling counter can split or lose failures and delay an outage alert. A short burst can indicate that authorized users cannot enter the portal, but alerting on every failure would create noise.
 
-**How to apply:** Keep stable event names and threshold fields so production log monitoring can route the fatal alert. Provider status, error code, and request trace ID may be retained for diagnosis, but never add user-identifying fields.
+**How to apply:** Keep the threshold and cooldown in the shared monitoring contract, not in logger process state. Grouping and administrator notification fields must not include Clerk diagnostics, user IDs, email addresses, tokens, cookies, or request headers. Provider status, error code, and request trace ID may be retained for diagnosis outside the alert aggregation.
 
 Production log routing is external to this repository: keep the monitor contract
 versioned under `deployment/monitoring/` and connect its administrator

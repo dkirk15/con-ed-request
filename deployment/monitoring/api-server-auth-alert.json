@@ -6,9 +6,19 @@
     "stream": "stdout"
   },
   "match": {
-    "levelAtLeast": 60,
-    "event": "alert.auth.clerk_provisioning_lookup_failures",
-    "alert": true
+    "levelAtLeast": 50,
+    "event": "auth.clerk_provisioning_lookup_failure"
+  },
+  "aggregation": {
+    "count": 5,
+    "windowSeconds": 300,
+    "groupBy": [
+      "service",
+      "event"
+    ],
+    "deduplicationKey": "event",
+    "cooldownSeconds": 900,
+    "alertEvent": "alert.auth.clerk_provisioning_lookup_failures"
   },
   "notification": {
     "recipient": "on-call-administrators",

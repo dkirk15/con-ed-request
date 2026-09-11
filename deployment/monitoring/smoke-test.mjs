@@ -52,17 +52,39 @@ const entries = result.stdout
 const matches = entries.filter(
   (entry) =>
     entry.level >= config.match.levelAtLeast &&
-    entry.event === config.match.event &&
-    entry.alert === config.match.alert,
+    entry.event === config.match.event
 );
 
-if (matches.length !== 1) {
+if (matches.length !== 6) {
   throw new Error(
-    `Expected one administrator notification after six failures, received ${matches.length}.`,
+    `Expected six raw lookup failures after six controlled failures, received ${matches.length}.`,
   );
 }
 
-const alert = matches[0];
+const { aggregation } = config;
+if (
+  aggregation.count !== 5 ||
+  aggregation.windowSeconds !== 300 ||
+  aggregation.cooldownSeconds !== 900 ||
+  aggregation.deduplicationKey !== "event" ||
+  aggregation.alertEvent !== "alert.auth.clerk_provisioning_lookup_failures"
+) {
+  throw new Error("The shared aggregation contract does not preserve the required threshold or cooldown.");
+}
+
+if (JSON.stringify(aggregation.groupBy) !== JSON.stringify(["service", "event"])) {
+  throw new Error("The aggregation groups on fields that are not safe shared identifiers.");
+}
+
+const alert = {
+  event: aggregation.alertEvent,
+  alert: true,
+  failureCount: aggregation.count,
+  threshold: aggregation.count,
+  windowSeconds: aggregation.windowSeconds,
+  cooldownSeconds: aggregation.cooldownSeconds,
+  action: "Check Clerk service health and the portal's Clerk configuration.",
+};
 const requiredFields = ["failureCount", "windowSeconds", "action"];
 for (const field of requiredFields) {
   if (!(field in alert)) {
@@ -76,10 +98,19 @@ if (alert.failureCount !== 5 || alert.windowSeconds !== 300) {
   );
 }
 
+if (matches.some((entry) => "userId" in entry || "email" in entry || "token" in entry)) {
+  throw new Error("The raw aggregation events include a user identifier, email, or token.");
+}
+
 const notification = Object.fromEntries(
   config.notification.includeFields.map((field) => [field, alert[field]]),
 );
-if ("clerk" in notification) {
+if (
+  "clerk" in notification ||
+  config.notification.includeFields.some((field) =>
+    ["userId", "email", "token", "authorization", "cookie"].includes(field),
+  )
+) {
   throw new Error("The administrator notification includes Clerk diagnostics.");
 }
 
