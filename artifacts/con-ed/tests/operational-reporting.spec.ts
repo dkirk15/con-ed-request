@@ -1752,26 +1752,31 @@ test("business-office Clinic filter scopes the budget view to the selected clini
   await expect(budgetSection.getByRole("row").filter({ hasText: clinicBetaName })).toHaveCount(0);
 });
 
-test("accounting user lands on payroll tab by default and cannot reach funding or clinic tabs", async ({
+test("accounting user stays on payroll from restricted report URLs", async ({
   page,
   provisionUser,
   signInAs,
 }) => {
   const accounting = await provisionUser({ role: "accounting" });
   await signInAs(accounting);
-  await page.goto(`/reports?year=${year}`);
 
-  // accounting defaultSection = "payroll" → Payroll tab must be selected on load
-  await expect(page.getByRole("tab", { name: "Payroll" })).toHaveAttribute("aria-selected", "true");
+  for (const section of [undefined, "funding", "clinics"]) {
+    const query = section ? `&section=${section}` : "";
+    await page.goto(`/reports?year=${year}${query}`);
 
-  // Funding & advances and Clinics tabs must not exist in the tab list
-  await expect(page.getByRole("tab", { name: "Funding & advances" })).toHaveCount(0);
-  await expect(page.getByRole("tab", { name: "Clinics" })).toHaveCount(0);
+    // Accounting defaults to Payroll, including when a restricted section is
+    // pasted into the URL.
+    await expect(page.getByRole("tab", { name: "Payroll" })).toHaveAttribute("aria-selected", "true");
 
-  // PaycheckLedger section must be visible as the active tab content
-  await expect(
-    page.getByRole("region", { name: "Paycheck reimbursement ledger" }),
-  ).toBeVisible();
+    // Funding & advances and Clinics must not exist in the tab list.
+    await expect(page.getByRole("tab", { name: "Funding & advances" })).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: "Clinics" })).toHaveCount(0);
+
+    // PaycheckLedger must remain visible as the active tab content.
+    await expect(
+      page.getByRole("region", { name: "Paycheck reimbursement ledger" }),
+    ).toBeVisible();
+  }
 });
 
 test("manager lands on team-funding tab by default and cannot reach payroll or clinic tabs", async ({
