@@ -1400,6 +1400,58 @@ test("business-office restricted URL preserves valid report filters", async ({
   await expect(page.getByRole("region", { name: "Request ledger" })).toContainText(courseName);
 });
 
+test("business-office export preserves restricted URL filters and reporting year", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-BO-Export-Filter-Clinic-${unique()}`);
+  const employeeId = await dataUser(clinicId, "BO Export Filter Employee");
+  const matchingCourse = `BO Export Filter Match ${unique()}`;
+  const nonMatchingCourse = `BO Export Filter Other ${unique()}`;
+
+  await insertRequest({
+    employeeId,
+    status: "awaiting_receipt",
+    courseNames: matchingCourse,
+    totalRequested: 450,
+    totalApproved: 400,
+    createdAt: new Date(`${year}-06-15T12:00:00Z`),
+  });
+  await insertRequest({
+    employeeId,
+    status: "awaiting_receipt",
+    courseNames: nonMatchingCourse,
+    totalRequested: 275,
+    totalApproved: 250,
+    createdAt: new Date(`${year}-07-15T12:00:00Z`),
+  });
+
+  const bo = await provisionUser({ role: "business_office" });
+  await signInAs(bo);
+  await page.goto(
+    `/reports?year=${year}&clinicId=${clinicId}&employeeId=${employeeId}` +
+      `&search=${encodeURIComponent(matchingCourse)}&section=clinics`,
+  );
+
+  await expect(page.getByRole("tab", { name: "Clinics" })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Funding & advances" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export current view" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe(`oss-ce-report-${year}.csv`);
+
+  const downloadPath = await download.path();
+  expect(downloadPath).toBeTruthy();
+  const rows = parseCsv(await readFile(downloadPath!, "utf8"));
+  expect(rows.slice(1).map((row) => row[5])).toEqual([matchingCourse]);
+  expect(rows.slice(1).map((row) => row[5])).not.toContain(nonMatchingCourse);
+});
+
 test("quick view badges show the correct count and the ledger total matches after clicking", async ({
   page,
   provisionUser,
