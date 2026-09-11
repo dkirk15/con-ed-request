@@ -2661,7 +2661,7 @@ export const getGetReportOptionsQueryKey = () => {
     }
 
 
-export const getGetReportOptionsQueryOptions = <TData = Awaited<ReturnType<typeof getReportOptions>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetReportOptionsQueryOptions = <TData = Awaited<ReturnType<typeof getReportOptions>>, TError = ErrorType<ErrorEnvelope>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -2680,14 +2680,14 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetReportOptionsQueryResult = NonNullable<Awaited<ReturnType<typeof getReportOptions>>>
-export type GetReportOptionsQueryError = ErrorType<unknown>
+export type GetReportOptionsQueryError = ErrorType<ErrorEnvelope>
 
 
 /**
  * @summary Get role-scoped reporting filter options
  */
 
-export function useGetReportOptions<TData = Awaited<ReturnType<typeof getReportOptions>>, TError = ErrorType<unknown>>(
+export function useGetReportOptions<TData = Awaited<ReturnType<typeof getReportOptions>>, TError = ErrorType<ErrorEnvelope>>(
   options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReportOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {

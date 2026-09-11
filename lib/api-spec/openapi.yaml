@@ -848,6 +848,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReportOptions"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
 
   /reports/export:
     get:
@@ -882,6 +888,18 @@ paths:
                 format: binary
         "400":
           description: Invalid report filters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "403":
+          description: Reporting is not available to this role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Internal server error
           content:
             application/json:
               schema:
