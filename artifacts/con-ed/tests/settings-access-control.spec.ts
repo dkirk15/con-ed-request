@@ -183,6 +183,7 @@ test.describe("Settings access control — non-admin roles blocked", () => {
   });
 
   for (const { role, label } of [
+    { role: "manager" as const, label: "manager" },
     { role: "business_office" as const, label: "business_office" },
     { role: "accounting" as const, label: "accounting" },
   ]) {
@@ -191,7 +192,10 @@ test.describe("Settings access control — non-admin roles blocked", () => {
       provisionUser,
       signInAs,
     }) => {
-      const user = await provisionUser({ role });
+      const clinicId = role === "manager"
+        ? await createClinic(`E2E-Clinic-settings-direct-manager`)
+        : undefined;
+      const user = await provisionUser({ role, clinicId });
       await signInAs(user);
 
       await page.goto("/dashboard");
