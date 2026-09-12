@@ -1678,6 +1678,10 @@ test("business-office tab switches preserve report filters and scoped data", asy
   await assertScopedReport("funding");
   await page.getByRole("tab", { name: "Workflow" }).click();
   await assertScopedReport("workflow");
+  await page.goBack();
+  await assertScopedReport("funding");
+  await page.goForward();
+  await assertScopedReport("workflow");
   await page.getByRole("tab", { name: "Funding & advances" }).click();
   await assertScopedReport("funding");
 });
