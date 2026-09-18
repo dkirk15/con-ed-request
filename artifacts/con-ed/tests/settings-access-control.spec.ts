@@ -131,6 +131,14 @@ test.describe("Settings access control — non-admin roles blocked", () => {
       ),
     );
 
+    const settingsGetRequests: string[] = [];
+    page.on("request", (request) => {
+      const url = new URL(request.url());
+      if (request.method() === "GET" && url.pathname.endsWith("/api/settings")) {
+        settingsGetRequests.push(request.url());
+      }
+    });
+
     // Typing the restricted URL directly must not expose the Settings form.
     await page.goto("/settings");
     await expect(page).toHaveURL(/\/settings$/);
@@ -139,6 +147,7 @@ test.describe("Settings access control — non-admin roles blocked", () => {
     ).toBeVisible();
     await expect(page.getByRole("spinbutton")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
+    expect(settingsGetRequests).toEqual([]);
   });
 
   test("employee: direct /settings navigation never flashes the settings form while permissions load", async ({
@@ -205,6 +214,14 @@ test.describe("Settings access control — non-admin roles blocked", () => {
         ),
       );
 
+      const settingsGetRequests: string[] = [];
+      page.on("request", (request) => {
+        const url = new URL(request.url());
+        if (request.method() === "GET" && url.pathname.endsWith("/api/settings")) {
+          settingsGetRequests.push(request.url());
+        }
+      });
+
       await page.goto("/settings");
       await expect(page).toHaveURL(/\/settings$/);
       await expect(
@@ -213,6 +230,7 @@ test.describe("Settings access control — non-admin roles blocked", () => {
       await expect(page.getByRole("spinbutton")).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
       await expect(page.getByRole("link", { name: "Settings" })).toHaveCount(0);
+      expect(settingsGetRequests).toEqual([]);
     });
   }
 
