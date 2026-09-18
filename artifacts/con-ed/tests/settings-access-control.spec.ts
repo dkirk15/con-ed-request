@@ -56,8 +56,10 @@ test.describe("Settings access control — non-admin roles blocked", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-settings-emp`);
-    const employee = await provisionUser({ role: "employee", clinicId });
+      const clinicId = role === "manager"
+        ? await createClinic(`E2E-Clinic-settings-direct-manager`)
+        : undefined;
+    const employee = await provisionUser({ role: "employee" });
     await signInAs(employee);
 
     await page.goto("/dashboard");
@@ -70,25 +72,26 @@ test.describe("Settings access control — non-admin roles blocked", () => {
     );
 
     // API: GET /api/settings must return 403.
-    const getRes = await apiCall(page, "GET", "/api/settings");
-    expect(getRes.status).toBe(403);
+      const getRes = await apiCall(page, "GET", "/api/settings");
+      expect(getRes.status).toBe(403);
 
-    // API: PATCH /api/settings must return 403.
-    const patchRes = await apiCall(page, "PATCH", "/api/settings", {
-      annualBudget: 9999,
-    });
+      const patchRes = await apiCall(page, "PATCH", "/api/settings", {
+        annualBudget: 9999,
+      });
     expect(patchRes.status).toBe(403);
 
     // Frontend: Settings link must not appear in the sidebar.
     await expect(page.getByRole("link", { name: "Settings" })).toHaveCount(0);
   });
 
-  test("manager: GET /api/settings returns 403, PATCH /api/settings returns 403, no Settings nav link", async ({
+  test("employee: direct /settings navigation shows access denied without the settings form", async ({
     page,
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-settings-mgr`);
+      const clinicId = role === "manager"
+        ? await createClinic(`E2E-Clinic-settings-direct-manager`)
+        : undefined;
     const manager = await provisionUser({ role: "manager", clinicId });
     await signInAs(manager);
 
@@ -102,13 +105,12 @@ test.describe("Settings access control — non-admin roles blocked", () => {
     );
 
     // API: GET /api/settings must return 403.
-    const getRes = await apiCall(page, "GET", "/api/settings");
-    expect(getRes.status).toBe(403);
+      const getRes = await apiCall(page, "GET", "/api/settings");
+      expect(getRes.status).toBe(403);
 
-    // API: PATCH /api/settings must return 403.
-    const patchRes = await apiCall(page, "PATCH", "/api/settings", {
-      annualBudget: 9999,
-    });
+      const patchRes = await apiCall(page, "PATCH", "/api/settings", {
+        annualBudget: 9999,
+      });
     expect(patchRes.status).toBe(403);
 
     // Frontend: Settings link must not appear in the sidebar.
@@ -120,8 +122,10 @@ test.describe("Settings access control — non-admin roles blocked", () => {
     provisionUser,
     signInAs,
   }) => {
-    const clinicId = await createClinic(`E2E-Clinic-settings-direct`);
-    const employee = await provisionUser({ role: "employee", clinicId });
+      const clinicId = role === "manager"
+        ? await createClinic(`E2E-Clinic-settings-direct-manager`)
+        : undefined;
+    const employee = await provisionUser({ role: "employee" });
     await signInAs(employee);
 
     await page.goto("/dashboard");
@@ -131,9 +135,9 @@ test.describe("Settings access control — non-admin roles blocked", () => {
       ),
     );
 
-    const settingsGetRequests: string[] = [];
-    page.on("request", (request) => {
-      const url = new URL(request.url());
+      const settingsGetRequests: string[] = [];
+      page.on("request", (request) => {
+        const url = new URL(request.url());
       if (request.method() === "GET" && url.pathname.endsWith("/api/settings")) {
         settingsGetRequests.push(request.url());
       }
@@ -158,38 +162,39 @@ test.describe("Settings access control — non-admin roles blocked", () => {
     const employee = await provisionUser({ role: "employee" });
     await signInAs(employee);
 
-    let releaseMe!: () => void;
-    const meReady = new Promise<void>((resolve) => {
-      releaseMe = resolve;
+      let releaseMe!: () => void;
+      const meReady = new Promise<void>((resolve) => {
+        releaseMe = resolve;
+      });
+      let holdMe = true;
+      await page.route("**/api/users/me", async (route) => {
+        if (holdMe) await meReady;
+        await route.continue();
+      });
+
+      try {
+        const navigation = page.goto("/settings");
+
+        // While the current user's role is unresolved, neither admin control
+        // may be present, even if the settings request would resolve first.
+        await expect(page.getByRole("spinbutton")).toHaveCount(0);
+        await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
+
+        holdMe = false;
+        releaseMe();
+        await navigation;
+        await expect(
+          page.getByText("You do not have permission to view this page.", { exact: true }),
+        ).toBeVisible();
+        await expect(page.getByRole("spinbutton")).toHaveCount(0);
+        await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
+      } finally {
+        holdMe = false;
+        releaseMe();
+        await page.unroute("**/api/users/me");
+      }
     });
-    let holdMe = true;
-    await page.route("**/api/users/me", async (route) => {
-      if (holdMe) await meReady;
-      await route.continue();
-    });
-
-    try {
-      const navigation = page.goto("/settings");
-
-      // While the current user's role is unresolved, neither admin control may
-      // be present, even if the settings request would resolve first.
-      await expect(page.getByRole("spinbutton")).toHaveCount(0);
-      await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
-
-      holdMe = false;
-      releaseMe();
-      await navigation;
-      await expect(
-        page.getByText("You do not have permission to view this page.", { exact: true }),
-      ).toBeVisible();
-      await expect(page.getByRole("spinbutton")).toHaveCount(0);
-      await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
-    } finally {
-      holdMe = false;
-      releaseMe();
-      await page.unroute("**/api/users/me");
-    }
-  });
+  }
 
   for (const { role, label } of [
     { role: "manager" as const, label: "manager" },
@@ -204,7 +209,7 @@ test.describe("Settings access control — non-admin roles blocked", () => {
       const clinicId = role === "manager"
         ? await createClinic(`E2E-Clinic-settings-direct-manager`)
         : undefined;
-      const user = await provisionUser({ role, clinicId });
+      const user = await provisionUser({ role });
       await signInAs(user);
 
       await page.goto("/dashboard");

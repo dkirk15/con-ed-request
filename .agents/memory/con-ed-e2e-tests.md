@@ -6,6 +6,7 @@ description: Non-obvious constraints for running and writing the Playwright E2E 
 # Running the suite
 - Run Playwright **synchronously inside a single bash call** (`playwright test … > file 2>&1; cat file`). Launching with `&` and polling across separate tool calls causes the background process to be **orphaned/reaped** between calls — it dies producing zero output.
 - The full suite exceeds the 120s bash-tool limit. Run in **batches of a few specs** per call (each batch finishes <120s), not all at once.
+- Start the managed `artifacts/api-server: API Server` workflow before E2E runs; the frontend can serve while authentication and API-backed tests hang or fail if the API workflow is stopped.
 - After a reaped/killed run, leftover Chromium can spike memory and cause transient SIGKILL (exit 137) on the *next* commands. If you see 137 with no output, check `free -m`; it usually clears once dying browsers are reaped, then retry.
 - Avoid piping playwright output through `tail` — on a SIGKILL the pipe yields no output. Redirect to a file and `cat` it after.
 
