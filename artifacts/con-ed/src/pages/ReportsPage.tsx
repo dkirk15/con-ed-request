@@ -207,8 +207,9 @@ export default function ReportsPage() {
     try {
       const exportParams = new URLSearchParams();
       Object.entries(reportParams).forEach(([key, value]) => {
-        if (key !== "page" && key !== "pageSize" && value != null && value !== "") {
-          exportParams.set(key, String(value));
+        const exportValue = key === "search" ? searchValue || undefined : value;
+        if (key !== "page" && key !== "pageSize" && exportValue != null && exportValue !== "") {
+          exportParams.set(key, String(exportValue));
         }
       });
       const blob = await customFetch<Blob>(`/api/reports/export?${exportParams.toString()}`, {

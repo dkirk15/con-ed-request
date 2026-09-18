@@ -226,6 +226,45 @@ test("sorted report exports keep the same row order as the visible ledger", asyn
   expect(await exportCourses()).toEqual(await visibleCourses());
 });
 
+test("rapid report search changes export the current URL filter", async ({
+  page,
+  provisionUser,
+  signInAs,
+}) => {
+  const clinicId = await createClinic(`E2E-Export-Rapid-Search-${unique()}`);
+  const employeeId = await dataUser(clinicId, "Rapid Search Employee");
+  const firstCourse = `Rapid Search First ${unique()}`;
+  const secondCourse = `Rapid Search Second ${unique()}`;
+
+  for (const courseNames of [firstCourse, secondCourse]) {
+    await insertRequest({
+      employeeId,
+      status: "pending_manager",
+      courseNames,
+      totalRequested: 250,
+      createdAt: new Date(`${year}-02-15T12:00:00Z`),
+    });
+  }
+
+  const admin = await provisionUser({ role: "admin" });
+  await signInAs(admin);
+  await page.goto(`/reports?year=${year}&clinicId=${clinicId}`);
+  await expect(page.getByRole("region", { name: "Request ledger" })).toContainText(firstCourse);
+
+  const search = page.locator('input[name="report-search"]');
+  const downloadPromise = page.waitForEvent("download");
+  await search.fill(secondCourse);
+  await page.getByRole("button", { name: "Export current view" }).click();
+
+  expect(new URL(page.url()).searchParams.get("search")).toBe(secondCourse);
+  const download = await downloadPromise;
+  const downloadPath = await download.path();
+  expect(downloadPath).toBeTruthy();
+  const rows = parseCsv(await readFile(downloadPath!, "utf8"));
+  expect(rows.slice(1).map((row) => row[5])).toEqual([secondCourse]);
+  expect(rows.slice(1).map((row) => row[5])).not.toContain(firstCourse);
+});
+
 test("reports CSV export honors each supported date basis", async ({
   page,
   provisionUser,
