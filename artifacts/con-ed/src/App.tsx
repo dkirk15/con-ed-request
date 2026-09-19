@@ -1,6 +1,6 @@
 import { Switch, Route, Redirect, useLocation, Router as WouterRouter } from "wouter";
-import { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactNode, useEffect, useRef, useState } from "react";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ClerkProvider, useAuth } from "@clerk/react";
@@ -121,6 +121,37 @@ function ClerkTokenSync() {
   return null;
 }
 
+/**
+ * React Query keys are shared by all Clerk users in this browser tab. Clear
+ * them whenever Clerk changes the signed-in identity and keep the protected
+ * tree unmounted until that identity's cache is ready.
+ */
+function AuthenticatedQueryBoundary({ children }: { children: ReactNode }) {
+  const { isLoaded, isSignedIn, userId } = useAuth();
+  const queryClient = useQueryClient();
+  const currentUserId = isSignedIn && userId ? userId : null;
+  const previousUserId = useRef<string | null | undefined>(undefined);
+  const [readyUserId, setReadyUserId] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!isLoaded || previousUserId.current === currentUserId) return;
+
+    previousUserId.current = currentUserId;
+    queryClient.clear();
+    setReadyUserId(currentUserId);
+  }, [currentUserId, isLoaded, queryClient]);
+
+  if (!isLoaded || (isSignedIn && (!userId || readyUserId !== currentUserId))) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-gray-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 function ClerkWithRouter({
   publishableKey,
   children,
@@ -159,12 +190,14 @@ function App() {
     <WouterRouter base={basePath}>
       <ClerkWithRouter publishableKey={clerkPubKey}>
         <QueryClientProvider client={queryClient}>
-          <ImpersonationProvider>
-            <TooltipProvider>
-              <AppRoutes />
-              <Toaster />
-            </TooltipProvider>
-          </ImpersonationProvider>
+          <AuthenticatedQueryBoundary>
+            <ImpersonationProvider>
+              <TooltipProvider>
+                <AppRoutes />
+                <Toaster />
+              </TooltipProvider>
+            </ImpersonationProvider>
+          </AuthenticatedQueryBoundary>
         </QueryClientProvider>
       </ClerkWithRouter>
     </WouterRouter>
